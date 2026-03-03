@@ -1010,6 +1010,58 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             ))}
           </div>
         )}
+
+        {/* News section */}
+        <div style={{ padding: "0 20px 8px" }}>
+          {(() => {
+            const featured = NEWS.find(n => n.featured);
+            const secondary = NEWS.filter(n => !n.featured);
+            return (
+              <div>
+                {featured && (
+                  <div data-press style={{ cursor: "pointer", marginBottom: 8, transition: "opacity 0.1s" }}>
+                    <div style={{
+                      height: 140, borderRadius: 12,
+                      backgroundColor: C.card, border: `1px solid ${C.border}`,
+                      display: "flex", alignItems: "flex-end", padding: 16,
+                    }}>
+                      <div>
+                        <div style={{ display: "inline-block", fontSize: 10, fontWeight: 700, color: C.accent, backgroundColor: C.accent + "18", borderRadius: 8, padding: "2px 8px", marginBottom: 8, letterSpacing: "0.04em", textTransform: "uppercase" }}>{featured.tag}</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: C.text, lineHeight: 1.35 }}>{featured.title}</div>
+                        <div style={{ fontSize: 12, color: C.sub, marginTop: 4, lineHeight: 1.3 }}>{featured.subtitle}</div>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 11, color: C.muted, marginTop: 6, paddingLeft: 2 }}>{featured.time}</div>
+                  </div>
+                )}
+                {secondary.map(n => (
+                  <div key={n.id} data-press style={{ padding: "12px 0", borderTop: `1px solid ${C.border}`, cursor: "pointer", transition: "opacity 0.1s" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: C.muted, backgroundColor: "#F5F5F0", borderRadius: 8, padding: "2px 7px", flexShrink: 0, marginTop: 2 }}>{n.tag}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: C.sub, lineHeight: 1.35 }}>{n.title}</div>
+                        <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{n.time}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <div style={{ textAlign: "center", padding: "14px 0", cursor: "pointer", borderTop: `1px solid ${C.border}`, marginTop: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: C.accent }}>Все новости →</span>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* CTA Button */}
+        <div style={{ padding: "12px 20px 32px" }}>
+          <div data-press style={{
+            backgroundColor: C.accent, borderRadius: 12, padding: "15px 0",
+            textAlign: "center", cursor: "pointer", transition: "opacity 0.1s",
+          }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#FFFFFF" }}>Новая карта или продукт</span>
+          </div>
+        </div>
       </div>
 
       {/* Bottom navigation */}

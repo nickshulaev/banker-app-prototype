@@ -614,7 +614,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
 
       <div style={{ flex: 1, overflow: "auto" }}>
         {/* Header */}
-        <div style={{ padding: "8px 24px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div style={{ padding: "16px 24px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
             <div style={{ fontSize: 32, fontWeight: 800, color: C.accent, lineHeight: 1.15, letterSpacing: "-0.02em" }}>Freedom</div>
             <div style={{ fontSize: 32, fontWeight: 800, color: C.text, lineHeight: 1.15, letterSpacing: "-0.02em" }}>Banker</div>
@@ -627,7 +627,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         </div>
 
         {/* Balance */}
-        <div style={{ padding: "12px 24px 0" }}>
+        <div style={{ padding: "24px 24px 0" }}>
           <div style={{ fontSize: 14, color: C.sub, marginBottom: 6 }}>
             Общий баланс
           </div>
@@ -682,7 +682,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         </div>
 
         {/* Action buttons */}
-        <div style={{ display: "flex", padding: "24px 20px 24px" }}>
+        <div style={{ display: "flex", padding: "28px 20px 28px" }}>
           {[
             { label: "Отправить", accent: true, d: "M10 16V4M10 4L5 9M10 4L15 9" },
             { label: "Запросить", accent: false, d: "M10 4V16M10 16L5 11M10 16L15 11" },
@@ -714,7 +714,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         {/* Search bar — sticky */}
         <div style={{
           position: "sticky", top: 0, zIndex: 20,
-          padding: "12px 20px", display: "flex", alignItems: "center", gap: 8,
+          padding: "16px 20px", display: "flex", alignItems: "center", gap: 8,
           backgroundColor: C.bg,
         }}>
           <div style={{
@@ -749,7 +749,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         </div>
 
         {/* Stories */}
-        <div style={{ padding: "4px 0 8px" }}>
+        <div style={{ padding: "12px 0 16px" }}>
           <div style={{ display: "flex", gap: 12, overflowX: "auto", padding: "0 20px", scrollbarWidth: "none" }}>
             {STORIES.map(s => (
               <div key={s.id} data-press style={{ flexShrink: 0, width: 68, cursor: "pointer", transition: "opacity 0.1s" }}>
@@ -773,7 +773,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         </div>
 
         {/* Product tabs */}
-        <div style={{ padding: "12px 20px 20px" }}>
+        <div style={{ padding: "8px 20px 24px" }}>
           <div style={{
             display: "flex", backgroundColor: C.card, borderRadius: 12, padding: 3,
             border: `1px solid ${C.border}`,
@@ -804,13 +804,13 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         {productTab === "bank" && (
           <div>
             {/* Recent transactions */}
-            <div style={{ padding: "0 20px 24px" }}>
+            <div style={{ padding: "0 20px 32px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}>Транзакции</span>
               </div>
 
               {/* Weekly spending chart */}
-              <div style={{ backgroundColor: C.card, borderRadius: 16, padding: "20px 20px 18px", border: `1px solid ${C.border}`, marginBottom: 12 }}>
+              <div style={{ backgroundColor: C.card, borderRadius: 16, padding: "20px 20px 18px", border: `1px solid ${C.border}`, marginBottom: 16 }}>
                 <div style={{ fontSize: 13, color: C.sub, marginBottom: 16 }}>Расходы за неделю</div>
                 {(() => {
                   const maxAmt = Math.max(...WEEK_SPEND_KZT.filter((_, j) => j <= TODAY_INDEX));
@@ -895,7 +895,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             </div>
 
             {/* Card chips — horizontal scroll */}
-            <div style={{ paddingLeft: 20, marginBottom: 24 }}>
+            <div style={{ paddingLeft: 20, marginBottom: 32 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingRight: 20, marginBottom: 10 }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}>Карты</span>
                 <span style={{ fontSize: 12, color: C.accent, fontWeight: 500, cursor: "pointer" }}>Управление</span>
@@ -933,7 +933,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             </div>
 
             {/* Currency wallets — expandable rows */}
-            <div style={{ padding: "0 20px 24px" }}>
+            <div style={{ padding: "0 20px 32px" }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 6 }}>Валюты</div>
               {wallets.filter(w => w.code !== "FREEDOM").map(w => {
                 const meta = CURRENCY_META[w.code] || { symbol: w.code, flag: "💰", color: C.muted };
@@ -1095,7 +1095,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         )}
 
         {/* News section */}
-        <div style={{ padding: "0 20px 12px" }}>
+        <div style={{ padding: "8px 20px 24px" }}>
           {(() => {
             const featured = NEWS.find(n => n.featured);
             const secondary = NEWS.filter(n => !n.featured);
@@ -1124,7 +1124,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         </div>
 
         {/* CTA Button */}
-        <div style={{ padding: "12px 20px 40px" }}>
+        <div style={{ padding: "4px 20px 40px" }}>
           <div data-press style={{
             backgroundColor: C.accent, borderRadius: 12, padding: "15px 0",
             textAlign: "center", cursor: "pointer", transition: "opacity 0.1s",

@@ -645,6 +645,28 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
           <div style={{ width: 58, height: 58, borderRadius: 29, backgroundColor: C.accent }} />
         </div>
 
+        {/* Stories row */}
+        <div style={{ display: "flex", gap: 12, overflowX: "auto", padding: "0 20px 6px", scrollbarWidth: "none" }}>
+          {STORIES.map(s => (
+            <div key={s.id} data-press style={{ flexShrink: 0, width: 68, cursor: "pointer", transition: "opacity 0.1s" }}>
+              <div style={{
+                width: 68, height: 68, borderRadius: 20,
+                border: s.viewed ? `1.5px solid ${C.border}` : `1.5px solid ${C.accent}`,
+                padding: 2, boxSizing: "border-box",
+              }}>
+                <div style={{
+                  width: "100%", height: "100%", borderRadius: 12,
+                  background: `linear-gradient(135deg, ${C.card}, #F5F5F0)`,
+                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26,
+                }}>{s.icon}</div>
+              </div>
+              <div style={{ fontSize: 10, fontWeight: 500, color: s.viewed ? C.muted : C.sub, textAlign: "center", marginTop: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {s.title}
+              </div>
+            </div>
+          ))}
+        </div>
+
         {/* Balance */}
         <div style={{ padding: "0 24px 6px" }}>
           <div style={{ fontSize: 14, color: C.sub, marginBottom: 6 }}>

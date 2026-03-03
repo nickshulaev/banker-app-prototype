@@ -748,6 +748,40 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
           </div>
         </div>
       </div>
+
+      {/* Bottom navigation */}
+      <div style={{
+        flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-around",
+        padding: "10px 16px 28px", backgroundColor: C.bg,
+        borderTop: `1px solid ${C.border}`,
+      }}>
+        {[
+          { label: "Главная", active: true, d: "M3 9.5L10 3l7 6.5V19a1 1 0 01-1 1h-4v-5a1 1 0 00-1-1H9a1 1 0 00-1 1v5H4a1 1 0 01-1-1V9.5z" },
+          { label: "Статистика", active: false, d: "M4 16V9M8 16V4M12 16V12M16 16V7" },
+          { label: "Переводы", active: false, d: "M4 12h12M12 4l4 4-4 4M16 8l-4 4 4 4" },
+          { label: "Контакты", active: false, d: "M12 12a4 4 0 100-8 4 4 0 000 8zm-7 8c0-3.3 3.1-6 7-6s7 2.7 7 6" },
+        ].map((tab, i) => (
+          <div key={i} data-press style={{
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+            cursor: "pointer", padding: "4px 12px", transition: "opacity 0.1s",
+          }}>
+            <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
+              {tab.label === "Главная" ? (
+                <path d={tab.d} fill={tab.active ? C.text : "none"} stroke={tab.active ? C.text : C.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              ) : (
+                <path d={tab.d} stroke={tab.active ? C.text : C.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              )}
+            </svg>
+            <span style={{
+              fontSize: 10, fontWeight: tab.active ? 600 : 500,
+              color: tab.active ? C.text : C.muted,
+            }}>{tab.label}</span>
+            {tab.active && (
+              <div style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: C.accent, marginTop: -2 }} />
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -522,7 +522,7 @@ function DebugModal({ theme, setTheme, onClose }) {
 }
 
 /* ─── Stripe Light Theme ─── */
-function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT, productTab, setProductTab }) {
+function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT, productTab, setProductTab, openCurrency, setOpenCurrency }) {
   const C = { bg: "#F0EFEB", card: "#FFFFFF", accent: "#EF4444", text: "#1A1A1A", sub: "#6B7280", muted: "#9CA3AF", border: "#E5E5E0" };
 
   const totalDisplay = convertTo(totalInKZT, displayCurrency);
@@ -719,62 +719,169 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
           </div>
         </div>
 
-        {/* Bento grid */}
-        <div style={{ padding: "4px 20px 40px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          {/* Gross Volume */}
-          <div style={{ backgroundColor: C.card, borderRadius: 16, padding: 16, border: `1px solid ${C.border}` }}>
-            <div style={{ fontSize: 13, color: C.sub, marginBottom: 16 }}>Gross Volume</div>
-            <svg width="100%" height="36" viewBox="0 0 140 36" preserveAspectRatio="none">
-              <path d="M0 30 C8 28,16 32,24 26 C32 20,40 24,52 18 C60 14,68 16,80 12 C88 8,96 14,108 10 C116 6,124 4,140 8" fill="none" stroke={C.text} strokeWidth="1.5"/>
-              <circle cx="140" cy="8" r="3" fill="none" stroke={C.text} strokeWidth="1.5"/>
-            </svg>
-            <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginTop: 10, fontFeatureSettings: "'tnum'" }}>$890.00</div>
-          </div>
+        {/* Tab content */}
+        {productTab === "bank" && (
+          <div>
+            {/* Bento grid */}
+            <div style={{ padding: "4px 20px 20px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {/* Gross Volume */}
+              <div style={{ backgroundColor: C.card, borderRadius: 16, padding: 16, border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 13, color: C.sub, marginBottom: 16 }}>Gross Volume</div>
+                <svg width="100%" height="36" viewBox="0 0 140 36" preserveAspectRatio="none">
+                  <path d="M0 30 C8 28,16 32,24 26 C32 20,40 24,52 18 C60 14,68 16,80 12 C88 8,96 14,108 10 C116 6,124 4,140 8" fill="none" stroke={C.text} strokeWidth="1.5"/>
+                  <circle cx="140" cy="8" r="3" fill="none" stroke={C.text} strokeWidth="1.5"/>
+                </svg>
+                <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginTop: 10, fontFeatureSettings: "'tnum'" }}>$890.00</div>
+              </div>
 
-          {/* Spent + Weekly — tall card spanning 2 rows */}
-          <div style={{
-            backgroundColor: C.card, borderRadius: 16, padding: 16,
-            border: `1px solid ${C.border}`, gridColumn: 2, gridRow: "1 / 3",
-            display: "flex", flexDirection: "column",
-          }}>
-            <div style={{ fontSize: 13, color: C.sub, marginBottom: 14 }}>Spent</div>
-            <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: 5, minHeight: 80 }}>
-              {[50, 30, 70, 25, 40, 95, 55].map((h, i) => (
-                <div key={i} style={{
-                  flex: 1, height: `${h}%`, borderRadius: 2.5,
-                  backgroundColor: i === 5 ? C.text : "#D5D5D0",
-                }} />
-              ))}
-            </div>
-            <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12, marginTop: 14 }}>
-              <div style={{ fontSize: 13, color: C.sub }}>Weekly Spent</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginTop: 2, fontFeatureSettings: "'tnum'" }}>$120.00</div>
-            </div>
-          </div>
-
-          {/* Last Expenses */}
-          <div style={{ backgroundColor: C.card, borderRadius: 16, padding: 16, border: `1px solid ${C.border}` }}>
-            <div style={{ fontSize: 13, color: C.sub, marginBottom: 14 }}>Last Expenses</div>
-            <div style={{ display: "flex", justifyContent: "space-around" }}>
-              {[
-                { letter: "U", amount: "-$10" },
-                { letter: "a", amount: "-$12" },
-                { letter: "v", amount: "-$9" },
-              ].map((e, i) => (
-                <div key={i} style={{ textAlign: "center" }}>
-                  <div style={{
-                    width: 38, height: 38, borderRadius: 19,
-                    border: `1.5px solid ${C.border}`, backgroundColor: C.card,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 6,
-                    fontStyle: i > 0 ? "italic" : "normal",
-                  }}>{e.letter}</div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: C.text, fontFeatureSettings: "'tnum'" }}>{e.amount}</div>
+              {/* Spent + Weekly — tall card spanning 2 rows */}
+              <div style={{
+                backgroundColor: C.card, borderRadius: 16, padding: 16,
+                border: `1px solid ${C.border}`, gridColumn: 2, gridRow: "1 / 3",
+                display: "flex", flexDirection: "column",
+              }}>
+                <div style={{ fontSize: 13, color: C.sub, marginBottom: 14 }}>Spent</div>
+                <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: 5, minHeight: 80 }}>
+                  {[50, 30, 70, 25, 40, 95, 55].map((h, i) => (
+                    <div key={i} style={{
+                      flex: 1, height: `${h}%`, borderRadius: 2.5,
+                      backgroundColor: i === 5 ? C.text : "#D5D5D0",
+                    }} />
+                  ))}
                 </div>
-              ))}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12, marginTop: 14 }}>
+                  <div style={{ fontSize: 13, color: C.sub }}>Weekly Spent</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginTop: 2, fontFeatureSettings: "'tnum'" }}>$120.00</div>
+                </div>
+              </div>
+
+              {/* Last Expenses */}
+              <div style={{ backgroundColor: C.card, borderRadius: 16, padding: 16, border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 13, color: C.sub, marginBottom: 14 }}>Last Expenses</div>
+                <div style={{ display: "flex", justifyContent: "space-around" }}>
+                  {[
+                    { letter: "U", amount: "-$10" },
+                    { letter: "a", amount: "-$12" },
+                    { letter: "v", amount: "-$9" },
+                  ].map((e, i) => (
+                    <div key={i} style={{ textAlign: "center" }}>
+                      <div style={{
+                        width: 38, height: 38, borderRadius: 19,
+                        border: `1.5px solid ${C.border}`, backgroundColor: C.card,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 6,
+                        fontStyle: i > 0 ? "italic" : "normal",
+                      }}>{e.letter}</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: C.text, fontFeatureSettings: "'tnum'" }}>{e.amount}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Card chips — horizontal scroll */}
+            <div style={{ paddingLeft: 20, marginBottom: 20 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingRight: 20, marginBottom: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}>Карты</span>
+                <span style={{ fontSize: 12, color: C.accent, fontWeight: 500, cursor: "pointer" }}>Управление</span>
+              </div>
+              <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, paddingRight: 20, scrollbarWidth: "none" }}>
+                {CARDS.map(c => (
+                  <div key={c.id} data-press style={{
+                    flexShrink: 0, width: 118, height: 74, borderRadius: 12, padding: "10px 12px",
+                    backgroundColor: C.card,
+                    border: c.frozen ? `1px dashed ${C.border}` : `1px solid ${C.border}`,
+                    display: "flex", flexDirection: "column", justifyContent: "space-between",
+                    cursor: "pointer", position: "relative",
+                    opacity: c.frozen ? 0.45 : 1, transition: "opacity 0.1s",
+                  }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: C.sub, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                      <span style={{ fontSize: 11, color: C.muted, fontFeatureSettings: "'tnum'" }}>••{c.last4}</span>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>{c.network}</span>
+                    </div>
+                    {c.frozen && (
+                      <div style={{ position: "absolute", top: 6, right: 8, fontSize: 8, fontWeight: 700, color: C.muted, backgroundColor: C.bg, borderRadius: 8, padding: "1px 4px", textTransform: "uppercase" }}>frozen</div>
+                    )}
+                  </div>
+                ))}
+                <div style={{
+                  flexShrink: 0, width: 74, height: 74, borderRadius: 12,
+                  border: `1px dashed ${C.border}`,
+                  display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                }}>
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M10 4V16M4 10H16" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Currency wallets — expandable rows */}
+            <div style={{ padding: "0 20px 24px" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 6 }}>Валюты</div>
+              {wallets.filter(w => w.code !== "FREEDOM").map(w => {
+                const meta = CURRENCY_META[w.code] || { symbol: w.code, flag: "💰", color: C.muted };
+                const isOpen = openCurrency === w.code;
+                const sorted = [...w.accounts].sort((a, b) => b.balance - a.balance);
+                return (
+                  <div key={w.code}>
+                    <div data-press onClick={() => setOpenCurrency(isOpen ? null : w.code)} style={{
+                      display: "flex", alignItems: "center", padding: "13px 0",
+                      cursor: "pointer", borderBottom: isOpen ? "none" : `1px solid ${C.border}`,
+                      transition: "opacity 0.1s",
+                    }}>
+                      <div style={{
+                        width: 38, height: 38, borderRadius: 20, backgroundColor: (meta.color || C.muted) + "15",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 18, marginRight: 12, flexShrink: 0,
+                      }}>{meta.flag}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{w.code}</div>
+                        <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>
+                          {sorted.length} {sorted.length === 1 ? "счёт" : sorted.length < 5 ? "счёта" : "счетов"}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", letterSpacing: "-0.01em" }}>
+                        {fmtFull(w.total)}
+                        <span style={{ fontSize: 11, fontWeight: 500, color: C.muted, marginLeft: 3 }}>{meta.symbol}</span>
+                      </div>
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ marginLeft: 8, transition: "transform 0.2s", transform: isOpen ? "rotate(180deg)" : "rotate(0)" }}>
+                        <path d="M3.5 5.25l3.5 3.5 3.5-3.5" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                    {isOpen && (
+                      <div style={{ paddingBottom: 10, marginBottom: 2, borderBottom: `1px solid ${C.border}` }}>
+                        {sorted.map((acc, j) => (
+                          <div key={j} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0 8px 50px" }}>
+                            <span style={{ fontSize: 12, color: C.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 12 }}>
+                              {acc.product} <span style={{ color: C.muted }}>•{acc.last4}</span>
+                            </span>
+                            <span style={{ fontSize: 12, fontWeight: 500, color: C.sub, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                              {fmtFull(acc.balance)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
-        </div>
+        )}
+
+        {productTab === "deposits" && (
+          <div style={{ padding: "4px 20px 40px", textAlign: "center" }}>
+            <div style={{ padding: "40px 0", color: C.muted, fontSize: 14 }}>Deposits content — Step 6</div>
+          </div>
+        )}
+
+        {productTab === "broker" && (
+          <div style={{ padding: "4px 20px 40px", textAlign: "center" }}>
+            <div style={{ padding: "40px 0", color: C.muted, fontSize: 14 }}>Broker content — Step 7</div>
+          </div>
+        )}
       </div>
 
       {/* Bottom navigation */}
@@ -890,6 +997,8 @@ export default function FreedomV6() {
           totalInKZT={totalInKZT}
           productTab={productTab}
           setProductTab={setProductTab}
+          openCurrency={openCurrency}
+          setOpenCurrency={setOpenCurrency}
         />
       </>
     );

@@ -638,7 +638,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
           {(() => {
             const balanceStr = fmtFull(totalDisplay);
             const len = balanceStr.length;
-            const balanceFontSize = len <= 5 ? 54 : len <= 8 ? 46 : len <= 11 ? 38 : len <= 14 ? 32 : 26;
+            const balanceFontSize = len <= 5 ? 56 : len <= 8 ? 50 : len <= 11 ? 44 : len <= 14 ? 38 : 30;
             return (
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <div style={{ flex: 1, fontSize: balanceFontSize, fontWeight: 800, color: C.text, fontFeatureSettings: "'tnum'", letterSpacing: "-0.03em", lineHeight: 1, overflow: "hidden", whiteSpace: "nowrap" }}>

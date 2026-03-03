@@ -242,7 +242,7 @@ function CardChip({ card }) {
 }
 
 /* ─── News ─── */
-function NewsBlock() {
+function NewsBlock({ onAvatarClick }) {
   const featured = NEWS.find(n => n.featured);
   const secondary = NEWS.filter(n => !n.featured);
   return (
@@ -274,7 +274,7 @@ function NewsBlock() {
           </div>
         </div>
       ))}
-      <div style={{ textAlign: "center", padding: "14px 0", cursor: "pointer", borderTop: "1px solid #1E293B", marginTop: 4 }}>
+      <div onClick={onAvatarClick} style={{ textAlign: "center", padding: "14px 0", cursor: "pointer", borderTop: "1px solid #1E293B", marginTop: 4 }}>
         <span style={{ fontSize: 13, fontWeight: 600, color: "#22C55E" }}>Все новости →</span>
       </div>
     </div>
@@ -1091,7 +1091,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                     <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{n.time}</div>
                   </div>
                 ))}
-                <div data-press style={{ textAlign: "center", padding: "14px 20px", cursor: "pointer", borderTop: `1px solid ${C.border}` }}>
+                <div onClick={onAvatarClick} data-press style={{ textAlign: "center", padding: "14px 20px", cursor: "pointer", borderTop: `1px solid ${C.border}` }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: C.accent }}>Все новости →</span>
                 </div>
               </div>
@@ -1406,7 +1406,7 @@ export default function FreedomV6() {
         {/* 9. NEWS */}
         <div style={{ padding: "0 20px 24px" }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "#64748B", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 12 }}>Новости</div>
-          <NewsBlock />
+          <NewsBlock onAvatarClick={() => setDebugOpen(true)} />
         </div>
 
       </div>

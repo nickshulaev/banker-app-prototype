@@ -612,16 +612,6 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         </div>
       )}
 
-      {/* Status bar */}
-      <div style={{ height: 48, flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 24px" }}>
-        <span style={{ fontSize: 15, fontWeight: 600, color: C.text }}>9:41</span>
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <svg width="17" height="12" viewBox="0 0 17 12"><rect y="8" width="3" height="4" rx=".5" fill={C.text}/><rect x="4.5" y="5" width="3" height="7" rx=".5" fill={C.text}/><rect x="9" y="2" width="3" height="10" rx=".5" fill={C.text}/><rect x="13.5" y="0" width="3" height="12" rx=".5" fill={C.text} opacity=".3"/></svg>
-          <svg width="16" height="12" viewBox="0 0 16 12"><circle cx="8" cy="10" r="1.2" fill={C.text}/><path d="M5 7.5a4.5 4.5 0 016 0" stroke={C.text} strokeWidth="1.3" fill="none" strokeLinecap="round"/><path d="M2.5 5a8 8 0 0111 0" stroke={C.text} strokeWidth="1.3" fill="none" strokeLinecap="round"/></svg>
-          <svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="22" height="12" rx="2.5" stroke={C.text} strokeOpacity=".35" fill="none"/><rect x="24" y="3.5" width="1.5" height="6" rx=".75" fill={C.text} opacity=".4"/><rect x="2" y="2" width="18" height="9" rx="1.5" fill={C.text}/></svg>
-        </div>
-      </div>
-
       <div style={{ flex: 1, overflow: "auto" }}>
         {/* Header */}
         <div style={{ padding: "8px 24px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -1264,20 +1254,6 @@ export default function FreedomV6() {
           onClose={() => setPickerOpen(false)}
         />
       )}
-
-      {/* Status bar */}
-      <div style={{
-        height: 48, flexShrink: 0,
-        display: "flex", justifyContent: "space-between", alignItems: "center",
-        padding: "0 20px", backgroundColor: "#0F172A", zIndex: 20,
-      }}>
-        <span style={{ fontSize: 15, fontWeight: 600, color: "#F1F5F9" }}>12:59</span>
-        <div style={{ backgroundColor: "#1E293B", borderRadius: 20, padding: "4px 14px" }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "#22C55E" }}>Freedom</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "#F1F5F9" }}>Banker</span>
-        </div>
-        <div onClick={() => setDebugOpen(true)} data-press style={{ width: 30, height: 30, borderRadius: 20, backgroundColor: "#334155", cursor: "pointer", transition: "opacity 0.1s" }} />
-      </div>
 
       {/* Sticky search */}
       {searchStuck && (

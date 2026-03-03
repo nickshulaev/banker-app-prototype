@@ -522,7 +522,7 @@ function DebugModal({ theme, setTheme, onClose }) {
 }
 
 /* ─── Stripe Light Theme ─── */
-function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT, productTab, setProductTab, openCurrency, setOpenCurrency }) {
+function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT, productTab, setProductTab, openCurrency, setOpenCurrency, searchQuery, setSearchQuery, searchFocused, setSearchFocused }) {
   const C = { bg: "#F0EFEB", card: "#FFFFFF", accent: "#EF4444", text: "#1A1A1A", sub: "#6B7280", muted: "#9CA3AF", border: "#E5E5E0" };
 
   const totalDisplay = convertTo(totalInKZT, displayCurrency);
@@ -601,6 +601,37 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
           <div onClick={onAvatarClick} data-press style={{ cursor: "pointer", padding: "8px 0", transition: "opacity 0.1s" }}>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M5 8l5 5 5-5" stroke={C.text} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+        </div>
+
+        {/* Search bar */}
+        <div style={{ padding: "8px 20px 0", display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{
+            flex: 1, display: "flex", alignItems: "center", gap: 8,
+            backgroundColor: C.card, borderRadius: 12, padding: "9px 14px",
+            border: searchFocused ? `1px solid ${C.accent}` : `1px solid ${C.border}`,
+            transition: "border-color 0.15s",
+          }}>
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+              <circle cx="7" cy="7" r="4.5" stroke={C.muted} strokeWidth="1.5"/>
+              <path d="M10.5 10.5L14 14" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <input
+              value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)}
+              placeholder="Найти контакт, продукт..."
+              style={{ flex: 1, background: "none", border: "none", outline: "none", color: C.text, fontSize: 14, fontFamily: "inherit" }}
+            />
+          </div>
+          <div data-press style={{
+            width: 40, height: 40, borderRadius: 12,
+            backgroundColor: C.card, border: `1px solid ${C.border}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", flexShrink: 0, transition: "opacity 0.1s",
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" fill={C.muted}/>
             </svg>
           </div>
         </div>
@@ -1074,6 +1105,10 @@ export default function FreedomV6() {
           setProductTab={setProductTab}
           openCurrency={openCurrency}
           setOpenCurrency={setOpenCurrency}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          searchFocused={searchFocused}
+          setSearchFocused={setSearchFocused}
         />
       </>
     );

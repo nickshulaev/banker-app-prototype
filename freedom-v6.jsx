@@ -525,6 +525,39 @@ function DebugModal({ theme, setTheme, onClose }) {
 function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT, productTab, setProductTab, openCurrency, setOpenCurrency, searchQuery, setSearchQuery, searchFocused, setSearchFocused }) {
   const C = { bg: "#F0EFEB", card: "#FFFFFF", accent: "#EF4444", text: "#1A1A1A", sub: "#6B7280", muted: "#9CA3AF", border: "#E5E5E0" };
 
+  const [vizMode, setVizMode] = useState("bars");
+
+  const vizData = useMemo(() => {
+    // Bars data
+    const barColors = { KZT: "#EF4444", USD: "#DC2626", RUB: "#F97316", EUR: "#F87171" };
+    const barFlags = { KZT: "🇰🇿", USD: "🇺🇸", RUB: "🇷🇺", EUR: "🇪🇺" };
+    const currencyWallets = wallets.filter(w => w.code !== "FREEDOM");
+    const maxKZT = Math.max(...currencyWallets.map(w => w.total * (RATES_TO_KZT[w.code] || 1)), 1);
+    const bars = currencyWallets.map(w => {
+      const inKZT = w.total * (RATES_TO_KZT[w.code] || 1);
+      return {
+        code: w.code,
+        height: Math.max((inKZT / maxKZT) * 145, 30),
+        color: barColors[w.code] || C.accent,
+        flag: barFlags[w.code] || "💰",
+      };
+    });
+    const freedomWallet = wallets.find(w => w.code === "FREEDOM");
+
+    // Donut data
+    const bankKZT = totalInKZT;
+    const depositsKZT = DEPOSITS.reduce((s, d) => s + d.balance * (RATES_TO_KZT[d.currency] || 1), 0);
+    const brokerKZT = BROKER_ACCOUNTS.flatMap(g => g.accounts).reduce((s, a) => s + a.balance * (RATES_TO_KZT[a.currency] || 1), 0);
+    const grandTotal = bankKZT + depositsKZT + brokerKZT;
+    const segments = [
+      { label: "Bank", value: bankKZT, color: "#EF4444" },
+      { label: "Deposits", value: depositsKZT, color: "#F87171" },
+      { label: "Broker", value: brokerKZT, color: "#FCA5A5" },
+    ];
+
+    return { bars, freedomWallet, segments, grandTotal };
+  }, [wallets, totalInKZT]);
+
   const totalDisplay = convertTo(totalInKZT, displayCurrency);
   const displayMeta = CURRENCY_META[displayCurrency] || { symbol: displayCurrency, flag: "💰" };
   const availableCurrencies = Object.keys(CURRENCY_META);
@@ -636,13 +669,112 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
           </div>
         </div>
 
-        {/* Abstract red art */}
-        <div style={{ padding: "28px 0 16px", display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 6, height: 210 }}>
-          <div style={{ width: 54, height: 130, borderRadius: 27, backgroundColor: C.accent }} />
-          <div style={{ width: 54, height: 80, borderRadius: 27, backgroundColor: C.accent }} />
-          <div style={{ width: 54, height: 155, borderRadius: 27, backgroundColor: C.accent }} />
-          <div style={{ width: 54, height: 62, borderRadius: 27, backgroundColor: C.accent }} />
-          <div style={{ width: 58, height: 58, borderRadius: 29, backgroundColor: C.accent }} />
+        {/* Data visualization: bars / donut toggle */}
+        <div
+          onClick={() => setVizMode(m => m === "bars" ? "ring" : "bars")}
+          style={{ position: "relative", height: 210, cursor: "pointer", userSelect: "none" }}
+        >
+          {/* Viz 1: Currency bars */}
+          <div style={{
+            position: "absolute", inset: 0,
+            opacity: vizMode === "bars" ? 1 : 0,
+            transition: "opacity 0.3s",
+            pointerEvents: vizMode === "bars" ? "auto" : "none",
+            padding: "20px 0 26px",
+            display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 8,
+          }}>
+            {vizData.bars.map(b => (
+              <div key={b.code} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                <div style={{
+                  width: 50, height: b.height, borderRadius: 25,
+                  backgroundColor: b.color,
+                  transition: "height 0.4s ease",
+                }} />
+                <span style={{ fontSize: 16 }}>{b.flag}</span>
+              </div>
+            ))}
+            {vizData.freedomWallet && (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                <div style={{
+                  width: 50, height: 50, borderRadius: 25,
+                  backgroundColor: "#B91C1C",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <span style={{ color: "#fff", fontSize: 20, fontWeight: 800 }}>F</span>
+                </div>
+                <span style={{ fontSize: 16 }}>🪙</span>
+              </div>
+            )}
+          </div>
+
+          {/* Viz 2: Asset donut */}
+          <div style={{
+            position: "absolute", inset: 0,
+            opacity: vizMode === "ring" ? 1 : 0,
+            transition: "opacity 0.3s",
+            pointerEvents: vizMode === "ring" ? "auto" : "none",
+            padding: "16px 24px 26px",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 24,
+          }}>
+            {(() => {
+              const r = 55, sw = 18, circumference = 2 * Math.PI * r;
+              let offset = 0;
+              return (
+                <>
+                  <svg width={150} height={150} viewBox="0 0 150 150">
+                    {vizData.segments.map(seg => {
+                      const pct = vizData.grandTotal > 0 ? seg.value / vizData.grandTotal : 0;
+                      const dash = pct * circumference;
+                      const el = (
+                        <circle
+                          key={seg.label}
+                          cx={75} cy={75} r={r}
+                          fill="none"
+                          stroke={seg.color}
+                          strokeWidth={sw}
+                          strokeDasharray={`${dash} ${circumference - dash}`}
+                          strokeDashoffset={-offset}
+                          strokeLinecap="butt"
+                          transform="rotate(-90 75 75)"
+                        />
+                      );
+                      offset += dash;
+                      return el;
+                    })}
+                    <text x={75} y={70} textAnchor="middle" style={{ fontSize: 18, fontWeight: 700, fill: C.text }}>
+                      {fmtCompact(convertTo(vizData.grandTotal, displayCurrency))}
+                    </text>
+                    <text x={75} y={90} textAnchor="middle" style={{ fontSize: 12, fontWeight: 500, fill: C.sub }}>
+                      {(CURRENCY_META[displayCurrency] || {}).symbol || displayCurrency}
+                    </text>
+                  </svg>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {vizData.segments.map(seg => {
+                      const pct = vizData.grandTotal > 0 ? ((seg.value / vizData.grandTotal) * 100).toFixed(1) : "0";
+                      return (
+                        <div key={seg.label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: seg.color, flexShrink: 0 }} />
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{seg.label}</div>
+                            <div style={{ fontSize: 11, color: C.sub }}>{pct}%</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Page indicator dots */}
+          <div style={{
+            position: "absolute", bottom: 6, left: 0, right: 0,
+            display: "flex", justifyContent: "center", gap: 6,
+          }}>
+            <div style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: vizMode === "bars" ? C.accent : C.border, transition: "background-color 0.3s" }} />
+            <div style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: vizMode === "ring" ? C.accent : C.border, transition: "background-color 0.3s" }} />
+          </div>
         </div>
 
         {/* Stories row */}

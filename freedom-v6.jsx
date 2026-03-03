@@ -555,7 +555,7 @@ function DebugModal({ theme, setTheme, onClose }) {
 }
 
 /* ─── Stripe Light Theme ─── */
-function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT, productTab, setProductTab, openCurrency, setOpenCurrency, searchQuery, setSearchQuery, searchFocused, setSearchFocused }) {
+function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT, productTab, setProductTab, openCurrency, setOpenCurrency, searchQuery, setSearchQuery, searchFocused, setSearchFocused, fcExpanded, setFcExpanded }) {
   const C = { bg: "#F0EFEB", card: "#FFFFFF", accent: "#0AB321", text: "#1A1A1A", sub: "#6B7280", muted: "#9CA3AF", border: "#E5E5E0" };
 
 
@@ -660,32 +660,56 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             );
           })()}
 
-          {/* Freedom Currency mini-card */}
+          {/* Freedom Tokens — badge + expandable details */}
           {(() => {
             const fcBalance = wallets.find(w => w.code === "FREEDOM")?.total || 0;
             const fcValueUsd = (fcBalance / 10000 * FRHC_PRICE);
             return (
-              <div data-press style={{
-                marginTop: 14, backgroundColor: C.card, borderRadius: 12,
-                border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.accent}`,
-                padding: "12px 14px", cursor: "pointer", transition: "opacity 0.1s",
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 15 }}>⭐</span>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{fcBalance}</span>
-                    <span style={{ fontSize: 13, fontWeight: 500, color: C.sub }}>Freedom Tokens</span>
+              <div style={{ marginTop: 14 }}>
+                {/* Collapsed badge — always visible */}
+                <div data-press onClick={() => setFcExpanded(v => !v)} style={{
+                  display: "flex", alignItems: "center", gap: 8, cursor: "pointer", transition: "opacity 0.1s",
+                }}>
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 4,
+                    backgroundColor: C.card, borderRadius: 8, border: `1px solid ${C.border}`,
+                    padding: "3px 8px",
+                  }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: C.accent }}>F</span>
+                    <span style={{ fontSize: 12, color: C.text, fontWeight: 600, fontFeatureSettings: "'tnum'" }}>
+                      {fcBalance.toLocaleString("ru-RU")}
+                    </span>
                   </div>
-                  <span style={{ fontSize: 12, color: C.muted, fontFeatureSettings: "'tnum'" }}>≈ ${fcValueUsd.toFixed(2)}</span>
+                  <span style={{ fontSize: 12, color: C.sub, fontWeight: 500 }}>Freedom Tokens</span>
+                  <span style={{
+                    fontSize: 10, color: C.muted, transition: "transform 0.2s",
+                    transform: fcExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                    display: "inline-block",
+                  }}>▼</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 11, color: C.muted }}>FRHC</span>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: C.text, fontFeatureSettings: "'tnum'" }}>${FRHC_PRICE}</span>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: C.accent }}>↑ {FRHC_CHANGE}%</span>
+
+                {/* Expanded details — FRHC price, FC value */}
+                {fcExpanded && (
+                  <div style={{
+                    marginTop: 8, backgroundColor: C.card, borderRadius: 12,
+                    border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.accent}`,
+                    padding: "10px 14px",
+                    animation: "fadeIn 0.15s ease-out",
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 11, color: C.muted }}>FRHC</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: C.text, fontFeatureSettings: "'tnum'" }}>${FRHC_PRICE}</span>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: C.accent }}>↑ {FRHC_CHANGE}%</span>
+                      </div>
+                      <span style={{ fontSize: 12, color: C.muted, fontFeatureSettings: "'tnum'" }}>≈ ${fcValueUsd.toFixed(2)}</span>
+                    </div>
+                    <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 11, color: C.sub }}>1 акция FRHC = 10 000 FC</span>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: C.accent, cursor: "pointer" }}>Подробнее →</span>
+                    </div>
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: C.accent }}>Подробнее →</span>
-                </div>
+                )}
               </div>
             );
           })()}
@@ -782,34 +806,50 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
           </div>
         </div>
 
-        {/* Transfer corridors banner */}
+        {/* Transfer corridors banner — gradient promo */}
         <div data-press style={{
-          margin: "0 20px 16px", padding: "16px 18px",
-          backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`,
-          cursor: "pointer", transition: "opacity 0.1s",
+          margin: "0 20px 16px", padding: "18px 20px",
+          background: `linear-gradient(135deg, ${C.accent}, #06B6D4)`,
+          borderRadius: 16, cursor: "pointer", transition: "opacity 0.1s",
+          position: "relative", overflow: "hidden",
         }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          {/* Subtle decorative circle */}
+          <div style={{
+            position: "absolute", top: -20, right: -20,
+            width: 80, height: 80, borderRadius: "50%",
+            background: "rgba(255,255,255,0.1)",
+          }}/>
+          <div style={{
+            position: "absolute", bottom: -12, left: 40,
+            width: 50, height: 50, borderRadius: "50%",
+            background: "rgba(255,255,255,0.07)",
+          }}/>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, position: "relative" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 16 }}>🌍</span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Переводы в 12 валют</span>
+              <span style={{ fontSize: 18 }}>🌍</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>Переводы в 12 валют</span>
             </div>
             <span style={{
-              fontSize: 10, fontWeight: 700, color: C.accent,
-              backgroundColor: C.accent + "15", borderRadius: 6, padding: "2px 6px",
-              textTransform: "uppercase", letterSpacing: "0.03em",
+              fontSize: 10, fontWeight: 700, color: "#fff",
+              backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 6, padding: "3px 8px",
+              textTransform: "uppercase", letterSpacing: "0.04em",
             }}>без комиссии</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8, position: "relative" }}>
             {[
               { from: "🇰🇿", to: "🇷🇺" },
               { from: "🇰🇿", to: "🇬🇪" },
               { from: "🇰🇿", to: "🇺🇿" },
             ].map((c, i) => (
-              <span key={i} style={{ fontSize: 13, letterSpacing: "0.02em" }}>{c.from}→{c.to}</span>
+              <span key={i} style={{
+                fontSize: 14, letterSpacing: "0.02em", color: "#fff",
+                backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 8, padding: "2px 8px",
+              }}>{c.from}→{c.to}</span>
             ))}
-            <span style={{ fontSize: 11, color: C.muted, fontWeight: 500 }}>+9</span>
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>+9</span>
           </div>
-          <div style={{ fontSize: 11, color: C.muted }}>SWIFT · Western Union · Золотая Корона</div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", position: "relative" }}>SWIFT · Western Union · Золотая Корона</div>
         </div>
 
         {/* Product tabs */}
@@ -1222,6 +1262,7 @@ export default function FreedomV6() {
   const [productTab, setProductTab] = useState("bank");
   const [theme, setTheme] = useState("dark");
   const [debugOpen, setDebugOpen] = useState(false);
+  const [fcExpanded, setFcExpanded] = useState(false);
 
   const scrollRef = useRef(null);
   const sentinelRef = useRef(null);
@@ -1293,6 +1334,8 @@ export default function FreedomV6() {
           setSearchQuery={setSearchQuery}
           searchFocused={searchFocused}
           setSearchFocused={setSearchFocused}
+          fcExpanded={fcExpanded}
+          setFcExpanded={setFcExpanded}
         />
       </>
     );

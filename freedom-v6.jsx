@@ -522,15 +522,12 @@ function DebugModal({ theme, setTheme, onClose }) {
 }
 
 /* ─── Stripe Light Theme ─── */
-function StripeThemeApp({ onAvatarClick }) {
+function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT }) {
   const C = { bg: "#F0EFEB", card: "#FFFFFF", accent: "#EF4444", text: "#1A1A1A", sub: "#6B7280", muted: "#9CA3AF", border: "#E5E5E0" };
 
-  const totalInKZT = useMemo(() => {
-    let s = 0; RAW_ACCOUNTS.forEach(a => { s += a.balance * (RATES_TO_KZT[a.currency] || 1); }); return s;
-  }, []);
-  const totalUSD = totalInKZT / RATES_TO_KZT.USD;
-  const whole = Math.floor(totalUSD).toLocaleString("en-US");
-  const cents = "." + Math.round((totalUSD % 1) * 100).toString().padStart(2, "0");
+  const totalDisplay = convertTo(totalInKZT, displayCurrency);
+  const displayMeta = CURRENCY_META[displayCurrency] || { symbol: displayCurrency, flag: "💰" };
+  const availableCurrencies = Object.keys(CURRENCY_META);
 
   return (
     <div style={{
@@ -539,6 +536,50 @@ function StripeThemeApp({ onAvatarClick }) {
       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
     }}>
       <style>{`[data-press]:active { opacity: 0.7 !important; }`}</style>
+
+      {/* Currency picker modal — light styled */}
+      {pickerOpen && (
+        <div onClick={() => setPickerOpen(false)} style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: "#00000033", zIndex: 100,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            backgroundColor: C.card, borderRadius: 20, padding: "8px 0",
+            width: 260, maxHeight: 340, overflow: "auto",
+            boxShadow: "0 20px 60px #00000022", border: `1px solid ${C.border}`,
+          }}>
+            <div style={{ padding: "12px 20px 8px", fontSize: 13, fontWeight: 600, color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+              Отображать баланс в
+            </div>
+            {availableCurrencies.map(code => {
+              const meta = CURRENCY_META[code] || { symbol: code, flag: "💰", name: code, color: C.muted };
+              const isActive = code === displayCurrency;
+              return (
+                <div key={code} onClick={() => { setDisplayCurrency(code); setPickerOpen(false); }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 12,
+                    padding: "12px 20px", cursor: "pointer",
+                    backgroundColor: isActive ? "#F5F5F0" : "transparent",
+                  }}
+                >
+                  <span style={{ fontSize: 20 }}>{meta.flag}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{code}</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>{meta.name}</div>
+                  </div>
+                  <span style={{ fontSize: 14, color: C.muted }}>{meta.symbol}</span>
+                  {isActive && (
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M3 8.5l3.5 3.5L13 5" stroke={C.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Status bar */}
       <div style={{ height: 48, flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 24px" }}>
@@ -578,8 +619,45 @@ function StripeThemeApp({ onAvatarClick }) {
           <div style={{ fontSize: 14, color: C.sub, marginBottom: 6 }}>
             Total Balance – ****{CARDS[0].last4}
           </div>
-          <div style={{ fontSize: 46, fontWeight: 800, color: C.text, fontFeatureSettings: "'tnum'", letterSpacing: "-0.03em", lineHeight: 1 }}>
-            ${whole}<span style={{ color: C.muted, fontWeight: 500 }}>{cents}</span>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+            <div style={{ fontSize: 46, fontWeight: 800, color: C.text, fontFeatureSettings: "'tnum'", letterSpacing: "-0.03em", lineHeight: 1 }}>
+              {fmtCompact(totalDisplay)}
+            </div>
+            <div onClick={() => setPickerOpen(true)} data-press style={{
+              display: "inline-flex", alignItems: "center", gap: 3,
+              cursor: "pointer", padding: "3px 10px", borderRadius: 8,
+              backgroundColor: C.card, border: `1px solid ${C.border}`,
+              transition: "opacity 0.1s",
+            }}>
+              <span style={{ fontSize: 20, fontWeight: 500, color: C.sub }}>{displayMeta.symbol}</span>
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M3 4l2 2 2-2" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+          </div>
+
+          {/* Currency breakdown */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" }}>
+            {wallets.filter(w => w.code !== "FREEDOM").slice(0, 4).map(w => {
+              const meta = CURRENCY_META[w.code] || { symbol: w.code, flag: "💰" };
+              return (
+                <div key={w.code} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ fontSize: 13 }}>{meta.flag}</span>
+                  <span style={{ fontSize: 12, color: C.sub, fontWeight: 500, fontFeatureSettings: "'tnum'" }}>{fmtCompact(w.total)}</span>
+                </div>
+              );
+            })}
+            {/* FREEDOM cashback badge */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 4,
+              backgroundColor: C.card, borderRadius: 8, border: `1px solid ${C.border}`,
+              padding: "3px 8px",
+            }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: C.accent }}>F</span>
+              <span style={{ fontSize: 12, color: C.text, fontWeight: 600, fontFeatureSettings: "'tnum'" }}>
+                {(wallets.find(w => w.code === "FREEDOM")?.total || 0).toLocaleString("ru-RU")}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -710,7 +788,15 @@ export default function FreedomV6() {
     return (
       <>
         {debugOpen && <DebugModal theme={theme} setTheme={setTheme} onClose={() => setDebugOpen(false)} />}
-        <StripeThemeApp onAvatarClick={() => setDebugOpen(true)} />
+        <StripeThemeApp
+          onAvatarClick={() => setDebugOpen(true)}
+          wallets={wallets}
+          displayCurrency={displayCurrency}
+          setDisplayCurrency={setDisplayCurrency}
+          pickerOpen={pickerOpen}
+          setPickerOpen={setPickerOpen}
+          totalInKZT={totalInKZT}
+        />
       </>
     );
   }

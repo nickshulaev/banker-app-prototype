@@ -872,14 +872,89 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         )}
 
         {productTab === "deposits" && (
-          <div style={{ padding: "4px 20px 40px", textAlign: "center" }}>
-            <div style={{ padding: "40px 0", color: C.muted, fontSize: 14 }}>Deposits content — Step 6</div>
+          <div style={{ padding: "4px 20px 40px" }}>
+            {/* Promo banner */}
+            <div style={{
+              borderRadius: 12, padding: "20px 22px", marginBottom: 24, position: "relative", overflow: "hidden",
+              backgroundColor: C.card, border: `1px solid ${C.border}`,
+            }}>
+              <div style={{ fontSize: 17, fontWeight: 700, color: C.text, lineHeight: 1.3, marginBottom: 8 }}>
+                Long-term investment
+              </div>
+              <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.4 }}>up to 7.28% per annum in USD</div>
+              <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.4 }}>up to 3.15% per annum in EUR</div>
+              <div style={{ position: "absolute", right: 18, top: "50%", transform: "translateY(-50%)", display: "flex" }}>
+                <div style={{ width: 36, height: 36, borderRadius: 20, backgroundColor: "#F5F5F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: C.sub }}>$</div>
+                <div style={{ width: 36, height: 36, borderRadius: 20, backgroundColor: "#F5F5F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: C.sub, marginLeft: -8 }}>€</div>
+              </div>
+            </div>
+
+            {/* Section header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <span style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Deposits</span>
+              <div style={{
+                width: 28, height: 28, borderRadius: 8, border: `1.5px solid ${C.accent}`,
+                display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+              }}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M7 3v8M3 7h8" stroke={C.accent} strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </div>
+            </div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>The calculation is approximate and is not an offer</div>
+
+            {/* Deposit list */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {DEPOSITS.map(dep => {
+                const cm = CURRENCY_META[dep.currency] || { symbol: dep.currency };
+                return (
+                  <div key={dep.id} style={{
+                    backgroundColor: C.card, borderRadius: 12, padding: "14px 18px",
+                    cursor: "pointer", border: `1px solid ${C.border}`,
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: C.text, maxWidth: "55%" }}>{dep.name}</span>
+                      <span style={{ fontSize: 16, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
+                        {fmtFull(dep.balance)} <span style={{ color: C.accent }}>{cm.symbol}</span>
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 12, color: C.muted }}>Closing date - {dep.closingDate}</span>
+                      <span style={{ fontSize: 12, color: C.muted }}>Rate {dep.rate}%</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
         {productTab === "broker" && (
-          <div style={{ padding: "4px 20px 40px", textAlign: "center" }}>
-            <div style={{ padding: "40px 0", color: C.muted, fontSize: 14 }}>Broker content — Step 7</div>
+          <div style={{ padding: "4px 20px 40px" }}>
+            {BROKER_ACCOUNTS.map((group, gi) => (
+              <div key={gi} style={{ marginBottom: 24 }}>
+                <span style={{ fontSize: 20, fontWeight: 700, color: C.text, display: "block", marginBottom: 14 }}>{group.group}</span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {group.accounts.map(acc => {
+                    const cm = CURRENCY_META[acc.currency] || { symbol: acc.currency };
+                    return (
+                      <div key={acc.id} style={{
+                        backgroundColor: C.card, borderRadius: 12, padding: "14px 18px",
+                        cursor: "pointer", border: `1px solid ${C.border}`,
+                      }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+                          <span style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{acc.id}</span>
+                          <span style={{ fontSize: 17, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
+                            {fmtFull(acc.balance)} <span style={{ fontSize: 13, color: C.muted }}>{acc.currency}</span>
+                          </span>
+                        </div>
+                        <span style={{ fontSize: 12, color: C.muted }}>{acc.type}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create vite@latest . -- --template react)",
+      "Bash(brew --version)",
+      "Bash(brew install node)",
+      "Bash(sudo chown -R nikitashulaev /usr/local/var/homebrew)",
+      "Bash(export PATH=\"$HOME/.local/node/bin:$PATH\")",
+      "Bash(node --version)",
+      "Bash(npm --version)",
+      "Bash(npm create vite@latest ./ -- --template react)",
+      "Bash(npm install)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(echo \"$HOME/.local/node/bin/npm\")",
+      "Bash(echo $PATH)",
+      "Bash(python3 -c \":*)",
+      "Bash(python3:*)"
+    ]
+  }
+}

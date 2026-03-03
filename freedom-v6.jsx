@@ -47,12 +47,16 @@ const CARDS = [
 const CARD_NET = Object.fromEntries(CARDS.map(c => [c.last4, c.network]));
 
 const STORIES = [
-  { id: 1, title: "Be cautious", icon: "🛡️", viewed: false },
-  { id: 2, title: "Potential Income", icon: "💰", viewed: false },
-  { id: 3, title: "Service Rates", icon: "📊", viewed: true },
-  { id: 4, title: "Official Pages", icon: "📱", viewed: true },
-  { id: 5, title: "Update Info", icon: "🔄", viewed: true },
+  { id: 1, title: "FC кэшбэк", icon: "⭐", viewed: false },
+  { id: 2, title: "Invest Card", icon: "💳", viewed: false },
+  { id: 3, title: "Страхование", icon: "🛡️", viewed: true },
+  { id: 4, title: "Тарифы", icon: "📊", viewed: true },
+  { id: 5, title: "Новости", icon: "📰", viewed: true },
 ];
+
+/* ─── FRHC / Freedom Currency mock data ─── */
+const FRHC_PRICE = 194;
+const FRHC_CHANGE = 12.4; // % за месяц
 
 const WEEK_SPEND_KZT = [15200, 8500, 22100, 12800, 0, 0, 0];
 const WEEK_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
@@ -458,7 +462,7 @@ function DepositsContent() {
           </svg>
         </div>
       </div>
-      <div style={{ fontSize: 12, color: "#64748B", marginBottom: 16 }}>The calculation is approximate and is not an offer</div>
+      <div style={{ fontSize: 12, color: "#64748B", marginBottom: 16 }}>Расчёт приблизительный и не является офертой</div>
 
       {/* Deposit list */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -476,8 +480,8 @@ function DepositsContent() {
                 </span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 12, color: "#64748B" }}>Closing date - {dep.closingDate}</span>
-                <span style={{ fontSize: 12, color: "#64748B" }}>Rate {dep.rate}%</span>
+                <span style={{ fontSize: 12, color: "#64748B" }}>Дата закрытия — {dep.closingDate}</span>
+                <span style={{ fontSize: 12, color: "#64748B" }}>Ставка {dep.rate}%</span>
               </div>
             </div>
           );
@@ -656,20 +660,35 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             );
           })()}
 
-          {/* FREEDOM cashback badge */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14 }}>
-            <div style={{
-              display: "flex", alignItems: "center", gap: 4,
-              backgroundColor: C.card, borderRadius: 8, border: `1px solid ${C.border}`,
-              padding: "3px 8px",
-            }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: C.accent }}>F</span>
-              <span style={{ fontSize: 12, color: C.text, fontWeight: 600, fontFeatureSettings: "'tnum'" }}>
-                {(wallets.find(w => w.code === "FREEDOM")?.total || 0).toLocaleString("ru-RU")}
-              </span>
-            </div>
-            <span style={{ fontSize: 12, color: C.sub, fontWeight: 500 }}>Freedom Tokens</span>
-          </div>
+          {/* Freedom Currency mini-card */}
+          {(() => {
+            const fcBalance = wallets.find(w => w.code === "FREEDOM")?.total || 0;
+            const fcValueUsd = (fcBalance / 10000 * FRHC_PRICE);
+            return (
+              <div data-press style={{
+                marginTop: 14, backgroundColor: C.card, borderRadius: 12,
+                border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.accent}`,
+                padding: "12px 14px", cursor: "pointer", transition: "opacity 0.1s",
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 15 }}>⭐</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{fcBalance}</span>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: C.sub }}>Freedom Tokens</span>
+                  </div>
+                  <span style={{ fontSize: 12, color: C.muted, fontFeatureSettings: "'tnum'" }}>≈ ${fcValueUsd.toFixed(2)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 11, color: C.muted }}>FRHC</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: C.text, fontFeatureSettings: "'tnum'" }}>${FRHC_PRICE}</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: C.accent }}>↑ {FRHC_CHANGE}%</span>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: C.accent }}>Подробнее →</span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Action buttons */}
@@ -761,6 +780,36 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Transfer corridors banner */}
+        <div data-press style={{
+          margin: "0 20px 16px", padding: "16px 18px",
+          backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`,
+          cursor: "pointer", transition: "opacity 0.1s",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 16 }}>🌍</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Переводы в 12 валют</span>
+            </div>
+            <span style={{
+              fontSize: 10, fontWeight: 700, color: C.accent,
+              backgroundColor: C.accent + "15", borderRadius: 6, padding: "2px 6px",
+              textTransform: "uppercase", letterSpacing: "0.03em",
+            }}>без комиссии</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            {[
+              { from: "🇰🇿", to: "🇷🇺" },
+              { from: "🇰🇿", to: "🇬🇪" },
+              { from: "🇰🇿", to: "🇺🇿" },
+            ].map((c, i) => (
+              <span key={i} style={{ fontSize: 13, letterSpacing: "0.02em" }}>{c.from}→{c.to}</span>
+            ))}
+            <span style={{ fontSize: 11, color: C.muted, fontWeight: 500 }}>+9</span>
+          </div>
+          <div style={{ fontSize: 11, color: C.muted }}>SWIFT · Western Union · Золотая Корона</div>
         </div>
 
         {/* Product tabs */}
@@ -1006,10 +1055,10 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
               backgroundColor: C.card, border: `1px solid ${C.border}`,
             }}>
               <div style={{ fontSize: 17, fontWeight: 700, color: C.text, lineHeight: 1.3, marginBottom: 8 }}>
-                Long-term investment
+                Долгосрочные вложения
               </div>
-              <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.4 }}>up to 7.28% per annum in USD</div>
-              <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.4 }}>up to 3.15% per annum in EUR</div>
+              <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.4 }}>до 7.28% годовых в USD</div>
+              <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.4 }}>до 3.15% годовых в EUR</div>
               <div style={{ position: "absolute", right: 18, top: "50%", transform: "translateY(-50%)", display: "flex" }}>
                 <div style={{ width: 36, height: 36, borderRadius: 20, backgroundColor: "#F5F5F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: C.sub }}>$</div>
                 <div style={{ width: 36, height: 36, borderRadius: 20, backgroundColor: "#F5F5F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: C.sub, marginLeft: -8 }}>€</div>
@@ -1028,7 +1077,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                 </svg>
               </div>
             </div>
-            <div style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>The calculation is approximate and is not an offer</div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>Расчёт приблизительный и не является офертой</div>
 
             {/* Deposit list */}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -1046,8 +1095,8 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                       </span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 12, color: C.muted }}>Closing date - {dep.closingDate}</span>
-                      <span style={{ fontSize: 12, color: C.muted }}>Rate {dep.rate}%</span>
+                      <span style={{ fontSize: 12, color: C.muted }}>Дата закрытия — {dep.closingDate}</span>
+                      <span style={{ fontSize: 12, color: C.muted }}>Ставка {dep.rate}%</span>
                     </div>
                   </div>
                 );

@@ -13,22 +13,22 @@ function usePressable() {
 
 /* ─── Data ─── */
 const RAW_ACCOUNTS = [
-  { product: "DepositCard R VISA Rew", last4: "4521", currency: "KZT", balance: 35251706.16 },
-  { product: "DepositCard R VISA Rew", last4: "4521", currency: "USD", balance: 113324.68 },
-  { product: "DepositCARD MC WE Rez7val VIP", last4: "4357", currency: "USD", balance: 130574.74 },
-  { product: "Business Premium Card", last4: "6608", currency: "KZT", balance: 4968007.40 },
-  { product: "Business Premium Card", last4: "0120", currency: "KZT", balance: 10000000.00 },
-  { product: "DepositCARD MCWorld Rez7val", last4: "3674", currency: "KZT", balance: 4046861.97 },
-  { product: "Deposit card DC ZP 0 Premium", last4: "4787", currency: "KZT", balance: 1772222.79 },
+  { product: "DepositCard R VISA Rew", last4: "4521", currency: "KZT", balance: 1350320.50 },
+  { product: "DepositCard R VISA Rew", last4: "4521", currency: "USD", balance: 412.80 },
+  { product: "DepositCARD MC WE Rez7val VIP", last4: "4357", currency: "USD", balance: 523.15 },
+  { product: "Business Premium Card", last4: "6608", currency: "KZT", balance: 387640.00 },
+  { product: "Business Premium Card", last4: "0120", currency: "KZT", balance: 52100.00 },
+  { product: "DepositCARD MCWorld Rez7val", last4: "3674", currency: "KZT", balance: 164230.45 },
+  { product: "Deposit card DC ZP 0 Premium", last4: "4787", currency: "KZT", balance: 89410.20 },
   { product: "Инвестиционная карта Global", last4: "1862", currency: "USD", balance: 358.42 },
   { product: "Инвестиционная карта Global", last4: "1862", currency: "KZT", balance: 30649.22 },
   { product: "Инвестиционная карта Global", last4: "1862", currency: "EUR", balance: 185.16 },
-  { product: "Инвестиционная карта TFOS", last4: "0160", currency: "USD", balance: 7206.81 },
-  { product: "Инвестиционная карта TFOS", last4: "0160", currency: "RUB", balance: 196.30 },
-  { product: "Инвестиционная карта Global", last4: "9201", currency: "KZT", balance: 30649.22 },
+  { product: "Инвестиционная карта TFOS", last4: "0160", currency: "USD", balance: 86.50 },
+  { product: "Инвестиционная карта TFOS", last4: "0160", currency: "RUB", balance: 12340.75 },
+  { product: "Инвестиционная карта Global", last4: "9201", currency: "KZT", balance: 15800.00 },
   { product: "DepositCARD MCWorld Rez7val", last4: "3674", currency: "FREEDOM", balance: 12 },
   { product: "EcoCard MC World Unlim", last4: "0426", currency: "USD", balance: 3.00 },
-  { product: "Deposit card DC ZP 0 Premium", last4: "4787", currency: "KZT", balance: 372222.79 },
+  { product: "Deposit card DC ZP 0 Premium", last4: "4787", currency: "KZT", balance: 42710.55 },
 ];
 
 const CARDS = [

@@ -656,20 +656,10 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             );
           })()}
 
-          {/* Currency breakdown */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 14, overflowX: "auto", scrollbarWidth: "none" }}>
-            {wallets.filter(w => w.code !== "FREEDOM").map(w => {
-              const meta = CURRENCY_META[w.code] || { symbol: w.code, flag: "💰" };
-              return (
-                <div key={w.code} style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                  <span style={{ fontSize: 13 }}>{meta.flag}</span>
-                  <span style={{ fontSize: 12, color: C.sub, fontWeight: 500, fontFeatureSettings: "'tnum'", whiteSpace: "nowrap" }}>{fmtCompact(w.total)}</span>
-                </div>
-              );
-            })}
-            {/* FREEDOM cashback badge */}
+          {/* FREEDOM cashback badge */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14 }}>
             <div style={{
-              display: "flex", alignItems: "center", gap: 4, flexShrink: 0,
+              display: "flex", alignItems: "center", gap: 4,
               backgroundColor: C.card, borderRadius: 8, border: `1px solid ${C.border}`,
               padding: "3px 8px",
             }}>
@@ -678,6 +668,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                 {(wallets.find(w => w.code === "FREEDOM")?.total || 0).toLocaleString("ru-RU")}
               </span>
             </div>
+            <span style={{ fontSize: 12, color: C.sub, fontWeight: 500 }}>Freedom Tokens</span>
           </div>
         </div>
 

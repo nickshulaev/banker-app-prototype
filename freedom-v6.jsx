@@ -59,7 +59,7 @@ const WEEK_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 const TODAY_INDEX = 3;
 
 const NEWS = [
-  { id: 1, featured: true, title: "Freedom Bank запускает мультивалютные переводы без комиссии", subtitle: "Новый тарифный план для премиум-клиентов с моментальными переводами в 12 валютах", time: "2ч назад", tag: "Breaking" },
+  { id: 1, featured: true, title: "Freedom Bank запускает мультивалютные переводы без комиссии", subtitle: "Новый тарифный план для премиум-клиентов с моментальными переводами в 12 валютах", time: "2ч назад", tag: "Срочное" },
   { id: 2, featured: false, title: "Изменение базовых ставок по депозитам с 1 апреля", time: "5ч назад" },
   { id: 3, featured: false, title: "Техническое обслуживание: плановые работы в ночь с 5 на 6 марта", time: "Вчера" },
 ];
@@ -448,7 +448,7 @@ function DepositsContent() {
 
       {/* Section header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-        <span style={{ fontSize: 20, fontWeight: 700, color: "#F1F5F9" }}>Deposits</span>
+        <span style={{ fontSize: 20, fontWeight: 700, color: "#F1F5F9" }}>Депозиты</span>
         <div style={{
           width: 28, height: 28, borderRadius: 8, border: "1.5px solid #22C55E",
           display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
@@ -523,7 +523,7 @@ function BrokerContent() {
 function DebugModal({ theme, setTheme, onClose }) {
   const themes = [
     { key: "dark", label: "Dark (v6)", desc: "Тёмная тема, зелёный акцент" },
-    { key: "stripe", label: "Stripe Light", desc: "Светлая, красный акцент, bento-grid" },
+    { key: "stripe", label: "Stripe Light", desc: "Светлая тема, зелёный акцент" },
   ];
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, backgroundColor: "#00000066", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -629,7 +629,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         {/* Balance */}
         <div style={{ padding: "12px 24px 0" }}>
           <div style={{ fontSize: 14, color: C.sub, marginBottom: 6 }}>
-            Total Balance
+            Общий баланс
           </div>
           {(() => {
             const balanceStr = fmtFull(totalDisplay);
@@ -748,6 +748,30 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
           </div>
         </div>
 
+        {/* Stories */}
+        <div style={{ padding: "4px 0 8px" }}>
+          <div style={{ display: "flex", gap: 12, overflowX: "auto", padding: "0 20px", scrollbarWidth: "none" }}>
+            {STORIES.map(s => (
+              <div key={s.id} data-press style={{ flexShrink: 0, width: 68, cursor: "pointer", transition: "opacity 0.1s" }}>
+                <div style={{
+                  width: 68, height: 68, borderRadius: 20,
+                  border: s.viewed ? `1.5px solid ${C.border}` : `1.5px solid ${C.accent}`,
+                  padding: 2, boxSizing: "border-box",
+                }}>
+                  <div style={{
+                    width: "100%", height: "100%", borderRadius: 16,
+                    background: C.card, border: `1px solid ${C.border}`,
+                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26,
+                  }}>{s.icon}</div>
+                </div>
+                <div style={{ fontSize: 10, fontWeight: 500, color: s.viewed ? C.muted : C.sub, textAlign: "center", marginTop: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {s.title}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Product tabs */}
         <div style={{ padding: "12px 20px 20px" }}>
           <div style={{
@@ -755,9 +779,9 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             border: `1px solid ${C.border}`,
           }}>
             {[
-              { key: "bank", label: "Bank" },
-              { key: "deposits", label: "Deposits" },
-              { key: "broker", label: "Broker" },
+              { key: "bank", label: "Банк" },
+              { key: "deposits", label: "Депозиты" },
+              { key: "broker", label: "Брокер" },
             ].map(tab => {
               const active = productTab === tab.key;
               return (
@@ -825,7 +849,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                             {fmtFull(convertTo(totalWeek, displayCurrency))} {displayMeta.symbol}
                           </span>
                         </div>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: C.accent }}>↓ 12%</div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: C.accent }}>↓ 12% к пр. неделе</div>
                       </div>
                     </>
                   );
@@ -1003,7 +1027,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
 
             {/* Section header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <span style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Deposits</span>
+              <span style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Депозиты</span>
               <div style={{
                 width: 28, height: 28, borderRadius: 8, border: `1.5px solid ${C.accent}`,
                 display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
@@ -1364,9 +1388,9 @@ export default function FreedomV6() {
             display: "flex", backgroundColor: "#1E293B", borderRadius: 12, padding: 3,
           }}>
             {[
-              { key: "bank", label: "Bank" },
-              { key: "deposits", label: "Deposits" },
-              { key: "broker", label: "Broker" },
+              { key: "bank", label: "Банк" },
+              { key: "deposits", label: "Депозиты" },
+              { key: "broker", label: "Брокер" },
             ].map(tab => {
               const active = productTab === tab.key;
               return (

@@ -561,7 +561,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
 
   const totalDisplay = convertTo(totalInKZT, displayCurrency);
   const displayMeta = CURRENCY_META[displayCurrency] || { symbol: displayCurrency, flag: "💰" };
-  const availableCurrencies = Object.keys(CURRENCY_META);
+  const availableCurrencies = Object.keys(CURRENCY_META).filter(c => c !== "FREEDOM");
 
   return (
     <div style={{
@@ -641,20 +641,17 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             const balanceFontSize = len <= 5 ? 56 : len <= 8 ? 50 : len <= 11 ? 44 : len <= 14 ? 38 : 30;
             return (
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ flex: 1, fontSize: balanceFontSize, fontWeight: 800, color: C.text, fontFeatureSettings: "'tnum'", letterSpacing: "-0.03em", lineHeight: 1, overflow: "hidden", whiteSpace: "nowrap" }}>
+                <div style={{ fontSize: balanceFontSize, fontWeight: 800, color: C.text, fontFeatureSettings: "'tnum'", letterSpacing: "-0.03em", lineHeight: 1, whiteSpace: "nowrap" }}>
                   {balanceStr}
                 </div>
                 <div onClick={() => setPickerOpen(true)} data-press style={{
                   width: Math.round(balanceFontSize * 0.78), height: Math.round(balanceFontSize * 0.78),
                   borderRadius: "50%", backgroundColor: C.accent,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  cursor: "pointer", flexShrink: 0, position: "relative",
+                  cursor: "pointer", flexShrink: 0,
                   transition: "transform 0.15s", boxShadow: `0 2px 8px ${C.accent}33`,
                 }}>
                   <span style={{ fontSize: Math.round(balanceFontSize * 0.38), fontWeight: 700, color: "#fff", lineHeight: 1 }}>{displayMeta.symbol}</span>
-                  <svg width="8" height="8" viewBox="0 0 8 8" fill="none" style={{ position: "absolute", bottom: 2, right: 2 }}>
-                    <path d="M2 3l2 2 2-2" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.7"/>
-                  </svg>
                 </div>
               </div>
             );
@@ -1281,7 +1278,7 @@ export default function FreedomV6() {
     return Object.entries(map).sort((a, b) => b[1].total - a[1].total).map(([code, data]) => ({ code, ...data }));
   }, []);
 
-  const availableCurrencies = useMemo(() => Object.keys(CURRENCY_META), []);
+  const availableCurrencies = useMemo(() => Object.keys(CURRENCY_META).filter(c => c !== "FREEDOM"), []);
 
   // Total balance in KZT, then convert to display currency
   const totalInKZT = useMemo(() => {

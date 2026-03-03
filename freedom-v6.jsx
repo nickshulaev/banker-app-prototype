@@ -40,7 +40,11 @@ const CARDS = [
   { id: 6, name: "EcoCard Unlim", last4: "0426", network: "mc", frozen: true },
   { id: 7, name: "DC ZP Premium", last4: "4787", network: "visa", frozen: false },
   { id: 8, name: "MCWorld Rez7val", last4: "3674", network: "mc", frozen: false },
+  { id: 9, name: "Business Premium", last4: "0120", network: "visa", frozen: false },
+  { id: 10, name: "Инвест Global", last4: "9201", network: "visa", frozen: false },
 ];
+
+const CARD_NET = Object.fromEntries(CARDS.map(c => [c.last4, c.network]));
 
 const STORIES = [
   { id: 1, title: "Be cautious", icon: "🛡️", viewed: false },
@@ -50,10 +54,14 @@ const STORIES = [
   { id: 5, title: "Update Info", icon: "🔄", viewed: true },
 ];
 
+const WEEK_SPEND_KZT = [15200, 8500, 22100, 12800, 0, 0, 0];
+const WEEK_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+const TODAY_INDEX = 3;
+
 const NEWS = [
-  { id: 1, featured: true, title: "Freedom Bank запускает мультивалютные переводы без комиссии", subtitle: "Новый тарифный план для премиум-клиентов с моментальными переводами в 12 валютах", time: "2ч назад", tag: "Продукт" },
-  { id: 2, featured: false, title: "Изменение базовых ставок по депозитам с 1 апреля", time: "5ч назад", tag: "Ставки" },
-  { id: 3, featured: false, title: "Техническое обслуживание: плановые работы в ночь с 5 на 6 марта", time: "Вчера", tag: "Сервис" },
+  { id: 1, featured: true, title: "Freedom Bank запускает мультивалютные переводы без комиссии", subtitle: "Новый тарифный план для премиум-клиентов с моментальными переводами в 12 валютах", time: "2ч назад", tag: "Breaking" },
+  { id: 2, featured: false, title: "Изменение базовых ставок по депозитам с 1 апреля", time: "5ч назад" },
+  { id: 3, featured: false, title: "Техническое обслуживание: плановые работы в ночь с 5 на 6 марта", time: "Вчера" },
 ];
 
 const CURRENCY_META = {
@@ -171,17 +179,38 @@ function CurrencyWallet({ code, total, accounts, isOpen, onToggle }) {
         </svg>
       </div>
       {isOpen && (
-        <div style={{ paddingBottom: 10, marginBottom: 2, borderBottom: "1px solid #1E293B" }}>
-          {sorted.map((acc, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0 8px 50px" }}>
-              <span style={{ fontSize: 12, color: "#94A3B8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 12 }}>
-                {acc.product} <span style={{ color: "#64748B" }}>•{acc.last4}</span>
-              </span>
-              <span style={{ fontSize: 12, fontWeight: 500, color: "#94A3B8", fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
-                {fmtFull(acc.balance)}
-              </span>
-            </div>
-          ))}
+        <div style={{ paddingBottom: 6, marginBottom: 2, borderBottom: "1px solid #1E293B" }}>
+          {sorted.map((acc, i) => {
+            const net = CARD_NET[acc.last4];
+            return (
+              <div key={i} {...handlers} style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "12px 0 12px 12px", cursor: "pointer",
+                borderBottom: i < sorted.length - 1 ? "1px solid #1E293B" : "none",
+                opacity: pressed ? 0.7 : 1, transition: "opacity 0.1s",
+              }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                  backgroundColor: net === "visa" ? "#1A1F71" : net === "mc" ? "#EB001B" : "#1E293B",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: "#fff", letterSpacing: "0.02em" }}>
+                    {net === "visa" ? "VISA" : net === "mc" ? "MC" : "💳"}
+                  </span>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "#F1F5F9", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{acc.product}</div>
+                  <div style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>••{acc.last4}</div>
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#F1F5F9", fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                  {fmtFull(acc.balance)}
+                </div>
+                <svg width="7" height="12" viewBox="0 0 7 12" fill="none" style={{ flexShrink: 0, marginLeft: 2 }}>
+                  <path d="M1 1l5 5-5 5" stroke="#64748B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -226,7 +255,7 @@ function NewsBlock() {
             display: "flex", alignItems: "flex-end", padding: 16,
           }}>
             <div>
-              <div style={{ display: "inline-block", fontSize: 10, fontWeight: 700, color: "#22C55E", backgroundColor: "#22C55E18", borderRadius: 8, padding: "2px 8px", marginBottom: 8, letterSpacing: "0.04em", textTransform: "uppercase" }}>{featured.tag}</div>
+              <div style={{ display: "inline-block", fontSize: 10, fontWeight: 700, color: "#E11D48", backgroundColor: "#E11D4818", borderRadius: 8, padding: "2px 8px", marginBottom: 8, letterSpacing: "0.04em", textTransform: "uppercase" }}>{featured.tag}</div>
               <div style={{ fontSize: 15, fontWeight: 700, color: "#F1F5F9", lineHeight: 1.35 }}>{featured.title}</div>
               <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4, lineHeight: 1.3 }}>{featured.subtitle}</div>
             </div>
@@ -237,7 +266,7 @@ function NewsBlock() {
       {secondary.map(n => (
         <div key={n.id} data-press style={{ padding: "12px 0", borderTop: "1px solid #1E293B", cursor: "pointer", transition: "opacity 0.1s" }}>
           <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: "#64748B", backgroundColor: "#1E293B", borderRadius: 8, padding: "2px 7px", flexShrink: 0, marginTop: 2 }}>{n.tag}</div>
+            {n.tag && <div style={{ fontSize: 10, fontWeight: 600, color: "#64748B", backgroundColor: "#1E293B", borderRadius: 8, padding: "2px 7px", flexShrink: 0, marginTop: 2 }}>{n.tag}</div>}
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#94A3B8", lineHeight: 1.35 }}>{n.title}</div>
               <div style={{ fontSize: 11, color: "#64748B", marginTop: 3 }}>{n.time}</div>
@@ -523,40 +552,8 @@ function DebugModal({ theme, setTheme, onClose }) {
 
 /* ─── Stripe Light Theme ─── */
 function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT, productTab, setProductTab, openCurrency, setOpenCurrency, searchQuery, setSearchQuery, searchFocused, setSearchFocused }) {
-  const C = { bg: "#F0EFEB", card: "#FFFFFF", accent: "#EF4444", text: "#1A1A1A", sub: "#6B7280", muted: "#9CA3AF", border: "#E5E5E0" };
+  const C = { bg: "#F0EFEB", card: "#FFFFFF", accent: "#0AB321", text: "#1A1A1A", sub: "#6B7280", muted: "#9CA3AF", border: "#E5E5E0" };
 
-  const [vizMode, setVizMode] = useState("bars");
-
-  const vizData = useMemo(() => {
-    // Bars data
-    const barColors = { KZT: "#EF4444", USD: "#DC2626", RUB: "#F97316", EUR: "#F87171" };
-    const barFlags = { KZT: "🇰🇿", USD: "🇺🇸", RUB: "🇷🇺", EUR: "🇪🇺" };
-    const currencyWallets = wallets.filter(w => w.code !== "FREEDOM");
-    const maxKZT = Math.max(...currencyWallets.map(w => w.total * (RATES_TO_KZT[w.code] || 1)), 1);
-    const bars = currencyWallets.map(w => {
-      const inKZT = w.total * (RATES_TO_KZT[w.code] || 1);
-      return {
-        code: w.code,
-        height: Math.max((inKZT / maxKZT) * 145, 30),
-        color: barColors[w.code] || C.accent,
-        flag: barFlags[w.code] || "💰",
-      };
-    });
-    const freedomWallet = wallets.find(w => w.code === "FREEDOM");
-
-    // Donut data
-    const bankKZT = totalInKZT;
-    const depositsKZT = DEPOSITS.reduce((s, d) => s + d.balance * (RATES_TO_KZT[d.currency] || 1), 0);
-    const brokerKZT = BROKER_ACCOUNTS.flatMap(g => g.accounts).reduce((s, a) => s + a.balance * (RATES_TO_KZT[a.currency] || 1), 0);
-    const grandTotal = bankKZT + depositsKZT + brokerKZT;
-    const segments = [
-      { label: "Bank", value: bankKZT, color: "#EF4444" },
-      { label: "Deposits", value: depositsKZT, color: "#F87171" },
-      { label: "Broker", value: brokerKZT, color: "#FCA5A5" },
-    ];
-
-    return { bars, freedomWallet, segments, grandTotal };
-  }, [wallets, totalInKZT]);
 
   const totalDisplay = convertTo(totalInKZT, displayCurrency);
   const displayMeta = CURRENCY_META[displayCurrency] || { symbol: displayCurrency, flag: "💰" };
@@ -568,7 +565,8 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
       height: "100vh", display: "flex", flexDirection: "column",
       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
     }}>
-      <style>{`[data-press]:active { opacity: 0.7 !important; }`}</style>
+      <style>{`[data-press]:active { opacity: 0.7 !important; }
+@keyframes sparkle-pulse { 0%,100% { transform: scale(1) rotate(0deg); opacity: 1; } 50% { transform: scale(1.18) rotate(18deg); opacity: 0.85; } }`}</style>
 
       {/* Currency picker modal — light styled */}
       {pickerOpen && (
@@ -626,10 +624,10 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
 
       <div style={{ flex: 1, overflow: "auto" }}>
         {/* Header */}
-        <div style={{ padding: "4px 24px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div style={{ padding: "8px 24px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
-            <div style={{ fontSize: 32, fontWeight: 800, color: C.text, lineHeight: 1.15, letterSpacing: "-0.02em" }}>Credit Card</div>
             <div style={{ fontSize: 32, fontWeight: 800, color: C.accent, lineHeight: 1.15, letterSpacing: "-0.02em" }}>Freedom</div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: C.text, lineHeight: 1.15, letterSpacing: "-0.02em" }}>Banker</div>
           </div>
           <div onClick={onAvatarClick} data-press style={{ cursor: "pointer", padding: "8px 0", transition: "opacity 0.1s" }}>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -638,203 +636,50 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
           </div>
         </div>
 
-        {/* Search bar */}
-        <div style={{ padding: "8px 20px 0", display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{
-            flex: 1, display: "flex", alignItems: "center", gap: 8,
-            backgroundColor: C.card, borderRadius: 12, padding: "9px 14px",
-            border: searchFocused ? `1px solid ${C.accent}` : `1px solid ${C.border}`,
-            transition: "border-color 0.15s",
-          }}>
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-              <circle cx="7" cy="7" r="4.5" stroke={C.muted} strokeWidth="1.5"/>
-              <path d="M10.5 10.5L14 14" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-            <input
-              value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)}
-              placeholder="Найти контакт, продукт..."
-              style={{ flex: 1, background: "none", border: "none", outline: "none", color: C.text, fontSize: 14, fontFamily: "inherit" }}
-            />
-          </div>
-          <div data-press style={{
-            width: 40, height: 40, borderRadius: 12,
-            backgroundColor: C.card, border: `1px solid ${C.border}`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer", flexShrink: 0, transition: "opacity 0.1s",
-          }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" fill={C.muted}/>
-            </svg>
-          </div>
-        </div>
-
-        {/* Data visualization: bars / donut toggle */}
-        <div
-          onClick={() => setVizMode(m => m === "bars" ? "ring" : "bars")}
-          style={{ position: "relative", height: 210, cursor: "pointer", userSelect: "none" }}
-        >
-          {/* Viz 1: Currency bars */}
-          <div style={{
-            position: "absolute", inset: 0,
-            opacity: vizMode === "bars" ? 1 : 0,
-            transition: "opacity 0.3s",
-            pointerEvents: vizMode === "bars" ? "auto" : "none",
-            padding: "20px 0 26px",
-            display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 8,
-          }}>
-            {vizData.bars.map(b => (
-              <div key={b.code} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                <div style={{
-                  width: 50, height: b.height, borderRadius: 25,
-                  backgroundColor: b.color,
-                  transition: "height 0.4s ease",
-                }} />
-                <span style={{ fontSize: 16 }}>{b.flag}</span>
-              </div>
-            ))}
-            {vizData.freedomWallet && (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                <div style={{
-                  width: 50, height: 50, borderRadius: 25,
-                  backgroundColor: "#B91C1C",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  <span style={{ color: "#fff", fontSize: 20, fontWeight: 800 }}>F</span>
-                </div>
-                <span style={{ fontSize: 16 }}>🪙</span>
-              </div>
-            )}
-          </div>
-
-          {/* Viz 2: Asset donut */}
-          <div style={{
-            position: "absolute", inset: 0,
-            opacity: vizMode === "ring" ? 1 : 0,
-            transition: "opacity 0.3s",
-            pointerEvents: vizMode === "ring" ? "auto" : "none",
-            padding: "16px 24px 26px",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 24,
-          }}>
-            {(() => {
-              const r = 55, sw = 18, circumference = 2 * Math.PI * r;
-              let offset = 0;
-              return (
-                <>
-                  <svg width={150} height={150} viewBox="0 0 150 150">
-                    {vizData.segments.map(seg => {
-                      const pct = vizData.grandTotal > 0 ? seg.value / vizData.grandTotal : 0;
-                      const dash = pct * circumference;
-                      const el = (
-                        <circle
-                          key={seg.label}
-                          cx={75} cy={75} r={r}
-                          fill="none"
-                          stroke={seg.color}
-                          strokeWidth={sw}
-                          strokeDasharray={`${dash} ${circumference - dash}`}
-                          strokeDashoffset={-offset}
-                          strokeLinecap="butt"
-                          transform="rotate(-90 75 75)"
-                        />
-                      );
-                      offset += dash;
-                      return el;
-                    })}
-                    <text x={75} y={70} textAnchor="middle" style={{ fontSize: 18, fontWeight: 700, fill: C.text }}>
-                      {fmtCompact(convertTo(vizData.grandTotal, displayCurrency))}
-                    </text>
-                    <text x={75} y={90} textAnchor="middle" style={{ fontSize: 12, fontWeight: 500, fill: C.sub }}>
-                      {(CURRENCY_META[displayCurrency] || {}).symbol || displayCurrency}
-                    </text>
-                  </svg>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {vizData.segments.map(seg => {
-                      const pct = vizData.grandTotal > 0 ? ((seg.value / vizData.grandTotal) * 100).toFixed(1) : "0";
-                      return (
-                        <div key={seg.label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <div style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: seg.color, flexShrink: 0 }} />
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{seg.label}</div>
-                            <div style={{ fontSize: 11, color: C.sub }}>{pct}%</div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-
-          {/* Page indicator dots */}
-          <div style={{
-            position: "absolute", bottom: 6, left: 0, right: 0,
-            display: "flex", justifyContent: "center", gap: 6,
-          }}>
-            <div style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: vizMode === "bars" ? C.accent : C.border, transition: "background-color 0.3s" }} />
-            <div style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: vizMode === "ring" ? C.accent : C.border, transition: "background-color 0.3s" }} />
-          </div>
-        </div>
-
-        {/* Stories row */}
-        <div style={{ display: "flex", gap: 12, overflowX: "auto", padding: "0 20px 6px", scrollbarWidth: "none" }}>
-          {STORIES.map(s => (
-            <div key={s.id} data-press style={{ flexShrink: 0, width: 68, cursor: "pointer", transition: "opacity 0.1s" }}>
-              <div style={{
-                width: 68, height: 68, borderRadius: 20,
-                border: s.viewed ? `1.5px solid ${C.border}` : `1.5px solid ${C.accent}`,
-                padding: 2, boxSizing: "border-box",
-              }}>
-                <div style={{
-                  width: "100%", height: "100%", borderRadius: 12,
-                  background: `linear-gradient(135deg, ${C.card}, #F5F5F0)`,
-                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26,
-                }}>{s.icon}</div>
-              </div>
-              <div style={{ fontSize: 10, fontWeight: 500, color: s.viewed ? C.muted : C.sub, textAlign: "center", marginTop: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {s.title}
-              </div>
-            </div>
-          ))}
-        </div>
-
         {/* Balance */}
-        <div style={{ padding: "0 24px 6px" }}>
+        <div style={{ padding: "12px 24px 0" }}>
           <div style={{ fontSize: 14, color: C.sub, marginBottom: 6 }}>
-            Total Balance – ****{CARDS[0].last4}
+            Total Balance
           </div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-            <div style={{ fontSize: 46, fontWeight: 800, color: C.text, fontFeatureSettings: "'tnum'", letterSpacing: "-0.03em", lineHeight: 1 }}>
-              {fmtCompact(totalDisplay)}
-            </div>
-            <div onClick={() => setPickerOpen(true)} data-press style={{
-              display: "inline-flex", alignItems: "center", gap: 3,
-              cursor: "pointer", padding: "3px 10px", borderRadius: 8,
-              backgroundColor: C.card, border: `1px solid ${C.border}`,
-              transition: "opacity 0.1s",
-            }}>
-              <span style={{ fontSize: 20, fontWeight: 500, color: C.sub }}>{displayMeta.symbol}</span>
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <path d="M3 4l2 2 2-2" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-          </div>
+          {(() => {
+            const balanceStr = fmtFull(totalDisplay);
+            const len = balanceStr.length;
+            const balanceFontSize = len <= 5 ? 54 : len <= 8 ? 46 : len <= 11 ? 38 : len <= 14 ? 32 : 26;
+            return (
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ flex: 1, fontSize: balanceFontSize, fontWeight: 800, color: C.text, fontFeatureSettings: "'tnum'", letterSpacing: "-0.03em", lineHeight: 1, overflow: "hidden", whiteSpace: "nowrap" }}>
+                  {balanceStr}
+                </div>
+                <div onClick={() => setPickerOpen(true)} data-press style={{
+                  width: Math.round(balanceFontSize * 0.78), height: Math.round(balanceFontSize * 0.78),
+                  borderRadius: "50%", backgroundColor: C.accent,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer", flexShrink: 0, position: "relative",
+                  transition: "transform 0.15s", boxShadow: `0 2px 8px ${C.accent}33`,
+                }}>
+                  <span style={{ fontSize: Math.round(balanceFontSize * 0.38), fontWeight: 700, color: "#fff", lineHeight: 1 }}>{displayMeta.symbol}</span>
+                  <svg width="8" height="8" viewBox="0 0 8 8" fill="none" style={{ position: "absolute", bottom: 2, right: 2 }}>
+                    <path d="M2 3l2 2 2-2" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.7"/>
+                  </svg>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Currency breakdown */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" }}>
-            {wallets.filter(w => w.code !== "FREEDOM").slice(0, 4).map(w => {
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 14, overflowX: "auto", scrollbarWidth: "none" }}>
+            {wallets.filter(w => w.code !== "FREEDOM").map(w => {
               const meta = CURRENCY_META[w.code] || { symbol: w.code, flag: "💰" };
               return (
-                <div key={w.code} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <div key={w.code} style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                   <span style={{ fontSize: 13 }}>{meta.flag}</span>
-                  <span style={{ fontSize: 12, color: C.sub, fontWeight: 500, fontFeatureSettings: "'tnum'" }}>{fmtCompact(w.total)}</span>
+                  <span style={{ fontSize: 12, color: C.sub, fontWeight: 500, fontFeatureSettings: "'tnum'", whiteSpace: "nowrap" }}>{fmtCompact(w.total)}</span>
                 </div>
               );
             })}
             {/* FREEDOM cashback badge */}
             <div style={{
-              display: "flex", alignItems: "center", gap: 4,
+              display: "flex", alignItems: "center", gap: 4, flexShrink: 0,
               backgroundColor: C.card, borderRadius: 8, border: `1px solid ${C.border}`,
               padding: "3px 8px",
             }}>
@@ -847,7 +692,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         </div>
 
         {/* Action buttons */}
-        <div style={{ display: "flex", padding: "16px 20px 20px" }}>
+        <div style={{ display: "flex", padding: "24px 20px 24px" }}>
           {[
             { label: "Отправить", accent: true, d: "M10 16V4M10 4L5 9M10 4L15 9" },
             { label: "Запросить", accent: false, d: "M10 4V16M10 16L5 11M10 16L15 11" },
@@ -876,8 +721,45 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
           ))}
         </div>
 
+        {/* Search bar — sticky */}
+        <div style={{
+          position: "sticky", top: 0, zIndex: 20,
+          padding: "12px 20px", display: "flex", alignItems: "center", gap: 8,
+          backgroundColor: C.bg,
+        }}>
+          <div style={{
+            flex: 1, display: "flex", alignItems: "center", gap: 8,
+            backgroundColor: C.card, borderRadius: 12, padding: "0 14px",
+            height: 40, boxSizing: "border-box",
+            border: searchFocused ? `1px solid ${C.accent}` : `1px solid ${C.border}`,
+            transition: "border-color 0.15s",
+          }}>
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+              <circle cx="7" cy="7" r="4.5" stroke={C.muted} strokeWidth="1.5"/>
+              <path d="M10.5 10.5L14 14" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <input
+              value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)}
+              placeholder="Найти контакт, продукт..."
+              style={{ flex: 1, background: "none", border: "none", outline: "none", color: C.text, fontSize: 14, fontFamily: "inherit" }}
+            />
+          </div>
+          <div data-press style={{
+            width: 40, height: 40, borderRadius: 12,
+            background: `linear-gradient(135deg, ${C.accent}, #06B6D4)`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", flexShrink: 0, transition: "opacity 0.1s",
+            boxShadow: `0 2px 8px ${C.accent}44`,
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ animation: "sparkle-pulse 2s ease-in-out infinite" }}>
+              <path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" fill="#FFFFFF"/>
+            </svg>
+          </div>
+        </div>
+
         {/* Product tabs */}
-        <div style={{ padding: "0 20px 14px" }}>
+        <div style={{ padding: "12px 20px 20px" }}>
           <div style={{
             display: "flex", backgroundColor: C.card, borderRadius: 12, padding: 3,
             border: `1px solid ${C.border}`,
@@ -907,65 +789,99 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         {/* Tab content */}
         {productTab === "bank" && (
           <div>
-            {/* Bento grid */}
-            <div style={{ padding: "4px 20px 20px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              {/* Gross Volume */}
-              <div style={{ backgroundColor: C.card, borderRadius: 16, padding: 16, border: `1px solid ${C.border}` }}>
-                <div style={{ fontSize: 13, color: C.sub, marginBottom: 16 }}>Gross Volume</div>
-                <svg width="100%" height="36" viewBox="0 0 140 36" preserveAspectRatio="none">
-                  <path d="M0 30 C8 28,16 32,24 26 C32 20,40 24,52 18 C60 14,68 16,80 12 C88 8,96 14,108 10 C116 6,124 4,140 8" fill="none" stroke={C.text} strokeWidth="1.5"/>
-                  <circle cx="140" cy="8" r="3" fill="none" stroke={C.text} strokeWidth="1.5"/>
-                </svg>
-                <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginTop: 10, fontFeatureSettings: "'tnum'" }}>$890.00</div>
+            {/* Recent transactions */}
+            <div style={{ padding: "0 20px 24px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}>Транзакции</span>
               </div>
 
-              {/* Spent + Weekly — tall card spanning 2 rows */}
-              <div style={{
-                backgroundColor: C.card, borderRadius: 16, padding: 16,
-                border: `1px solid ${C.border}`, gridColumn: 2, gridRow: "1 / 3",
-                display: "flex", flexDirection: "column",
-              }}>
-                <div style={{ fontSize: 13, color: C.sub, marginBottom: 14 }}>Spent</div>
-                <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: 5, minHeight: 80 }}>
-                  {[50, 30, 70, 25, 40, 95, 55].map((h, i) => (
-                    <div key={i} style={{
-                      flex: 1, height: `${h}%`, borderRadius: 2.5,
-                      backgroundColor: i === 5 ? C.text : "#D5D5D0",
-                    }} />
-                  ))}
-                </div>
-                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12, marginTop: 14 }}>
-                  <div style={{ fontSize: 13, color: C.sub }}>Weekly Spent</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginTop: 2, fontFeatureSettings: "'tnum'" }}>$120.00</div>
-                </div>
+              {/* Weekly spending chart */}
+              <div style={{ backgroundColor: C.card, borderRadius: 16, padding: "20px 20px 18px", border: `1px solid ${C.border}`, marginBottom: 12 }}>
+                <div style={{ fontSize: 13, color: C.sub, marginBottom: 16 }}>Расходы за неделю</div>
+                {(() => {
+                  const maxAmt = Math.max(...WEEK_SPEND_KZT.filter((_, j) => j <= TODAY_INDEX));
+                  const totalWeek = WEEK_SPEND_KZT.reduce((s, v) => s + v, 0);
+                  return (
+                    <>
+                      <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 100 }}>
+                        {WEEK_SPEND_KZT.map((amt, i) => {
+                          const pct = maxAmt > 0 && amt > 0 ? (amt / maxAmt) * 100 : 0;
+                          const isFuture = i > TODAY_INDEX;
+                          const isToday = i === TODAY_INDEX;
+                          return (
+                            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", height: "100%" }}>
+                              <div style={{ flex: 1, width: "100%", display: "flex", alignItems: "flex-end" }}>
+                                <div style={{
+                                  width: "100%",
+                                  height: isFuture ? "20%" : `${Math.max(pct, 6)}%`,
+                                  borderRadius: 4,
+                                  backgroundColor: isToday ? C.accent : isFuture ? "transparent" : "#D5D5D0",
+                                  border: isFuture ? `1.5px dashed ${C.border}` : "none",
+                                }} />
+                              </div>
+                              <div style={{
+                                fontSize: 11, marginTop: 8,
+                                color: isToday ? C.text : C.muted,
+                                fontWeight: isToday ? 700 : 400,
+                              }}>{WEEK_LABELS[i]}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14, marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                        <div>
+                          <span style={{ fontSize: 13, color: C.sub }}>Итого</span>
+                          <span style={{ fontSize: 20, fontWeight: 700, color: C.text, marginLeft: 10, fontFeatureSettings: "'tnum'" }}>
+                            {fmtFull(convertTo(totalWeek, displayCurrency))} {displayMeta.symbol}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: C.accent }}>↓ 12%</div>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
-
-              {/* Last Expenses */}
-              <div style={{ backgroundColor: C.card, borderRadius: 16, padding: 16, border: `1px solid ${C.border}` }}>
-                <div style={{ fontSize: 13, color: C.sub, marginBottom: 14 }}>Last Expenses</div>
-                <div style={{ display: "flex", justifyContent: "space-around" }}>
-                  {[
-                    { letter: "U", amount: "-$10" },
-                    { letter: "a", amount: "-$12" },
-                    { letter: "v", amount: "-$9" },
-                  ].map((e, i) => (
-                    <div key={i} style={{ textAlign: "center" }}>
-                      <div style={{
-                        width: 38, height: 38, borderRadius: 19,
-                        border: `1.5px solid ${C.border}`, backgroundColor: C.card,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 6,
-                        fontStyle: i > 0 ? "italic" : "normal",
-                      }}>{e.letter}</div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: C.text, fontFeatureSettings: "'tnum'" }}>{e.amount}</div>
+              <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+                {[
+                  { emoji: "🛒", name: "Магнум", desc: "Продукты", amount: "-12 500 ₸", time: "Сегодня, 14:32" },
+                  { emoji: "💳", name: "Kaspi перевод", desc: "Исходящий", amount: "-25 000 ₸", time: "Сегодня, 11:05" },
+                  { emoji: "🍔", name: "Glovo", desc: "Доставка еды", amount: "-4 800 ₸", time: "Вчера, 20:18" },
+                  { emoji: "⛽", name: "КМГ АЗС", desc: "Топливо", amount: "-15 000 ₸", time: "Вчера, 09:41" },
+                  { emoji: "💰", name: "Зарплата", desc: "Входящий", amount: "+450 000 ₸", time: "28 фев, 10:00", income: true },
+                ].map((tx, i, arr) => (
+                  <div key={i} data-press style={{
+                    display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
+                    borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none",
+                    cursor: "pointer", transition: "background 0.1s",
+                  }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 20,
+                      backgroundColor: C.bg, border: `1px solid ${C.border}`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 18, flexShrink: 0,
+                    }}>{tx.emoji}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: C.text, lineHeight: 1.3 }}>{tx.name}</div>
+                      <div style={{ fontSize: 12, color: C.sub, marginTop: 1 }}>{tx.desc} · {tx.time}</div>
                     </div>
-                  ))}
-                </div>
+                    <div style={{
+                      fontSize: 14, fontWeight: 600, fontFeatureSettings: "'tnum'", flexShrink: 0,
+                      color: tx.income ? C.accent : C.text,
+                    }}>{tx.amount}</div>
+                  </div>
+                ))}
               </div>
+              <div data-press style={{
+                marginTop: 12, padding: "14px 0", borderRadius: 12,
+                backgroundColor: C.card, border: `1px solid ${C.border}`,
+                textAlign: "center", cursor: "pointer",
+                fontSize: 14, fontWeight: 600, color: C.accent,
+                transition: "opacity 0.1s",
+              }}>Все транзакции</div>
             </div>
 
             {/* Card chips — horizontal scroll */}
-            <div style={{ paddingLeft: 20, marginBottom: 20 }}>
+            <div style={{ paddingLeft: 20, marginBottom: 24 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingRight: 20, marginBottom: 10 }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}>Карты</span>
                 <span style={{ fontSize: 12, color: C.accent, fontWeight: 500, cursor: "pointer" }}>Управление</span>
@@ -1036,17 +952,38 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                       </svg>
                     </div>
                     {isOpen && (
-                      <div style={{ paddingBottom: 10, marginBottom: 2, borderBottom: `1px solid ${C.border}` }}>
-                        {sorted.map((acc, j) => (
-                          <div key={j} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0 8px 50px" }}>
-                            <span style={{ fontSize: 12, color: C.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 12 }}>
-                              {acc.product} <span style={{ color: C.muted }}>•{acc.last4}</span>
-                            </span>
-                            <span style={{ fontSize: 12, fontWeight: 500, color: C.sub, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
-                              {fmtFull(acc.balance)}
-                            </span>
-                          </div>
-                        ))}
+                      <div style={{ paddingBottom: 6, marginBottom: 2, borderBottom: `1px solid ${C.border}` }}>
+                        {sorted.map((acc, j) => {
+                          const net = CARD_NET[acc.last4];
+                          return (
+                            <div key={j} data-press style={{
+                              display: "flex", alignItems: "center", gap: 12,
+                              padding: "12px 0 12px 12px", cursor: "pointer",
+                              borderBottom: j < sorted.length - 1 ? `1px solid ${C.border}` : "none",
+                              transition: "opacity 0.1s",
+                            }}>
+                              <div style={{
+                                width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                                backgroundColor: net === "visa" ? "#1A1F71" : net === "mc" ? "#EB001B" : C.bg,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                              }}>
+                                <span style={{ fontSize: 11, fontWeight: 800, color: net ? "#fff" : C.muted, letterSpacing: "0.02em" }}>
+                                  {net === "visa" ? "VISA" : net === "mc" ? "MC" : "💳"}
+                                </span>
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 14, fontWeight: 500, color: C.text, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{acc.product}</div>
+                                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>••{acc.last4}</div>
+                              </div>
+                              <div style={{ fontSize: 14, fontWeight: 600, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                                {fmtFull(acc.balance)}
+                              </div>
+                              <svg width="7" height="12" viewBox="0 0 7 12" fill="none" style={{ flexShrink: 0, marginLeft: 2 }}>
+                                <path d="M1 1l5 5-5 5" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -1057,7 +994,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         )}
 
         {productTab === "deposits" && (
-          <div style={{ padding: "4px 20px 40px" }}>
+          <div style={{ padding: "0 20px 40px" }}>
             {/* Promo banner */}
             <div style={{
               borderRadius: 12, padding: "20px 22px", marginBottom: 24, position: "relative", overflow: "hidden",
@@ -1115,7 +1052,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         )}
 
         {productTab === "broker" && (
-          <div style={{ padding: "4px 20px 40px" }}>
+          <div style={{ padding: "0 20px 40px" }}>
             {BROKER_ACCOUNTS.map((group, gi) => (
               <div key={gi} style={{ marginBottom: 24 }}>
                 <span style={{ fontSize: 20, fontWeight: 700, color: C.text, display: "block", marginBottom: 14 }}>{group.group}</span>
@@ -1144,40 +1081,27 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         )}
 
         {/* News section */}
-        <div style={{ padding: "0 20px 8px" }}>
+        <div style={{ padding: "0 20px 12px" }}>
           {(() => {
             const featured = NEWS.find(n => n.featured);
             const secondary = NEWS.filter(n => !n.featured);
             return (
-              <div>
+              <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: "hidden" }}>
                 {featured && (
-                  <div data-press style={{ cursor: "pointer", marginBottom: 8, transition: "opacity 0.1s" }}>
-                    <div style={{
-                      height: 140, borderRadius: 12,
-                      backgroundColor: C.card, border: `1px solid ${C.border}`,
-                      display: "flex", alignItems: "flex-end", padding: 16,
-                    }}>
-                      <div>
-                        <div style={{ display: "inline-block", fontSize: 10, fontWeight: 700, color: C.accent, backgroundColor: C.accent + "18", borderRadius: 8, padding: "2px 8px", marginBottom: 8, letterSpacing: "0.04em", textTransform: "uppercase" }}>{featured.tag}</div>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: C.text, lineHeight: 1.35 }}>{featured.title}</div>
-                        <div style={{ fontSize: 12, color: C.sub, marginTop: 4, lineHeight: 1.3 }}>{featured.subtitle}</div>
-                      </div>
-                    </div>
-                    <div style={{ fontSize: 11, color: C.muted, marginTop: 6, paddingLeft: 2 }}>{featured.time}</div>
+                  <div data-press style={{ padding: "20px 20px 16px", cursor: "pointer", transition: "opacity 0.1s" }}>
+                    <div style={{ display: "inline-block", fontSize: 10, fontWeight: 700, color: "#E11D48", backgroundColor: "#E11D4818", borderRadius: 8, padding: "2px 8px", marginBottom: 12, letterSpacing: "0.04em", textTransform: "uppercase" }}>{featured.tag}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: C.text, lineHeight: 1.35 }}>{featured.title}</div>
+                    <div style={{ fontSize: 12, color: C.sub, marginTop: 6, lineHeight: 1.4 }}>{featured.subtitle}</div>
+                    <div style={{ fontSize: 11, color: C.muted, marginTop: 10 }}>{featured.time}</div>
                   </div>
                 )}
                 {secondary.map(n => (
-                  <div key={n.id} data-press style={{ padding: "12px 0", borderTop: `1px solid ${C.border}`, cursor: "pointer", transition: "opacity 0.1s" }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: C.muted, backgroundColor: "#F5F5F0", borderRadius: 8, padding: "2px 7px", flexShrink: 0, marginTop: 2 }}>{n.tag}</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: C.sub, lineHeight: 1.35 }}>{n.title}</div>
-                        <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{n.time}</div>
-                      </div>
-                    </div>
+                  <div key={n.id} data-press style={{ padding: "14px 20px", borderTop: `1px solid ${C.border}`, cursor: "pointer", transition: "opacity 0.1s" }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: C.sub, lineHeight: 1.35 }}>{n.title}</div>
+                    <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{n.time}</div>
                   </div>
                 ))}
-                <div style={{ textAlign: "center", padding: "14px 0", cursor: "pointer", borderTop: `1px solid ${C.border}`, marginTop: 4 }}>
+                <div data-press style={{ textAlign: "center", padding: "14px 20px", cursor: "pointer", borderTop: `1px solid ${C.border}` }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: C.accent }}>Все новости →</span>
                 </div>
               </div>
@@ -1186,7 +1110,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         </div>
 
         {/* CTA Button */}
-        <div style={{ padding: "12px 20px 32px" }}>
+        <div style={{ padding: "12px 20px 40px" }}>
           <div data-press style={{
             backgroundColor: C.accent, borderRadius: 12, padding: "15px 0",
             textAlign: "center", cursor: "pointer", transition: "opacity 0.1s",

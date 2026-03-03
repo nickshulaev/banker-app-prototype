@@ -661,8 +661,38 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
           </div>
         </div>
 
+        {/* Action buttons */}
+        <div style={{ display: "flex", padding: "16px 20px 20px" }}>
+          {[
+            { label: "Отправить", accent: true, d: "M10 16V4M10 4L5 9M10 4L15 9" },
+            { label: "Запросить", accent: false, d: "M10 4V16M10 16L5 11M10 16L15 11" },
+            { label: "Обмен", accent: false, d: "M4 7H16M16 7L13 4M16 7L13 10M16 13H4M4 13L7 10M4 13L7 16" },
+            { label: "Ещё", accent: false, d: null },
+          ].map((btn, i) => (
+            <div key={i} data-press style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, cursor: "pointer", flex: 1, transition: "opacity 0.1s" }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 16,
+                backgroundColor: btn.accent ? C.accent : C.card,
+                border: btn.accent ? "none" : `1px solid ${C.border}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {btn.d ? (
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d={btn.d} stroke={btn.accent ? "#FFFFFF" : C.sub} strokeWidth={btn.label === "Обмен" ? "1.5" : "2"} strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <circle cx="5" cy="10" r="1.5" fill={C.sub}/><circle cx="10" cy="10" r="1.5" fill={C.sub}/><circle cx="15" cy="10" r="1.5" fill={C.sub}/>
+                  </svg>
+                )}
+              </div>
+              <span style={{ fontSize: 11, color: btn.accent ? C.accent : C.sub, fontWeight: 500 }}>{btn.label}</span>
+            </div>
+          ))}
+        </div>
+
         {/* Bento grid */}
-        <div style={{ padding: "20px 20px 40px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div style={{ padding: "4px 20px 40px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {/* Gross Volume */}
           <div style={{ backgroundColor: C.card, borderRadius: 16, padding: 16, border: `1px solid ${C.border}` }}>
             <div style={{ fontSize: 13, color: C.sub, marginBottom: 16 }}>Gross Volume</div>

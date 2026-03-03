@@ -522,7 +522,7 @@ function DebugModal({ theme, setTheme, onClose }) {
 }
 
 /* ─── Stripe Light Theme ─── */
-function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT }) {
+function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT, productTab, setProductTab }) {
   const C = { bg: "#F0EFEB", card: "#FFFFFF", accent: "#EF4444", text: "#1A1A1A", sub: "#6B7280", muted: "#9CA3AF", border: "#E5E5E0" };
 
   const totalDisplay = convertTo(totalInKZT, displayCurrency);
@@ -689,6 +689,34 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
               <span style={{ fontSize: 11, color: btn.accent ? C.accent : C.sub, fontWeight: 500 }}>{btn.label}</span>
             </div>
           ))}
+        </div>
+
+        {/* Product tabs */}
+        <div style={{ padding: "0 20px 14px" }}>
+          <div style={{
+            display: "flex", backgroundColor: C.card, borderRadius: 12, padding: 3,
+            border: `1px solid ${C.border}`,
+          }}>
+            {[
+              { key: "bank", label: "Bank" },
+              { key: "deposits", label: "Deposits" },
+              { key: "broker", label: "Broker" },
+            ].map(tab => {
+              const active = productTab === tab.key;
+              return (
+                <div key={tab.key} data-press onClick={() => setProductTab(tab.key)} style={{
+                  flex: 1, textAlign: "center", padding: "9px 0", borderRadius: 10,
+                  backgroundColor: active ? C.text : "transparent",
+                  cursor: "pointer", transition: "background-color 0.15s, opacity 0.1s",
+                }}>
+                  <span style={{
+                    fontSize: 13, fontWeight: 600,
+                    color: active ? C.card : C.muted,
+                  }}>{tab.label}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Bento grid */}
@@ -860,6 +888,8 @@ export default function FreedomV6() {
           pickerOpen={pickerOpen}
           setPickerOpen={setPickerOpen}
           totalInKZT={totalInKZT}
+          productTab={productTab}
+          setProductTab={setProductTab}
         />
       </>
     );

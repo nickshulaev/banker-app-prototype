@@ -1254,10 +1254,10 @@ export default function FreedomV6() {
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchStuck, setSearchStuck] = useState(false);
-  const [displayCurrency, setDisplayCurrency] = useState("KZT");
+  const [displayCurrency, setDisplayCurrency] = useState("EUR");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [productTab, setProductTab] = useState("bank");
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme] = useState("stripe");
   const [debugOpen, setDebugOpen] = useState(false);
   const [fcExpanded, setFcExpanded] = useState(false);
 

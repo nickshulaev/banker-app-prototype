@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { ArrowLeftRight, Phone, CreditCard, Globe, TrendingUp, DollarSign, Star, Shield, BarChart3, Newspaper, ShoppingCart, Utensils, Fuel, Home, Wallet, Send as SendIcon, Plane } from "lucide-react";
 
 /* ─── Pressable helper ─── */
 function usePressable() {
@@ -47,11 +48,11 @@ const CARDS = [
 const CARD_NET = Object.fromEntries(CARDS.map(c => [c.last4, c.network]));
 
 const STORIES = [
-  { id: 1, title: "FC кэшбэк", icon: "⭐", viewed: false },
-  { id: 2, title: "Invest Card", icon: "💳", viewed: false },
-  { id: 3, title: "Страхование", icon: "🛡️", viewed: true },
-  { id: 4, title: "Тарифы", icon: "📊", viewed: true },
-  { id: 5, title: "Новости", icon: "📰", viewed: true },
+  { id: 1, title: "FC кэшбэк", Icon: Star, viewed: false, bg: "linear-gradient(135deg, #F59E0B, #EF4444)" },
+  { id: 2, title: "Invest Card", Icon: CreditCard, viewed: false, bg: "linear-gradient(135deg, #6366F1, #A855F7)" },
+  { id: 3, title: "Страхование", Icon: Shield, viewed: true, bg: "linear-gradient(135deg, #0AB321, #06B6D4)" },
+  { id: 4, title: "Тарифы", Icon: BarChart3, viewed: true, bg: "linear-gradient(135deg, #3B82F6, #6366F1)" },
+  { id: 5, title: "Новости", Icon: Newspaper, viewed: true, bg: "linear-gradient(135deg, #EC4899, #F59E0B)" },
 ];
 
 /* ─── FRHC / Freedom Currency mock data ─── */
@@ -128,9 +129,9 @@ function StoryItem({ s }) {
         padding: 2, boxSizing: "border-box",
       }}>
         <div style={{
-          width: "100%", height: "100%", borderRadius: 12, background: "linear-gradient(135deg, #1E293B, #334155)",
-          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, overflow: "hidden",
-        }}>{s.icon}</div>
+          width: "100%", height: "100%", borderRadius: 12, background: s.bg || "linear-gradient(135deg, #1E293B, #334155)",
+          display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+        }}><s.Icon size={24} color="#fff" strokeWidth={2} /></div>
       </div>
       <div style={{ fontSize: 10, fontWeight: 500, color: s.viewed ? "#64748B" : "#94A3B8", textAlign: "center", marginTop: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {s.title}
@@ -523,15 +524,27 @@ function BrokerContent() {
   );
 }
 
+const BLOCK_LABELS = [
+  { key: "balance", label: "Баланс" },
+  { key: "actions", label: "Кнопки действий" },
+  { key: "search", label: "Поиск" },
+  { key: "stories", label: "Stories" },
+  { key: "transfers", label: "Переводы" },
+  { key: "banners", label: "Промо-баннеры" },
+  { key: "products", label: "Продукты" },
+  { key: "news", label: "Новости" },
+  { key: "cta", label: "CTA кнопка" },
+];
+
 /* ─── Debug Theme Switcher ─── */
-function DebugModal({ theme, setTheme, onClose }) {
+function DebugModal({ theme, setTheme, onClose, blockVis, setBlockVis }) {
   const themes = [
     { key: "dark", label: "Dark (v6)", desc: "Тёмная тема, зелёный акцент" },
     { key: "stripe", label: "Stripe Light", desc: "Светлая тема, зелёный акцент" },
   ];
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, backgroundColor: "#00000066", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div onClick={e => e.stopPropagation()} style={{ backgroundColor: "#1E293B", borderRadius: 20, padding: 24, width: 280, boxShadow: "0 20px 60px #00000088" }}>
+      <div onClick={e => e.stopPropagation()} style={{ backgroundColor: "#1E293B", borderRadius: 20, padding: 24, width: 280, boxShadow: "0 20px 60px #00000088", maxHeight: "80vh", overflowY: "auto" }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: "#F1F5F9", marginBottom: 4 }}>Debug: Theme</div>
         <div style={{ fontSize: 11, color: "#64748B", marginBottom: 16 }}>Выберите дизайн интерфейса</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -549,19 +562,68 @@ function DebugModal({ theme, setTheme, onClose }) {
             </div>
           ))}
         </div>
+
+        {/* Block visibility toggles */}
+        <div style={{ borderTop: "1px solid #334155", marginTop: 20, paddingTop: 16 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "#F1F5F9", marginBottom: 2 }}>Видимость блоков</div>
+          <div style={{ fontSize: 11, color: "#64748B", marginBottom: 14 }}>Скрывайте секции для презентаций</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {BLOCK_LABELS.map(b => {
+              const on = blockVis[b.key];
+              return (
+                <div key={b.key} onClick={() => setBlockVis(prev => ({ ...prev, [b.key]: !prev[b.key] }))}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", cursor: "pointer" }}>
+                  <span style={{ fontSize: 13, color: on ? "#F1F5F9" : "#64748B", fontWeight: 500 }}>{b.label}</span>
+                  <div style={{
+                    width: 40, height: 22, borderRadius: 11,
+                    backgroundColor: on ? "#22C55E" : "#475569",
+                    position: "relative", transition: "background-color 0.2s",
+                  }}>
+                    <div style={{
+                      width: 18, height: 18, borderRadius: 9,
+                      backgroundColor: "#fff",
+                      position: "absolute", top: 2,
+                      left: on ? 20 : 2,
+                      transition: "left 0.2s",
+                      boxShadow: "0 1px 3px #00000033",
+                    }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div onClick={() => setBlockVis(BLOCK_LABELS.reduce((acc, b) => ({ ...acc, [b.key]: true }), {}))}
+            style={{ fontSize: 12, fontWeight: 600, color: "#22C55E", textAlign: "center", marginTop: 12, cursor: "pointer", padding: "6px 0" }}>
+            Сбросить всё
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
+const LIGHT_COLORS = {
+  bg: "#F0EFEB", card: "#FFFFFF", accent: "#0AB321",
+  text: "#1A1A1A", sub: "#6B7280", muted: "#9CA3AF", border: "#E5E5E0",
+  accentFg: "#FFFFFF",
+};
+
+const DARK_COLORS = {
+  bg: "#0F172A", card: "#1E293B", accent: "#22C55E",
+  text: "#F1F5F9", sub: "#94A3B8", muted: "#64748B", border: "#334155",
+  accentFg: "#0F172A",
+};
+
 /* ─── Stripe Light Theme ─── */
-function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT, productTab, setProductTab, openCurrency, setOpenCurrency, searchQuery, setSearchQuery, searchFocused, setSearchFocused, fcExpanded, setFcExpanded }) {
-  const C = { bg: "#F0EFEB", card: "#FFFFFF", accent: "#0AB321", text: "#1A1A1A", sub: "#6B7280", muted: "#9CA3AF", border: "#E5E5E0" };
+function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT, productTab, setProductTab, openCurrency, setOpenCurrency, searchQuery, setSearchQuery, searchFocused, setSearchFocused, fcExpanded, setFcExpanded, blockVis, colors }) {
+  const C = colors;
 
 
   const totalDisplay = convertTo(totalInKZT, displayCurrency);
   const displayMeta = CURRENCY_META[displayCurrency] || { symbol: displayCurrency, flag: "💰" };
   const availableCurrencies = Object.keys(CURRENCY_META).filter(c => c !== "FREEDOM");
+  const [activeBanner, setActiveBanner] = useState(0);
+  const bannerScrollRef = useRef(null);
 
   return (
     <div style={{
@@ -595,7 +657,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                   style={{
                     display: "flex", alignItems: "center", gap: 12,
                     padding: "12px 20px", cursor: "pointer",
-                    backgroundColor: isActive ? "#F5F5F0" : "transparent",
+                    backgroundColor: isActive ? C.border : "transparent",
                   }}
                 >
                   <span style={{ fontSize: 20 }}>{meta.flag}</span>
@@ -635,7 +697,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             <div style={{
               position: "absolute", top: 0, right: 0,
               width: 10, height: 10, borderRadius: "50%",
-              backgroundColor: "#22C55E",
+              backgroundColor: "#EF4444",
               border: `2px solid ${C.bg}`,
               boxSizing: "content-box",
             }} />
@@ -643,6 +705,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         </div>
 
         {/* Balance */}
+        {blockVis.balance && (
         <div style={{ padding: "24px 24px 0" }}>
           <div style={{ fontSize: 14, color: C.sub, marginBottom: 6 }}>
             Общий баланс
@@ -723,8 +786,10 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             );
           })()}
         </div>
+        )}
 
         {/* Action buttons */}
+        {blockVis.actions && (
         <div style={{ display: "flex", padding: "28px 20px 28px" }}>
           {[
             { label: "Отправить", accent: true, d: "M10 16V4M10 4L5 9M10 4L15 9" },
@@ -741,7 +806,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
               }}>
                 {btn.d ? (
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path d={btn.d} stroke={btn.accent ? "#FFFFFF" : C.sub} strokeWidth={btn.label === "Обмен" ? "1.5" : "2"} strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d={btn.d} stroke={btn.accent ? C.accentFg : C.sub} strokeWidth={btn.label === "Обмен" ? "1.5" : "2"} strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 ) : (
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -753,8 +818,10 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             </div>
           ))}
         </div>
+        )}
 
         {/* Search bar — sticky */}
+        {blockVis.search && (
         <div style={{
           position: "sticky", top: 0, zIndex: 20,
           padding: "16px 20px", display: "flex", alignItems: "center", gap: 8,
@@ -790,8 +857,10 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             </svg>
           </div>
         </div>
+        )}
 
         {/* Stories */}
+        {blockVis.stories && (
         <div style={{ padding: "12px 0 16px" }}>
           <div style={{ display: "flex", gap: 12, overflowX: "auto", padding: "0 20px", scrollbarWidth: "none" }}>
             {STORIES.map(s => (
@@ -803,9 +872,9 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                 }}>
                   <div style={{
                     width: "100%", height: "100%", borderRadius: 16,
-                    background: C.card, border: `1px solid ${C.border}`,
-                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26,
-                  }}>{s.icon}</div>
+                    background: s.bg || C.card,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}><s.Icon size={24} color="#fff" strokeWidth={2} /></div>
                 </div>
                 <div style={{ fontSize: 10, fontWeight: 500, color: s.viewed ? C.muted : C.sub, textAlign: "center", marginTop: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {s.title}
@@ -814,83 +883,169 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             ))}
           </div>
         </div>
+        )}
 
-        {/* Payments — service category grid */}
+        {/* Transfers & Payments — bento grid */}
+        {blockVis.transfers && (
         <div style={{ padding: "0 20px 16px" }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 12 }}>Платежи</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-            {[
-              { icon: "📱", label: "Связь" },
-              { icon: "🏠", label: "ЖКХ" },
-              { icon: "🌐", label: "Интернет" },
-              { icon: "⚡", label: "Коммунальные" },
-              { icon: "🚌", label: "Транспорт" },
-              { icon: "💊", label: "Здоровье" },
-              { icon: "🎓", label: "Образование" },
-              { icon: "•••", label: "Ещё" },
-            ].map((item, i) => (
-              <div key={i} data-press style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", transition: "opacity 0.1s" }}>
-                <div style={{
-                  width: 48, height: 48, borderRadius: "50%",
-                  backgroundColor: C.card, border: `1px solid ${C.border}`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: item.icon === "•••" ? 16 : 22,
-                  color: item.icon === "•••" ? C.muted : undefined,
-                  fontWeight: item.icon === "•••" ? 700 : undefined,
-                }}>{item.icon}</div>
-                <span style={{ fontSize: 10, color: C.sub, fontWeight: 500, textAlign: "center", lineHeight: 1.2 }}>{item.label}</span>
+          <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 12 }}>Переводы и платежи</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gridAutoRows: "auto", gap: 10 }}>
+            {/* Row 1: big + small + small */}
+            <div data-press style={{
+              gridColumn: "1 / 3", padding: "16px", borderRadius: 16,
+              backgroundColor: C.card, border: `1px solid ${C.border}`,
+              display: "flex", alignItems: "center", gap: 12, cursor: "pointer", transition: "opacity 0.1s",
+            }}>
+              <ArrowLeftRight size={24} color={C.accent} strokeWidth={2} />
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Между своими</div>
+                <div style={{ fontSize: 10, color: C.muted }}>Карты, депозиты</div>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Transfer corridors banner — gradient promo */}
-        <div data-press style={{
-          margin: "0 20px 16px", padding: "18px 20px",
-          background: `linear-gradient(135deg, ${C.accent}, #06B6D4)`,
-          borderRadius: 16, cursor: "pointer", transition: "opacity 0.1s",
-          position: "relative", overflow: "hidden",
-        }}>
-          {/* Subtle decorative circle */}
-          <div style={{
-            position: "absolute", top: -20, right: -20,
-            width: 80, height: 80, borderRadius: "50%",
-            background: "rgba(255,255,255,0.1)",
-          }}/>
-          <div style={{
-            position: "absolute", bottom: -12, left: 40,
-            width: 50, height: 50, borderRadius: "50%",
-            background: "rgba(255,255,255,0.07)",
-          }}/>
-
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, position: "relative" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 18 }}>🌍</span>
-              <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>Переводы в 12 валют</span>
             </div>
-            <span style={{
-              fontSize: 10, fontWeight: 700, color: "#fff",
-              backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 6, padding: "3px 8px",
-              textTransform: "uppercase", letterSpacing: "0.04em",
-            }}>без комиссии</span>
+            <div data-press style={{
+              padding: "14px 4px", borderRadius: 16,
+              backgroundColor: C.card, border: `1px solid ${C.border}`,
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", transition: "opacity 0.1s",
+            }}>
+              <Phone size={22} color={C.sub} strokeWidth={1.8} />
+              <span style={{ fontSize: 9, fontWeight: 500, color: C.sub, textAlign: "center", lineHeight: 1.2 }}>По номеру</span>
+            </div>
+            <div data-press style={{
+              padding: "14px 4px", borderRadius: 16,
+              backgroundColor: C.card, border: `1px solid ${C.border}`,
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", transition: "opacity 0.1s",
+            }}>
+              <CreditCard size={22} color={C.sub} strokeWidth={1.8} />
+              <span style={{ fontSize: 9, fontWeight: 500, color: C.sub, textAlign: "center", lineHeight: 1.2 }}>На карту</span>
+            </div>
+            {/* Row 2: small + small + big */}
+            <div data-press style={{
+              padding: "14px 4px", borderRadius: 16,
+              backgroundColor: C.card, border: `1px solid ${C.border}`,
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", transition: "opacity 0.1s",
+            }}>
+              <Globe size={22} color={C.sub} strokeWidth={1.8} />
+              <span style={{ fontSize: 9, fontWeight: 500, color: C.sub, textAlign: "center", lineHeight: 1.2 }}>SWIFT</span>
+            </div>
+            <div data-press style={{
+              padding: "14px 4px", borderRadius: 16,
+              backgroundColor: C.card, border: `1px solid ${C.border}`,
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", transition: "opacity 0.1s",
+            }}>
+              <TrendingUp size={22} color={C.sub} strokeWidth={1.8} />
+              <span style={{ fontSize: 9, fontWeight: 500, color: C.sub, textAlign: "center", lineHeight: 1.2 }}>Брокер</span>
+            </div>
+            <div data-press style={{
+              gridColumn: "3 / 5", padding: "16px", borderRadius: 16,
+              backgroundColor: C.card, border: `1px solid ${C.border}`,
+              display: "flex", alignItems: "center", gap: 12, cursor: "pointer", transition: "opacity 0.1s",
+            }}>
+              <DollarSign size={24} color={C.accent} strokeWidth={2} />
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Обмен валют</div>
+                <div style={{ fontSize: 10, color: C.muted }}>По курсу банка</div>
+              </div>
+            </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8, position: "relative" }}>
-            {[
-              { from: "🇰🇿", to: "🇷🇺" },
-              { from: "🇰🇿", to: "🇬🇪" },
-              { from: "🇰🇿", to: "🇺🇿" },
-            ].map((c, i) => (
-              <span key={i} style={{
-                fontSize: 14, letterSpacing: "0.02em", color: "#fff",
-                backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 8, padding: "2px 8px",
-              }}>{c.from}→{c.to}</span>
-            ))}
-            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>+9</span>
-          </div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", position: "relative" }}>SWIFT · Western Union · Золотая Корона</div>
         </div>
+        )}
+
+        {/* Promo banners carousel */}
+        {blockVis.banners && (() => {
+          const banners = [
+            { bg: `linear-gradient(135deg, ${C.accent}, #06B6D4)`, content: (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <Globe size={26} color="#fff" strokeWidth={2} />
+                  <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>Переводы</span>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.9)", marginBottom: 10, lineHeight: 1.4 }}>12 валют без комиссии</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  {[{ from: "🇰🇿", to: "🇷🇺" }, { from: "🇰🇿", to: "🇬🇪" }, { from: "🇰🇿", to: "🇺🇿" }].map((c, i) => (
+                    <span key={i} style={{ fontSize: 13, color: "#fff", backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 8, padding: "3px 8px" }}>{c.from}→{c.to}</span>
+                  ))}
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", fontWeight: 500 }}>+9</span>
+                </div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>SWIFT · Western Union · Золотая Корона</div>
+              </>
+            )},
+            { bg: `linear-gradient(135deg, #6366F1, #A855F7)`, content: (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <CreditCard size={26} color="#fff" strokeWidth={2} />
+                  <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>Invest Card</span>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.9)", marginBottom: 10, lineHeight: 1.4 }}>Кэшбэк Freedom Tokens за каждую покупку</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 6 }}>до 5% кэшбэк</div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>Бесплатное обслуживание · Apple Pay</div>
+              </>
+            )},
+            { bg: `linear-gradient(135deg, #F59E0B, #EF4444)`, content: (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <TrendingUp size={26} color="#fff" strokeWidth={2} />
+                  <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>Депозиты</span>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.9)", marginBottom: 10, lineHeight: 1.4 }}>Высокие ставки в тенге и валюте</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 6 }}>до 14.5% годовых</div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>КФГД · без комиссий · онлайн открытие</div>
+              </>
+            )},
+          ];
+          const handleScroll = () => {
+            const el = bannerScrollRef.current;
+            if (!el || !el.children.length) return;
+            const child = el.children[0];
+            const gap = 12;
+            const step = child.offsetWidth + gap;
+            const idx = Math.round(el.scrollLeft / step);
+            setActiveBanner(Math.min(idx, banners.length - 1));
+          };
+          const scrollTo = (idx) => {
+            const el = bannerScrollRef.current;
+            if (!el || !el.children[idx]) return;
+            const child = el.children[0];
+            const gap = 12;
+            const step = child.offsetWidth + gap;
+            el.scrollTo({ left: step * idx, behavior: "smooth" });
+          };
+          return (
+            <div style={{ marginBottom: 16 }}>
+              <div ref={bannerScrollRef} onScroll={handleScroll} style={{
+                display: "flex", overflowX: "auto", scrollSnapType: "x mandatory",
+                WebkitOverflowScrolling: "touch",
+                scrollbarWidth: "none", padding: "0 20px", gap: 12,
+                msOverflowStyle: "none",
+              }}>
+                {banners.map((b, i) => (
+                  <div key={i} data-press style={{
+                    flex: `0 0 calc(100% - 40px)`, scrollSnapAlign: "center",
+                    padding: "20px 20px 18px", borderRadius: 16, cursor: "pointer",
+                    background: b.bg, position: "relative", overflow: "hidden",
+                    transition: "opacity 0.1s",
+                  }}>
+                    <div style={{ position: "absolute", top: -20, right: -20, width: 80, height: 80, borderRadius: "50%", background: "rgba(255,255,255,0.1)" }}/>
+                    <div style={{ position: "absolute", bottom: -12, left: 40, width: 50, height: 50, borderRadius: "50%", background: "rgba(255,255,255,0.07)" }}/>
+                    <div style={{ position: "relative" }}>{b.content}</div>
+                  </div>
+                ))}
+              </div>
+              {/* Pagination dots */}
+              <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10 }}>
+                {banners.map((_, i) => (
+                  <div key={i} onClick={() => scrollTo(i)} style={{
+                    width: activeBanner === i ? 16 : 6, height: 6, borderRadius: 3,
+                    backgroundColor: activeBanner === i ? C.accent : C.border,
+                    transition: "all 0.25s ease", cursor: "pointer",
+                  }}/>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Product tabs */}
+        {blockVis.products && (<>
         <div style={{ padding: "8px 20px 24px" }}>
           <div style={{
             display: "flex", backgroundColor: C.card, borderRadius: 12, padding: 3,
@@ -947,7 +1102,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                                   width: "100%",
                                   height: isFuture ? "20%" : `${Math.max(pct, 6)}%`,
                                   borderRadius: 4,
-                                  backgroundColor: isToday ? C.accent : isFuture ? "transparent" : "#D5D5D0",
+                                  backgroundColor: isToday ? C.accent : isFuture ? "transparent" : C.border,
                                   border: isFuture ? `1.5px dashed ${C.border}` : "none",
                                 }} />
                               </div>
@@ -975,12 +1130,12 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
               </div>
               <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: "hidden" }}>
                 {[
-                  { emoji: "🛒", name: "Магнум", desc: "Продукты", amount: "-12 500 ₸", time: "Сегодня, 14:32" },
-                  { emoji: "💳", name: "SWIFT перевод", desc: "→ Грузия", amount: "-$320.00", time: "Сегодня, 11:05" },
-                  { emoji: "🍔", name: "Glovo", desc: "Доставка еды", amount: "-4 800 ₸", time: "Вчера, 20:18" },
-                  { emoji: "⛽", name: "КМГ АЗС", desc: "Топливо", amount: "-15 000 ₸", time: "Вчера, 09:41" },
-                  { emoji: "🏠", name: "Аренда", desc: "Ежемесячный", amount: "-€580.00", time: "1 мар, 08:00" },
-                  { emoji: "💰", name: "Зарплата", desc: "Входящий", amount: "+$2 400.00", time: "28 фев, 10:00", income: true },
+                  { Icon: ShoppingCart, name: "Магнум", desc: "Продукты", amount: "-12 500 ₸", time: "Сегодня, 14:32" },
+                  { Icon: Globe, name: "SWIFT перевод", desc: "→ Грузия", amount: "-$320.00", time: "Сегодня, 11:05" },
+                  { Icon: Utensils, name: "Glovo", desc: "Доставка еды", amount: "-4 800 ₸", time: "Вчера, 20:18" },
+                  { Icon: Fuel, name: "КМГ АЗС", desc: "Топливо", amount: "-15 000 ₸", time: "Вчера, 09:41" },
+                  { Icon: Home, name: "Аренда", desc: "Ежемесячный", amount: "-€580.00", time: "1 мар, 08:00" },
+                  { Icon: Wallet, name: "Зарплата", desc: "Входящий", amount: "+$2 400.00", time: "28 фев, 10:00", income: true },
                 ].map((tx, i, arr) => (
                   <div key={i} data-press style={{
                     display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
@@ -991,8 +1146,8 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                       width: 40, height: 40, borderRadius: 20,
                       backgroundColor: C.bg, border: `1px solid ${C.border}`,
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 18, flexShrink: 0,
-                    }}>{tx.emoji}</div>
+                      flexShrink: 0,
+                    }}><tx.Icon size={18} color={tx.income ? C.accent : C.sub} strokeWidth={1.8} /></div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 600, color: C.text, lineHeight: 1.3 }}>{tx.name}</div>
                       <div style={{ fontSize: 12, color: C.sub, marginTop: 1 }}>{tx.desc} · {tx.time}</div>
@@ -1139,8 +1294,8 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
               <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.4 }}>до 7.28% годовых в USD</div>
               <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.4 }}>до 3.15% годовых в EUR</div>
               <div style={{ position: "absolute", right: 18, top: "50%", transform: "translateY(-50%)", display: "flex" }}>
-                <div style={{ width: 36, height: 36, borderRadius: 20, backgroundColor: "#F5F5F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: C.sub }}>$</div>
-                <div style={{ width: 36, height: 36, borderRadius: 20, backgroundColor: "#F5F5F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: C.sub, marginLeft: -8 }}>€</div>
+                <div style={{ width: 36, height: 36, borderRadius: 20, backgroundColor: C.border, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: C.sub }}>$</div>
+                <div style={{ width: 36, height: 36, borderRadius: 20, backgroundColor: C.border, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: C.sub, marginLeft: -8 }}>€</div>
               </div>
             </div>
 
@@ -1212,8 +1367,10 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             ))}
           </div>
         )}
+        </>)}
 
         {/* News section */}
+        {blockVis.news && (
         <div style={{ padding: "8px 20px 24px" }}>
           {(() => {
             const featured = NEWS.find(n => n.featured);
@@ -1241,16 +1398,19 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             );
           })()}
         </div>
+        )}
 
         {/* CTA Button */}
+        {blockVis.cta && (
         <div style={{ padding: "4px 20px 40px" }}>
           <div data-press style={{
             backgroundColor: C.accent, borderRadius: 12, padding: "15px 0",
             textAlign: "center", cursor: "pointer", transition: "opacity 0.1s",
           }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#FFFFFF" }}>Новая карта или продукт</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: C.accentFg }}>Новая карта или продукт</span>
           </div>
         </div>
+        )}
       </div>
 
       {/* Bottom navigation */}
@@ -1302,6 +1462,9 @@ export default function FreedomV6() {
   const [theme, setTheme] = useState("stripe");
   const [debugOpen, setDebugOpen] = useState(false);
   const [fcExpanded, setFcExpanded] = useState(false);
+  const [blockVis, setBlockVis] = useState(
+    BLOCK_LABELS.reduce((acc, b) => ({ ...acc, [b.key]: true }), {})
+  );
 
   const scrollRef = useRef(null);
   const sentinelRef = useRef(null);
@@ -1349,14 +1512,14 @@ export default function FreedomV6() {
 
   // Sync body bg with theme
   useEffect(() => {
-    document.body.style.backgroundColor = theme === "stripe" ? "#F0EFEB" : "#0F172A";
+    document.body.style.backgroundColor = (theme === "stripe" ? LIGHT_COLORS : DARK_COLORS).bg;
   }, [theme]);
 
   // Stripe theme — completely different UI
   if (theme === "stripe") {
     return (
       <>
-        {debugOpen && <DebugModal theme={theme} setTheme={setTheme} onClose={() => setDebugOpen(false)} />}
+        {debugOpen && <DebugModal theme={theme} setTheme={setTheme} onClose={() => setDebugOpen(false)} blockVis={blockVis} setBlockVis={setBlockVis} />}
         <StripeThemeApp
           onAvatarClick={() => setDebugOpen(true)}
           wallets={wallets}
@@ -1375,207 +1538,37 @@ export default function FreedomV6() {
           setSearchFocused={setSearchFocused}
           fcExpanded={fcExpanded}
           setFcExpanded={setFcExpanded}
+          blockVis={blockVis}
+          colors={LIGHT_COLORS}
         />
       </>
     );
   }
 
   return (
-    <div style={{
-      maxWidth: 393, margin: "0 auto", backgroundColor: "#0F172A",
-      height: "100vh", display: "flex", flexDirection: "column",
-      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
-    }}>
-      <style>{`[data-press]:active { opacity: 0.7 !important; }`}</style>
-
-      {/* Debug theme modal */}
-      {debugOpen && <DebugModal theme={theme} setTheme={setTheme} onClose={() => setDebugOpen(false)} />}
-
-      {/* Currency picker modal */}
-      {pickerOpen && (
-        <CurrencyPicker
-          current={displayCurrency}
-          currencies={availableCurrencies}
-          onSelect={setDisplayCurrency}
-          onClose={() => setPickerOpen(false)}
-        />
-      )}
-
-      {/* Sticky search */}
-      {searchStuck && (
-        <div style={{ position: "sticky", top: 0, zIndex: 15, backgroundColor: "#0F172A" }}>
-          <SearchBar stuck searchQuery={searchQuery} setSearchQuery={setSearchQuery}
-            searchFocused={searchFocused} setSearchFocused={setSearchFocused} />
-        </div>
-      )}
-
-      {/* SCROLL */}
-      <div ref={scrollRef} style={{ flex: 1, overflow: "auto" }}>
-
-        {/* 1. BALANCE */}
-        <div style={{ padding: "28px 20px 24px", textAlign: "center" }}>
-          <div style={{ fontSize: 11, color: "#64748B", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
-            Общий баланс
-          </div>
-          <div style={{
-            fontSize: 36, fontWeight: 800, color: "#F1F5F9",
-            letterSpacing: "-0.025em", lineHeight: 1, fontFeatureSettings: "'tnum'",
-            display: "flex", alignItems: "baseline", justifyContent: "center", gap: 4,
-          }}>
-            <span>{fmtCompact(totalDisplay)}</span>
-
-            {/* Clickable currency symbol */}
-            <div
-              onClick={() => setPickerOpen(true)}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 3,
-                cursor: "pointer", padding: "2px 8px", borderRadius: 8,
-                backgroundColor: "#1E293B", marginLeft: 2,
-                transition: "background-color 0.15s",
-              }}
-            >
-              <span style={{ fontSize: 20, fontWeight: 500, color: "#94A3B8" }}>
-                {displayMeta.symbol}
-              </span>
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <path d="M3 4l2 2 2-2" stroke="#64748B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-          </div>
-
-          {/* Mini currency breakdown + FREEDOM cashback */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginTop: 18, flexWrap: "wrap" }}>
-            {wallets.filter(w => w.code !== "FREEDOM").slice(0, 4).map(w => {
-              const meta = CURRENCY_META[w.code] || { symbol: w.code, flag: "💰" };
-              return (
-                <div key={w.code} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <span style={{ fontSize: 13 }}>{meta.flag}</span>
-                  <span style={{ fontSize: 12, color: "#94A3B8", fontWeight: 500, fontFeatureSettings: "'tnum'" }}>{fmtCompact(w.total)}</span>
-                </div>
-              );
-            })}
-
-            {/* FREEDOM cashback — always visible */}
-            <div style={{
-              display: "flex", alignItems: "center", gap: 4,
-              backgroundColor: "#334155", borderRadius: 8, border: "1px solid #334155",
-              padding: "3px 8px",
-            }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#94A3B8" }}>F</span>
-              <span style={{ fontSize: 12, color: "#F1F5F9", fontWeight: 600, fontFeatureSettings: "'tnum'" }}>
-                {(wallets.find(w => w.code === "FREEDOM")?.total || 0).toLocaleString("ru-RU")}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* 2. ACTIONS */}
-        <div style={{ display: "flex", padding: "4px 20px 22px" }}>
-          <ActionBtn label="Отправить" accent>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M10 16V4M10 4L5 9M10 4L15 9" stroke="#0F172A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </ActionBtn>
-          <ActionBtn label="Запросить">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M10 4V16M10 16L5 11M10 16L15 11" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </ActionBtn>
-          <ActionBtn label="Обмен">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M4 7H16M16 7L13 4M16 7L13 10M16 13H4M4 13L7 10M4 13L7 16" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </ActionBtn>
-          <ActionBtn label="Ещё">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <circle cx="5" cy="10" r="1.5" fill="#94A3B8"/><circle cx="10" cy="10" r="1.5" fill="#94A3B8"/><circle cx="15" cy="10" r="1.5" fill="#94A3B8"/>
-            </svg>
-          </ActionBtn>
-        </div>
-
-        {/* 3. SEARCH (natural) */}
-        <div ref={sentinelRef}>
-          <SearchBar stuck={false} searchQuery={searchQuery} setSearchQuery={setSearchQuery}
-            searchFocused={searchFocused} setSearchFocused={setSearchFocused} />
-        </div>
-
-        {/* 4. STORIES */}
-        <div style={{ paddingTop: 18, paddingBottom: 16 }}>
-          <StoriesRow />
-        </div>
-
-        {/* 5. PRODUCT TABS */}
-        <div style={{ padding: "0 20px 16px" }}>
-          <div style={{
-            display: "flex", backgroundColor: "#1E293B", borderRadius: 12, padding: 3,
-          }}>
-            {[
-              { key: "bank", label: "Банк" },
-              { key: "deposits", label: "Депозиты" },
-              { key: "broker", label: "Брокер" },
-            ].map(tab => {
-              const active = productTab === tab.key;
-              return (
-                <div key={tab.key} data-press onClick={() => setProductTab(tab.key)} style={{
-                  flex: 1, textAlign: "center", padding: "9px 0", borderRadius: 12,
-                  backgroundColor: active ? "#334155" : "transparent",
-                  cursor: "pointer", transition: "background-color 0.15s, opacity 0.1s",
-                }}>
-                  <span style={{
-                    fontSize: 13, fontWeight: 600,
-                    color: active ? "#F1F5F9" : "#94A3B8",
-                  }}>{tab.label}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 6. TAB CONTENT */}
-        <div style={{ paddingBottom: 8 }}>
-          {productTab === "bank" && <BankContent wallets={wallets} openCurrency={openCurrency} setOpenCurrency={setOpenCurrency} />}
-          {productTab === "deposits" && <DepositsContent />}
-          {productTab === "broker" && <BrokerContent />}
-        </div>
-
-        {/* 8. NEW PRODUCT */}
-        <div style={{ padding: "20px 20px" }}>
-          <div data-press style={{
-            backgroundColor: "#22C55E",
-            borderRadius: 12, padding: "15px 0", textAlign: "center", cursor: "pointer",
-            transition: "opacity 0.1s",
-          }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#0F172A" }}>Новая карта или продукт</span>
-          </div>
-        </div>
-
-        {/* 9. NEWS */}
-        <div style={{ padding: "0 20px 24px" }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#64748B", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 12 }}>Новости</div>
-          <NewsBlock onAvatarClick={() => setDebugOpen(true)} />
-        </div>
-
-      </div>
-
-      {/* BOTTOM NAV */}
-      <div style={{
-        display: "flex", justifyContent: "space-around", padding: "8px 0 26px",
-        borderTop: "1px solid #1E293B", backgroundColor: "#0F172A", flexShrink: 0,
-      }}>
-        {[
-          { label: "Главная", active: true, d: "M3 9l7-6 7 6v8a1 1 0 01-1 1H4a1 1 0 01-1-1V9z" },
-          { label: "Статистика", active: false, d: "M4 16V9M8 16V4M12 16V7M16 16V2" },
-          { label: "Переводы", active: false, d: "M4 7h12M4 13h12" },
-          { label: "Контакты", active: false, d: "M10 10a3 3 0 100-6 3 3 0 000 6zM3 18c0-3 3-5 7-5s7 2 7 5" },
-        ].map(item => (
-          <div key={item.label} data-press style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: "pointer", backgroundColor: item.active ? "#22C55E12" : "transparent", padding: "4px 12px", borderRadius: 12, transition: "opacity 0.1s" }}>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d={item.d} stroke={item.active ? "#22C55E" : "#64748B"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <span style={{ fontSize: 10, fontWeight: 600, color: item.active ? "#22C55E" : "#64748B" }}>{item.label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
+    <>
+      {debugOpen && <DebugModal theme={theme} setTheme={setTheme} onClose={() => setDebugOpen(false)} blockVis={blockVis} setBlockVis={setBlockVis} />}
+      <StripeThemeApp
+        onAvatarClick={() => setDebugOpen(true)}
+        wallets={wallets}
+        displayCurrency={displayCurrency}
+        setDisplayCurrency={setDisplayCurrency}
+        pickerOpen={pickerOpen}
+        setPickerOpen={setPickerOpen}
+        totalInKZT={totalInKZT}
+        productTab={productTab}
+        setProductTab={setProductTab}
+        openCurrency={openCurrency}
+        setOpenCurrency={setOpenCurrency}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        searchFocused={searchFocused}
+        setSearchFocused={setSearchFocused}
+        fcExpanded={fcExpanded}
+        setFcExpanded={setFcExpanded}
+        blockVis={blockVis}
+        colors={DARK_COLORS}
+      />
+    </>
   );
 }

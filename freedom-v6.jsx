@@ -935,10 +935,11 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
               <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: "hidden" }}>
                 {[
                   { emoji: "🛒", name: "Магнум", desc: "Продукты", amount: "-12 500 ₸", time: "Сегодня, 14:32" },
-                  { emoji: "💳", name: "Kaspi перевод", desc: "Исходящий", amount: "-25 000 ₸", time: "Сегодня, 11:05" },
+                  { emoji: "💳", name: "SWIFT перевод", desc: "→ Грузия", amount: "-$320.00", time: "Сегодня, 11:05" },
                   { emoji: "🍔", name: "Glovo", desc: "Доставка еды", amount: "-4 800 ₸", time: "Вчера, 20:18" },
                   { emoji: "⛽", name: "КМГ АЗС", desc: "Топливо", amount: "-15 000 ₸", time: "Вчера, 09:41" },
-                  { emoji: "💰", name: "Зарплата", desc: "Входящий", amount: "+450 000 ₸", time: "28 фев, 10:00", income: true },
+                  { emoji: "🏠", name: "Аренда", desc: "Ежемесячный", amount: "-€580.00", time: "1 мар, 08:00" },
+                  { emoji: "💰", name: "Зарплата", desc: "Входящий", amount: "+$2 400.00", time: "28 фев, 10:00", income: true },
                 ].map((tx, i, arr) => (
                   <div key={i} data-press style={{
                     display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",

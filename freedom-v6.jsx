@@ -537,54 +537,168 @@ const BLOCK_LABELS = [
 ];
 
 /* ─── Debug Theme Switcher ─── */
-function DebugModal({ theme, setTheme, onClose, blockVis, setBlockVis }) {
+function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrder, setBlockOrder, colors }) {
+  const C = colors;
+  const isDark = C.bg === '#0F172A';
   const themes = [
     { key: "dark", label: "Dark (v6)", desc: "Тёмная тема, зелёный акцент" },
     { key: "stripe", label: "Stripe Light", desc: "Светлая тема, зелёный акцент" },
   ];
-  return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, backgroundColor: "#00000066", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div onClick={e => e.stopPropagation()} style={{ backgroundColor: "#1E293B", borderRadius: 20, padding: 24, width: 280, boxShadow: "0 20px 60px #00000088", maxHeight: "80vh", overflowY: "auto" }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: "#F1F5F9", marginBottom: 4 }}>Debug: Theme</div>
-        <div style={{ fontSize: 11, color: "#64748B", marginBottom: 16 }}>Выберите дизайн интерфейса</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {themes.map(t => (
-            <div key={t.key} onClick={() => { setTheme(t.key); onClose(); }} style={{
-              padding: "12px 16px", borderRadius: 12, cursor: "pointer",
-              backgroundColor: theme === t.key ? "#334155" : "transparent",
-              border: theme === t.key ? "1.5px solid #22C55E" : "1.5px solid #334155",
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#F1F5F9" }}>{t.label}</span>
-                {theme === t.key && <span style={{ fontSize: 10, fontWeight: 700, color: "#22C55E" }}>ACTIVE</span>}
-              </div>
-              <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 2 }}>{t.desc}</div>
-            </div>
-          ))}
-        </div>
 
-        {/* Block visibility toggles */}
-        <div style={{ borderTop: "1px solid #334155", marginTop: 20, paddingTop: 16 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#F1F5F9", marginBottom: 2 }}>Видимость блоков</div>
-          <div style={{ fontSize: 11, color: "#64748B", marginBottom: 14 }}>Скрывайте секции для презентаций</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {BLOCK_LABELS.map(b => {
-              const on = blockVis[b.key];
+  // DnD state
+  const [dragIndex, setDragIndex] = useState(null);
+  const [overIndex, setOverIndex] = useState(null);
+  const [dragY, setDragY] = useState(0);
+  const [dragStartY, setDragStartY] = useState(0);
+  const ROW_H = 46; // row height + gap
+
+  const dragRef = useRef({ index: null, startY: 0, overIndex: null });
+
+  const handleDragStart = (index, e) => {
+    e.preventDefault();
+    dragRef.current = { index, startY: e.clientY, overIndex: index };
+    setDragIndex(index);
+    setOverIndex(index);
+    setDragStartY(e.clientY);
+    setDragY(0);
+  };
+
+  useEffect(() => {
+    if (dragIndex === null) return;
+    const onMove = (e) => {
+      const dy = e.clientY - dragRef.current.startY;
+      setDragY(dy);
+      const raw = dragRef.current.index + Math.round(dy / ROW_H);
+      const clamped = Math.max(0, Math.min(blockOrder.length - 1, raw));
+      dragRef.current.overIndex = clamped;
+      setOverIndex(clamped);
+    };
+    const onUp = () => {
+      const { index: fromIdx, overIndex: toIdx } = dragRef.current;
+      if (fromIdx !== null && toIdx !== null && fromIdx !== toIdx) {
+        setBlockOrder(bo => {
+          const next = [...bo];
+          const [moved] = next.splice(fromIdx, 1);
+          next.splice(toIdx, 0, moved);
+          return next;
+        });
+      }
+      dragRef.current = { index: null, startY: 0, overIndex: null };
+      setDragIndex(null);
+      setOverIndex(null);
+      setDragY(0);
+    };
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+    return () => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+    };
+  }, [dragIndex, blockOrder.length, setBlockOrder]);
+
+  const getDisplacement = (index) => {
+    if (dragIndex === null || overIndex === null || index === dragIndex) return 0;
+    if (dragIndex < overIndex) {
+      if (index > dragIndex && index <= overIndex) return -ROW_H;
+    } else {
+      if (index >= overIndex && index < dragIndex) return ROW_H;
+    }
+    return 0;
+  };
+
+  const labelMap = {};
+  BLOCK_LABELS.forEach(b => { labelMap[b.key] = b.label; });
+
+  return (
+    <>
+      {/* Overlay */}
+      <div onClick={onClose} style={{
+        position: "fixed", inset: 0, backgroundColor: "#00000055", zIndex: 200,
+        animation: "sheetOverlay 0.2s ease-out",
+      }} />
+      {/* Sheet */}
+      <div onClick={e => e.stopPropagation()} style={{
+        position: "fixed", bottom: 0, left: 0, right: 0,
+        maxWidth: 393, margin: "0 auto",
+        backgroundColor: C.card,
+        borderRadius: "20px 20px 0 0",
+        maxHeight: "75vh",
+        display: "flex", flexDirection: "column",
+        zIndex: 201,
+        animation: "sheetUp 0.3s cubic-bezier(0.22, 1, 0.36, 1)",
+        boxShadow: "0 -8px 40px #00000018",
+      }}>
+        {/* Pill handle */}
+        <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 0" }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: C.border }} />
+        </div>
+        {/* Header */}
+        <div style={{ padding: "14px 24px 0" }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>Конструктор</div>
+          <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Тема, порядок и видимость блоков</div>
+        </div>
+        {/* Scrollable content */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px 32px", WebkitOverflowScrolling: "touch" }}>
+          {/* Theme switcher */}
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.04em" }}>Тема</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+            {themes.map(t => (
+              <div key={t.key} onClick={() => { setTheme(t.key); }} style={{
+                flex: 1, padding: "10px 12px", borderRadius: 12, cursor: "pointer",
+                backgroundColor: theme === t.key ? (isDark ? "#334155" : `${C.accent}10`) : "transparent",
+                border: theme === t.key ? `1.5px solid ${C.accent}` : `1.5px solid ${C.border}`,
+                transition: "all 0.15s",
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{t.label}</div>
+                {theme === t.key && <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, marginTop: 2 }}>ACTIVE</div>}
+              </div>
+            ))}
+          </div>
+
+          {/* Block list */}
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.04em" }}>Блоки</div>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: 2, position: "relative" }}
+          >
+            {blockOrder.map((key, index) => {
+              const on = blockVis[key];
+              const isDragged = index === dragIndex;
+              const displacement = getDisplacement(index);
               return (
-                <div key={b.key} onClick={() => setBlockVis(prev => ({ ...prev, [b.key]: !prev[b.key] }))}
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", cursor: "pointer" }}>
-                  <span style={{ fontSize: 13, color: on ? "#F1F5F9" : "#64748B", fontWeight: 500 }}>{b.label}</span>
-                  <div style={{
+                <div key={key} style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "10px 8px", borderRadius: 10,
+                  backgroundColor: isDragged ? (isDark ? "#334155" : "#F3F4F6") : "transparent",
+                  transform: isDragged ? `translateY(${dragY}px) scale(1.02)` : `translateY(${displacement}px)`,
+                  transition: isDragged ? "box-shadow 0.15s" : "transform 0.2s cubic-bezier(0.2,0,0,1), background-color 0.15s",
+                  zIndex: isDragged ? 10 : 1,
+                  boxShadow: isDragged ? `0 4px 16px ${isDark ? "#00000044" : "#00000018"}` : "none",
+                  userSelect: "none",
+                  touchAction: "none",
+                  position: "relative",
+                }}>
+                  {/* Grip handle */}
+                  <div
+                    onPointerDown={(e) => handleDragStart(index, e)}
+                    style={{
+                      width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
+                      cursor: isDragged ? "grabbing" : "grab", color: C.muted, fontSize: 16, flexShrink: 0,
+                      borderRadius: 6,
+                    }}
+                  >⠿</div>
+                  {/* Label */}
+                  <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: on ? C.text : C.muted }}>{labelMap[key]}</span>
+                  {/* Toggle */}
+                  <div onClick={(e) => { e.stopPropagation(); setBlockVis(prev => ({ ...prev, [key]: !prev[key] })); }} style={{
                     width: 40, height: 22, borderRadius: 11,
-                    backgroundColor: on ? "#22C55E" : "#475569",
+                    backgroundColor: on ? C.accent : (isDark ? "#475569" : "#D1D5DB"),
                     position: "relative", transition: "background-color 0.2s",
+                    cursor: "pointer", flexShrink: 0,
                   }}>
                     <div style={{
                       width: 18, height: 18, borderRadius: 9,
-                      backgroundColor: "#fff",
-                      position: "absolute", top: 2,
-                      left: on ? 20 : 2,
-                      transition: "left 0.2s",
+                      backgroundColor: "#fff", position: "absolute", top: 2,
+                      left: on ? 20 : 2, transition: "left 0.2s",
                       boxShadow: "0 1px 3px #00000033",
                     }} />
                   </div>
@@ -592,13 +706,18 @@ function DebugModal({ theme, setTheme, onClose, blockVis, setBlockVis }) {
               );
             })}
           </div>
-          <div onClick={() => setBlockVis(BLOCK_LABELS.reduce((acc, b) => ({ ...acc, [b.key]: true }), {}))}
-            style={{ fontSize: 12, fontWeight: 600, color: "#22C55E", textAlign: "center", marginTop: 12, cursor: "pointer", padding: "6px 0" }}>
+
+          {/* Reset */}
+          <div onClick={() => {
+            setBlockVis(BLOCK_LABELS.reduce((acc, b) => ({ ...acc, [b.key]: true }), {}));
+            setBlockOrder(BLOCK_LABELS.map(b => b.key));
+          }}
+            style={{ fontSize: 12, fontWeight: 600, color: C.accent, textAlign: "center", marginTop: 16, cursor: "pointer", padding: "8px 0" }}>
             Сбросить всё
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -615,9 +734,9 @@ const DARK_COLORS = {
 };
 
 /* ─── Stripe Light Theme ─── */
-function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT, productTab, setProductTab, openCurrency, setOpenCurrency, searchQuery, setSearchQuery, searchFocused, setSearchFocused, fcExpanded, setFcExpanded, blockVis, colors }) {
+function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT, productTab, setProductTab, openCurrency, setOpenCurrency, searchQuery, setSearchQuery, searchFocused, setSearchFocused, fcExpanded, setFcExpanded, blockVis, blockOrder, colors, scrollRef, sentinelRef, searchStuck }) {
   const C = colors;
-
+  const isDark = C.bg === '#0F172A';
 
   const totalDisplay = convertTo(totalInKZT, displayCurrency);
   const displayMeta = CURRENCY_META[displayCurrency] || { symbol: displayCurrency, flag: "💰" };
@@ -630,9 +749,18 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
       maxWidth: 393, margin: "0 auto", backgroundColor: C.bg,
       height: "100vh", display: "flex", flexDirection: "column",
       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+      position: "relative", overflow: "hidden",
     }}>
       <style>{`[data-press]:active { opacity: 0.7 !important; }
-@keyframes sparkle-pulse { 0%,100% { transform: scale(1) rotate(0deg); opacity: 1; } 50% { transform: scale(1.18) rotate(18deg); opacity: 0.85; } }`}</style>
+@keyframes sparkle-pulse { 0%,100% { transform: scale(1) rotate(0deg); opacity: 1; } 50% { transform: scale(1.18) rotate(18deg); opacity: 0.85; } }
+@keyframes aurora-drift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+@keyframes orb-float-1 { 0%,100% { transform: translate(0,0) scale(1); } 33% { transform: translate(30px,-20px) scale(1.1); } 66% { transform: translate(-20px,15px) scale(0.95); } }
+@keyframes orb-float-2 { 0%,100% { transform: translate(0,0) scale(1); } 33% { transform: translate(-25px,25px) scale(1.05); } 66% { transform: translate(35px,-10px) scale(0.9); } }
+@keyframes orb-float-3 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(15px,30px) scale(1.08); } }
+@keyframes shimmer-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+@keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes sheetOverlay { from { opacity: 0; } to { opacity: 1; } }`}</style>
 
       {/* Currency picker modal — light styled */}
       {pickerOpen && (
@@ -678,12 +806,30 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         </div>
       )}
 
-      <div style={{ flex: 1, overflow: "auto" }}>
+      {/* Aurora gradient — fixed behind scroll content, fades at bottom */}
+      <div style={{
+        position: "absolute", top: 0, left: 0, right: 0, height: 520,
+        backgroundImage: isDark
+          ? `linear-gradient(135deg, ${C.accent}28 0%, #6366F125 25%, ${C.bg} 50%, #06B6D420 75%, ${C.accent}18 100%)`
+          : `linear-gradient(135deg, ${C.accent}12 0%, #6366F115 25%, ${C.bg} 50%, #06B6D410 75%, ${C.accent}0D 100%)`,
+        backgroundSize: "400% 400%",
+        animation: "aurora-drift 15s ease infinite",
+        zIndex: 0,
+        pointerEvents: "none",
+        maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
+        WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
+      }} />
+      {/* Floating orbs */}
+      <div style={{ position: "absolute", top: -30, right: -20, width: 140, height: 140, borderRadius: "50%", background: `radial-gradient(circle, ${C.accent}${isDark ? "30" : "18"}, transparent 70%)`, animation: "orb-float-1 8s ease-in-out infinite", zIndex: 0, pointerEvents: "none" }} />
+      <div style={{ position: "absolute", top: 300, left: -30, width: 120, height: 120, borderRadius: "50%", background: `radial-gradient(circle, ${isDark ? "#6366F128" : "#6366F112"}, transparent 70%)`, animation: "orb-float-2 10s ease-in-out infinite", zIndex: 0, pointerEvents: "none" }} />
+      <div style={{ position: "absolute", top: 180, left: "60%", width: 100, height: 100, borderRadius: "50%", background: `radial-gradient(circle, ${isDark ? "#06B6D422" : "#06B6D410"}, transparent 70%)`, animation: "orb-float-3 12s ease-in-out infinite", zIndex: 0, pointerEvents: "none" }} />
+
+      <div ref={scrollRef} style={{ flex: 1, overflow: "auto", position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 40, paddingBottom: 40 }}>
         {/* Header */}
-        <div style={{ padding: "16px 24px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div style={{ padding: "16px 24px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start", order: -1 }}>
           <div>
-            <div style={{ fontSize: 32, fontWeight: 800, color: C.accent, lineHeight: 1.15, letterSpacing: "-0.02em" }}>Freedom</div>
-            <div style={{ fontSize: 32, fontWeight: 800, color: C.text, lineHeight: 1.15, letterSpacing: "-0.02em" }}>Banker</div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: C.accent, lineHeight: 1.15, letterSpacing: "-0.03em", textShadow: isDark ? `0 0 30px ${C.accent}40` : "none" }}>Freedom</div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: C.text, lineHeight: 1.15, letterSpacing: "-0.03em" }}>Banker</div>
           </div>
           <div onClick={onAvatarClick} data-press style={{ cursor: "pointer", position: "relative", transition: "opacity 0.1s" }}>
             <div style={{
@@ -706,7 +852,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
 
         {/* Balance */}
         {blockVis.balance && (
-        <div style={{ padding: "24px 24px 0" }}>
+        <div style={{ padding: "0 24px", order: blockOrder.indexOf("balance") }}>
           <div style={{ fontSize: 14, color: C.sub, marginBottom: 6 }}>
             Общий баланс
           </div>
@@ -724,7 +870,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                   borderRadius: "50%", backgroundColor: C.accent,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   cursor: "pointer", flexShrink: 0,
-                  transition: "transform 0.15s", boxShadow: `0 2px 8px ${C.accent}33`,
+                  transition: "transform 0.15s", boxShadow: `0 2px 8px ${C.accent}33, 0 0 20px ${C.accent}22, inset 0 1px 1px #ffffff30`,
                 }}>
                   <span style={{ fontSize: Math.round(balanceFontSize * 0.38), fontWeight: 700, color: "#fff", lineHeight: 1 }}>{displayMeta.symbol}</span>
                 </div>
@@ -744,8 +890,11 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                 }}>
                   <div style={{
                     display: "flex", alignItems: "center", gap: 4,
-                    backgroundColor: C.card, borderRadius: 8, border: `1px solid ${C.border}`,
-                    padding: "3px 8px",
+                    backgroundColor: isDark ? `${C.card}CC` : `${C.card}EE`,
+                    backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+                    borderRadius: 10, border: `1px solid ${isDark ? "#ffffff10" : C.border}`,
+                    padding: "4px 10px",
+                    boxShadow: isDark ? `0 0 12px ${C.accent}10` : "0 1px 4px #0000000A",
                   }}>
                     <span style={{ fontSize: 11, fontWeight: 700, color: C.accent }}>F</span>
                     <span style={{ fontSize: 12, color: C.text, fontWeight: 600, fontFeatureSettings: "'tnum'" }}>
@@ -790,7 +939,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
 
         {/* Action buttons */}
         {blockVis.actions && (
-        <div style={{ display: "flex", padding: "28px 20px 28px" }}>
+        <div style={{ display: "flex", padding: "0 20px", order: blockOrder.indexOf("actions") }}>
           {[
             { label: "Отправить", accent: true, d: "M10 16V4M10 4L5 9M10 4L15 9" },
             { label: "Запросить", accent: false, d: "M10 4V16M10 16L5 11M10 16L15 11" },
@@ -799,10 +948,16 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
           ].map((btn, i) => (
             <div key={i} data-press style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, cursor: "pointer", flex: 1, transition: "opacity 0.1s" }}>
               <div style={{
-                width: 48, height: 48, borderRadius: 16,
-                backgroundColor: btn.accent ? C.accent : C.card,
-                border: btn.accent ? "none" : `1px solid ${C.border}`,
+                width: 52, height: 52, borderRadius: 18,
+                background: btn.accent ? `linear-gradient(135deg, ${C.accent}, #06B6D4)` : (isDark ? `${C.card}CC` : `${C.card}BB`),
+                border: btn.accent ? "none" : `1px solid ${isDark ? "#ffffff12" : "#00000008"}`,
                 display: "flex", alignItems: "center", justifyContent: "center",
+                backdropFilter: btn.accent ? "none" : "blur(12px)",
+                WebkitBackdropFilter: btn.accent ? "none" : "blur(12px)",
+                boxShadow: btn.accent
+                  ? `0 4px 16px ${C.accent}44, 0 0 24px ${C.accent}22, inset 0 1px 1px #ffffff30`
+                  : (isDark ? "0 2px 8px #00000022, inset 0 1px 0 #ffffff08" : "0 2px 8px #0000000A, inset 0 1px 0 #ffffff60"),
+                transition: "transform 0.15s, box-shadow 0.15s",
               }}>
                 {btn.d ? (
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -819,13 +974,12 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
           ))}
         </div>
         )}
-
-        {/* Search bar — sticky */}
-        {blockVis.search && (
+        {/* Search bar — sentinel + spacer in ordered flow */}
+        <div style={{ order: blockOrder.indexOf("search") }}>
+        <div ref={sentinelRef} style={{ height: 0 }} />
+        {blockVis.search && !searchStuck && (
         <div style={{
-          position: "sticky", top: 0, zIndex: 20,
-          padding: "16px 20px", display: "flex", alignItems: "center", gap: 8,
-          backgroundColor: C.bg,
+          padding: "0 20px", display: "flex", alignItems: "center", gap: 8,
         }}>
           <div style={{
             flex: 1, display: "flex", alignItems: "center", gap: 8,
@@ -858,10 +1012,12 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
           </div>
         </div>
         )}
+        {blockVis.search && searchStuck && <div style={{ height: 56 }} />}
+        </div>
 
         {/* Stories */}
         {blockVis.stories && (
-        <div style={{ padding: "12px 0 16px" }}>
+        <div style={{ padding: 0, order: blockOrder.indexOf("stories") }}>
           <div style={{ display: "flex", gap: 12, overflowX: "auto", padding: "0 20px", scrollbarWidth: "none" }}>
             {STORIES.map(s => (
               <div key={s.id} data-press style={{ flexShrink: 0, width: 68, cursor: "pointer", transition: "opacity 0.1s" }}>
@@ -887,7 +1043,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
 
         {/* Transfers & Payments — bento grid */}
         {blockVis.transfers && (
-        <div style={{ padding: "0 20px 16px" }}>
+        <div style={{ padding: "0 20px", order: blockOrder.indexOf("transfers") }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 12 }}>Переводы и платежи</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gridAutoRows: "auto", gap: 10 }}>
             {/* Row 1: big + small + small */}
@@ -952,6 +1108,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
 
         {/* Promo banners carousel */}
         {blockVis.banners && (() => {
+          const bannerOrder = blockOrder.indexOf("banners");
           const banners = [
             { bg: `linear-gradient(135deg, ${C.accent}, #06B6D4)`, content: (
               <>
@@ -1010,7 +1167,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             el.scrollTo({ left: step * idx, behavior: "smooth" });
           };
           return (
-            <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: 0, order: bannerOrder }}>
               <div ref={bannerScrollRef} onScroll={handleScroll} style={{
                 display: "flex", overflowX: "auto", scrollSnapType: "x mandatory",
                 WebkitOverflowScrolling: "touch",
@@ -1045,8 +1202,8 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         })()}
 
         {/* Product tabs */}
-        {blockVis.products && (<>
-        <div style={{ padding: "8px 20px 24px" }}>
+        {blockVis.products && (<div style={{ order: blockOrder.indexOf("products") }}>
+        <div style={{ padding: "0 20px" }}>
           <div style={{
             display: "flex", backgroundColor: C.card, borderRadius: 12, padding: 3,
             border: `1px solid ${C.border}`,
@@ -1077,7 +1234,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         {productTab === "bank" && (
           <div>
             {/* Recent transactions */}
-            <div style={{ padding: "0 20px 32px" }}>
+            <div style={{ padding: "16px 20px 0" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}>Транзакции</span>
               </div>
@@ -1169,7 +1326,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             </div>
 
             {/* Card chips — horizontal scroll */}
-            <div style={{ paddingLeft: 20, marginBottom: 32 }}>
+            <div style={{ paddingLeft: 20, marginBottom: 0, marginTop: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingRight: 20, marginBottom: 10 }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}>Карты</span>
                 <span style={{ fontSize: 12, color: C.accent, fontWeight: 500, cursor: "pointer" }}>Управление</span>
@@ -1207,7 +1364,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             </div>
 
             {/* Currency wallets — expandable rows */}
-            <div style={{ padding: "0 20px 32px" }}>
+            <div style={{ padding: "0 20px 0", marginTop: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 6 }}>Валюты</div>
               {wallets.filter(w => w.code !== "FREEDOM").map(w => {
                 const meta = CURRENCY_META[w.code] || { symbol: w.code, flag: "💰", color: C.muted };
@@ -1282,10 +1439,10 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         )}
 
         {productTab === "deposits" && (
-          <div style={{ padding: "0 20px 40px" }}>
+          <div style={{ padding: "16px 20px 0" }}>
             {/* Promo banner */}
             <div style={{
-              borderRadius: 12, padding: "20px 22px", marginBottom: 24, position: "relative", overflow: "hidden",
+              borderRadius: 12, padding: "20px 22px", marginBottom: 16, position: "relative", overflow: "hidden",
               backgroundColor: C.card, border: `1px solid ${C.border}`,
             }}>
               <div style={{ fontSize: 17, fontWeight: 700, color: C.text, lineHeight: 1.3, marginBottom: 8 }}>
@@ -1340,9 +1497,9 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         )}
 
         {productTab === "broker" && (
-          <div style={{ padding: "0 20px 40px" }}>
+          <div style={{ padding: "16px 20px 0" }}>
             {BROKER_ACCOUNTS.map((group, gi) => (
-              <div key={gi} style={{ marginBottom: 24 }}>
+              <div key={gi} style={{ marginBottom: gi < BROKER_ACCOUNTS.length - 1 ? 24 : 0 }}>
                 <span style={{ fontSize: 20, fontWeight: 700, color: C.text, display: "block", marginBottom: 14 }}>{group.group}</span>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {group.accounts.map(acc => {
@@ -1367,11 +1524,11 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             ))}
           </div>
         )}
-        </>)}
+        </div>)}
 
         {/* News section */}
         {blockVis.news && (
-        <div style={{ padding: "8px 20px 24px" }}>
+        <div style={{ padding: "0 20px", order: blockOrder.indexOf("news") }}>
           {(() => {
             const featured = NEWS.find(n => n.featured);
             const secondary = NEWS.filter(n => !n.featured);
@@ -1402,7 +1559,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
 
         {/* CTA Button */}
         {blockVis.cta && (
-        <div style={{ padding: "4px 20px 40px" }}>
+        <div style={{ padding: "0 20px", order: blockOrder.indexOf("cta") }}>
           <div data-press style={{
             backgroundColor: C.accent, borderRadius: 12, padding: "15px 0",
             textAlign: "center", cursor: "pointer", transition: "opacity 0.1s",
@@ -1412,6 +1569,45 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         </div>
         )}
       </div>
+
+      {/* Sticky search bar — fixed overlay when scrolled past */}
+      {blockVis.search && searchStuck && (
+        <div style={{
+          position: "absolute", top: 0, left: 0, right: 0,
+          zIndex: 20, padding: "16px 20px", display: "flex", alignItems: "center", gap: 8,
+          backgroundColor: C.bg,
+        }}>
+          <div style={{
+            flex: 1, display: "flex", alignItems: "center", gap: 8,
+            backgroundColor: C.card, borderRadius: 12, padding: "0 14px",
+            height: 40, boxSizing: "border-box",
+            border: searchFocused ? `1px solid ${C.accent}` : `1px solid ${C.border}`,
+            transition: "border-color 0.15s",
+          }}>
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+              <circle cx="7" cy="7" r="4.5" stroke={C.muted} strokeWidth="1.5"/>
+              <path d="M10.5 10.5L14 14" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <input
+              value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)}
+              placeholder="Найти контакт, продукт..."
+              style={{ flex: 1, background: "none", border: "none", outline: "none", color: C.text, fontSize: 14, fontFamily: "inherit" }}
+            />
+          </div>
+          <div data-press style={{
+            width: 40, height: 40, borderRadius: 12,
+            background: `linear-gradient(135deg, ${C.accent}, #06B6D4)`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", flexShrink: 0, transition: "opacity 0.1s",
+            boxShadow: `0 2px 8px ${C.accent}44`,
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ animation: "sparkle-pulse 2s ease-in-out infinite" }}>
+              <path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" fill="#FFFFFF"/>
+            </svg>
+          </div>
+        </div>
+      )}
 
       {/* Bottom navigation */}
       <div style={{
@@ -1465,6 +1661,7 @@ export default function FreedomV6() {
   const [blockVis, setBlockVis] = useState(
     BLOCK_LABELS.reduce((acc, b) => ({ ...acc, [b.key]: true }), {})
   );
+  const [blockOrder, setBlockOrder] = useState(BLOCK_LABELS.map(b => b.key));
 
   const scrollRef = useRef(null);
   const sentinelRef = useRef(null);
@@ -1519,7 +1716,7 @@ export default function FreedomV6() {
   if (theme === "stripe") {
     return (
       <>
-        {debugOpen && <DebugModal theme={theme} setTheme={setTheme} onClose={() => setDebugOpen(false)} blockVis={blockVis} setBlockVis={setBlockVis} />}
+        {debugOpen && <BottomSheet theme={theme} setTheme={setTheme} onClose={() => setDebugOpen(false)} blockVis={blockVis} setBlockVis={setBlockVis} blockOrder={blockOrder} setBlockOrder={setBlockOrder} colors={theme === "stripe" ? LIGHT_COLORS : DARK_COLORS} />}
         <StripeThemeApp
           onAvatarClick={() => setDebugOpen(true)}
           wallets={wallets}
@@ -1539,7 +1736,11 @@ export default function FreedomV6() {
           fcExpanded={fcExpanded}
           setFcExpanded={setFcExpanded}
           blockVis={blockVis}
+          blockOrder={blockOrder}
           colors={LIGHT_COLORS}
+          scrollRef={scrollRef}
+          sentinelRef={sentinelRef}
+          searchStuck={searchStuck}
         />
       </>
     );
@@ -1547,7 +1748,7 @@ export default function FreedomV6() {
 
   return (
     <>
-      {debugOpen && <DebugModal theme={theme} setTheme={setTheme} onClose={() => setDebugOpen(false)} blockVis={blockVis} setBlockVis={setBlockVis} />}
+      {debugOpen && <BottomSheet theme={theme} setTheme={setTheme} onClose={() => setDebugOpen(false)} blockVis={blockVis} setBlockVis={setBlockVis} blockOrder={blockOrder} setBlockOrder={setBlockOrder} colors={theme === "stripe" ? LIGHT_COLORS : DARK_COLORS} />}
       <StripeThemeApp
         onAvatarClick={() => setDebugOpen(true)}
         wallets={wallets}
@@ -1567,7 +1768,11 @@ export default function FreedomV6() {
         fcExpanded={fcExpanded}
         setFcExpanded={setFcExpanded}
         blockVis={blockVis}
+        blockOrder={blockOrder}
         colors={DARK_COLORS}
+        scrollRef={scrollRef}
+        sentinelRef={sentinelRef}
+        searchStuck={searchStuck}
       />
     </>
   );

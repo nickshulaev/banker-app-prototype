@@ -46,7 +46,11 @@
       "Bash(npx vite build)",
       "Bash(/Users/nikitashulaev/.local/node/bin/node node_modules/.bin/vite build)",
       "Bash(/Users/nikitashulaev/.local/node/bin/node /Users/nikitashulaev/.local/node/bin/npm install lucide-react)",
-      "Bash(git add freedom-v6.jsx .claude/settings.local.json package.json package-lock.json)"
+      "Bash(git add freedom-v6.jsx .claude/settings.local.json package.json package-lock.json)",
+      "Bash(/Users/nikitashulaev/.local/node/bin/npx gh-pages -d dist)",
+      "Bash(PATH=\"/Users/nikitashulaev/.local/node/bin:$PATH\" npx gh-pages -d dist)",
+      "Bash(git checkout -b feature/premium-header)",
+      "Bash(git add freedom-v6.jsx .claude/settings.local.json)"
     ]
   }
 }

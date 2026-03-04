@@ -623,10 +623,22 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             <div style={{ fontSize: 32, fontWeight: 800, color: C.accent, lineHeight: 1.15, letterSpacing: "-0.02em" }}>Freedom</div>
             <div style={{ fontSize: 32, fontWeight: 800, color: C.text, lineHeight: 1.15, letterSpacing: "-0.02em" }}>Banker</div>
           </div>
-          <div onClick={onAvatarClick} data-press style={{ cursor: "pointer", padding: "8px 0", transition: "opacity 0.1s" }}>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M5 8l5 5 5-5" stroke={C.text} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+          <div onClick={onAvatarClick} data-press style={{ cursor: "pointer", position: "relative", transition: "opacity 0.1s" }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: "50%",
+              backgroundColor: C.accent,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", lineHeight: 1 }}>НШ</span>
+            </div>
+            {/* Notification dot */}
+            <div style={{
+              position: "absolute", top: 0, right: 0,
+              width: 10, height: 10, borderRadius: "50%",
+              backgroundColor: "#22C55E",
+              border: `2px solid ${C.bg}`,
+              boxSizing: "content-box",
+            }} />
           </div>
         </div>
 
@@ -798,6 +810,35 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                 <div style={{ fontSize: 10, fontWeight: 500, color: s.viewed ? C.muted : C.sub, textAlign: "center", marginTop: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {s.title}
                 </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Payments — service category grid */}
+        <div style={{ padding: "0 20px 16px" }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 12 }}>Платежи</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+            {[
+              { icon: "📱", label: "Связь" },
+              { icon: "🏠", label: "ЖКХ" },
+              { icon: "🌐", label: "Интернет" },
+              { icon: "⚡", label: "Коммунальные" },
+              { icon: "🚌", label: "Транспорт" },
+              { icon: "💊", label: "Здоровье" },
+              { icon: "🎓", label: "Образование" },
+              { icon: "•••", label: "Ещё" },
+            ].map((item, i) => (
+              <div key={i} data-press style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", transition: "opacity 0.1s" }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: "50%",
+                  backgroundColor: C.card, border: `1px solid ${C.border}`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: item.icon === "•••" ? 16 : 22,
+                  color: item.icon === "•••" ? C.muted : undefined,
+                  fontWeight: item.icon === "•••" ? 700 : undefined,
+                }}>{item.icon}</div>
+                <span style={{ fontSize: 10, color: C.sub, fontWeight: 500, textAlign: "center", lineHeight: 1.2 }}>{item.label}</span>
               </div>
             ))}
           </div>

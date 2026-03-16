@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback, Fragment } from "react";
 import { ArrowLeftRight, Phone, CreditCard, Globe, TrendingUp, DollarSign, Star, Shield, BarChart3, Newspaper, ShoppingCart, Utensils, Fuel, Home, Wallet, Send as SendIcon, Plane } from "lucide-react";
 
 /* ─── Pressable helper ─── */
@@ -49,10 +49,11 @@ const CARD_NET = Object.fromEntries(CARDS.map(c => [c.last4, c.network]));
 
 const STORIES = [
   { id: 1, title: "FC кэшбэк", Icon: Star, viewed: false, bg: "linear-gradient(135deg, #F59E0B, #EF4444)" },
-  { id: 2, title: "Invest Card", Icon: CreditCard, viewed: false, bg: "linear-gradient(135deg, #6366F1, #A855F7)" },
+  { id: 2, title: "Депозиты", Icon: TrendingUp, viewed: false, bg: "linear-gradient(135deg, #22C55E, #06B6D4)" },
   { id: 3, title: "Страхование", Icon: Shield, viewed: true, bg: "linear-gradient(135deg, #0AB321, #06B6D4)" },
   { id: 4, title: "Тарифы", Icon: BarChart3, viewed: true, bg: "linear-gradient(135deg, #3B82F6, #6366F1)" },
   { id: 5, title: "Новости", Icon: Newspaper, viewed: true, bg: "linear-gradient(135deg, #EC4899, #F59E0B)" },
+  { id: 6, title: "Invest Card", Icon: CreditCard, viewed: true, bg: "linear-gradient(135deg, #6366F1, #A855F7)" },
 ];
 
 /* ─── FRHC / Freedom Currency mock data ─── */
@@ -68,6 +69,16 @@ const NEWS = [
   { id: 2, featured: false, title: "Изменение базовых ставок по депозитам с 1 апреля", time: "5ч назад" },
   { id: 3, featured: false, title: "Техническое обслуживание: плановые работы в ночь с 5 на 6 марта", time: "Вчера" },
 ];
+
+const RECENT_CONTACTS = [
+  { id: 1, name: "Алия", initials: "АК", color: "#6366F1" },
+  { id: 2, name: "Марат", initials: "МТ", color: "#F59E0B" },
+  { id: 3, name: "Дарья", initials: "ДС", color: "#EC4899" },
+  { id: 4, name: "Банк RU", initials: "🏦", color: "#3B82F6" },
+  { id: 5, name: "Мама", initials: "МШ", color: "#22C55E" },
+];
+
+const DEPOSIT_RATE_KZT = 14.5;
 
 const CURRENCY_META = {
   KZT: { symbol: "₸", flag: "🇰🇿", color: "#22C55E", name: "Тенге" },
@@ -526,10 +537,12 @@ function BrokerContent() {
 
 const BLOCK_LABELS = [
   { key: "balance", label: "Баланс" },
-  { key: "actions", label: "Кнопки действий" },
+  { key: "actions", label: "Быстрые действия" },
   { key: "search", label: "Поиск" },
+  { key: "recentTransfers", label: "Частые переводы" },
+  { key: "transfers", label: "Переводы и платежи" },
   { key: "stories", label: "Stories" },
-  { key: "transfers", label: "Переводы" },
+  { key: "depositNudge", label: "Депозитный оффер" },
   { key: "banners", label: "Промо-баннеры" },
   { key: "products", label: "Продукты" },
   { key: "news", label: "Новости" },
@@ -537,7 +550,7 @@ const BLOCK_LABELS = [
 ];
 
 /* ─── Debug Theme Switcher ─── */
-function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrder, setBlockOrder, colors }) {
+function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrder, setBlockOrder, subVis, setSubVis, colors }) {
   const C = colors;
   const isDark = C.bg === '#0F172A';
   const themes = [
@@ -664,8 +677,13 @@ function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrd
               const on = blockVis[key];
               const isDragged = index === dragIndex;
               const displacement = getDisplacement(index);
+              const SUB_ITEMS = key === "products" && on ? [
+                { sKey: "expenses", label: "Расходы за неделю" },
+                { sKey: "transactions", label: "Транзакции" },
+              ] : null;
               return (
-                <div key={key} style={{
+                <Fragment key={key}>
+                <div style={{
                   display: "flex", alignItems: "center", gap: 10,
                   padding: "10px 8px", borderRadius: 10,
                   backgroundColor: isDragged ? (isDark ? "#334155" : "#F3F4F6") : "transparent",
@@ -703,6 +721,31 @@ function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrd
                     }} />
                   </div>
                 </div>
+                {SUB_ITEMS && SUB_ITEMS.map(({ sKey, label }) => {
+                  const sOn = subVis[sKey];
+                  return (
+                    <div key={sKey} style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      padding: "8px 8px 8px 44px", borderRadius: 8,
+                    }}>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 400, color: sOn ? C.sub : C.muted }}>{label}</span>
+                      <div onClick={(e) => { e.stopPropagation(); setSubVis(prev => ({ ...prev, [sKey]: !prev[sKey] })); }} style={{
+                        width: 40, height: 22, borderRadius: 11,
+                        backgroundColor: sOn ? C.accent : (isDark ? "#475569" : "#D1D5DB"),
+                        position: "relative", transition: "background-color 0.2s",
+                        cursor: "pointer", flexShrink: 0,
+                      }}>
+                        <div style={{
+                          width: 18, height: 18, borderRadius: 9,
+                          backgroundColor: "#fff", position: "absolute", top: 2,
+                          left: sOn ? 20 : 2, transition: "left 0.2s",
+                          boxShadow: "0 1px 3px #00000033",
+                        }} />
+                      </div>
+                    </div>
+                  );
+                })}
+                </Fragment>
               );
             })}
           </div>
@@ -711,6 +754,7 @@ function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrd
           <div onClick={() => {
             setBlockVis(BLOCK_LABELS.reduce((acc, b) => ({ ...acc, [b.key]: true }), {}));
             setBlockOrder(BLOCK_LABELS.map(b => b.key));
+            setSubVis({ expenses: true, transactions: true });
           }}
             style={{ fontSize: 12, fontWeight: 600, color: C.accent, textAlign: "center", marginTop: 16, cursor: "pointer", padding: "8px 0" }}>
             Сбросить всё
@@ -734,7 +778,7 @@ const DARK_COLORS = {
 };
 
 /* ─── Stripe Light Theme ─── */
-function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT, productTab, setProductTab, openCurrency, setOpenCurrency, searchQuery, setSearchQuery, searchFocused, setSearchFocused, fcExpanded, setFcExpanded, blockVis, blockOrder, colors, scrollRef, sentinelRef, searchStuck }) {
+function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT, productTab, setProductTab, openCurrency, setOpenCurrency, searchQuery, setSearchQuery, searchFocused, setSearchFocused, fcExpanded, setFcExpanded, blockVis, blockOrder, subVis, colors, scrollRef, sentinelRef, searchStuck }) {
   const C = colors;
   const isDark = C.bg === '#0F172A';
 
@@ -970,10 +1014,53 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                 )}
               </div>
               <span style={{ fontSize: 11, color: btn.accent ? C.accent : C.sub, fontWeight: 500 }}>{btn.label}</span>
+              {btn.label === "Обмен" && <span style={{ fontSize: 9, color: C.muted, fontFeatureSettings: "'tnum'", marginTop: -3 }}>1$ = {RATES_TO_KZT.USD}₸</span>}
             </div>
           ))}
         </div>
         )}
+
+        {/* Recent transfers — frequent contacts */}
+        {blockVis.recentTransfers && (
+        <div style={{ padding: 0, order: blockOrder.indexOf("recentTransfers") }}>
+          <div style={{ padding: "0 20px", marginBottom: 10 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}>Частые переводы</span>
+          </div>
+          <div style={{ display: "flex", gap: 14, overflowX: "auto", padding: "0 20px", scrollbarWidth: "none" }}>
+            {RECENT_CONTACTS.map(c => (
+              <div key={c.id} data-press style={{ flexShrink: 0, width: 56, cursor: "pointer", transition: "opacity 0.1s", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <div style={{
+                  width: 52, height: 52, borderRadius: "50%",
+                  backgroundColor: c.color + "20",
+                  border: `2px solid ${c.color}40`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: c.color }}>{c.initials}</span>
+                </div>
+                <div style={{ fontSize: 10, fontWeight: 500, color: C.sub, textAlign: "center", marginTop: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%" }}>
+                  {c.name}
+                </div>
+              </div>
+            ))}
+            {/* Add new contact */}
+            <div data-press style={{ flexShrink: 0, width: 56, cursor: "pointer", transition: "opacity 0.1s", display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <div style={{
+                width: 52, height: 52, borderRadius: "50%",
+                border: `2px dashed ${C.border}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M10 4V16M4 10H16" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <div style={{ fontSize: 10, fontWeight: 500, color: C.muted, textAlign: "center", marginTop: 6 }}>
+                Новый
+              </div>
+            </div>
+          </div>
+        </div>
+        )}
+
         {/* Search bar — sentinel + spacer in ordered flow */}
         <div style={{ order: blockOrder.indexOf("search") }}>
         <div ref={sentinelRef} style={{ height: 0 }} />
@@ -1041,21 +1128,21 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         </div>
         )}
 
-        {/* Transfers & Payments — bento grid */}
+        {/* Transfers & Payments — bento grid (FX-first layout) */}
         {blockVis.transfers && (
         <div style={{ padding: "0 20px", order: blockOrder.indexOf("transfers") }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 12 }}>Переводы и платежи</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gridAutoRows: "auto", gap: 10 }}>
-            {/* Row 1: big + small + small */}
+            {/* Row 1: Обмен валют (big, FX=95% revenue) + По номеру + На карту */}
             <div data-press style={{
               gridColumn: "1 / 3", padding: "16px", borderRadius: 16,
               backgroundColor: C.card, border: `1px solid ${C.border}`,
               display: "flex", alignItems: "center", gap: 12, cursor: "pointer", transition: "opacity 0.1s",
             }}>
-              <ArrowLeftRight size={24} color={C.accent} strokeWidth={2} />
+              <DollarSign size={24} color={C.accent} strokeWidth={2} />
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Между своими</div>
-                <div style={{ fontSize: 10, color: C.muted }}>Карты, депозиты</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Обмен валют</div>
+                <div style={{ fontSize: 10, color: C.muted, fontFeatureSettings: "'tnum'" }}>1$ = {RATES_TO_KZT.USD}₸</div>
               </div>
             </div>
             <div data-press style={{
@@ -1074,7 +1161,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
               <CreditCard size={22} color={C.sub} strokeWidth={1.8} />
               <span style={{ fontSize: 9, fontWeight: 500, color: C.sub, textAlign: "center", lineHeight: 1.2 }}>На карту</span>
             </div>
-            {/* Row 2: small + small + big */}
+            {/* Row 2: SWIFT + Между своими + Коммунальные (big, KZ receivers retention) */}
             <div data-press style={{
               padding: "14px 4px", borderRadius: 16,
               backgroundColor: C.card, border: `1px solid ${C.border}`,
@@ -1088,18 +1175,58 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
               backgroundColor: C.card, border: `1px solid ${C.border}`,
               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", transition: "opacity 0.1s",
             }}>
-              <TrendingUp size={22} color={C.sub} strokeWidth={1.8} />
-              <span style={{ fontSize: 9, fontWeight: 500, color: C.sub, textAlign: "center", lineHeight: 1.2 }}>Брокер</span>
+              <ArrowLeftRight size={22} color={C.sub} strokeWidth={1.8} />
+              <span style={{ fontSize: 9, fontWeight: 500, color: C.sub, textAlign: "center", lineHeight: 1.2 }}>Между своими</span>
             </div>
             <div data-press style={{
               gridColumn: "3 / 5", padding: "16px", borderRadius: 16,
               backgroundColor: C.card, border: `1px solid ${C.border}`,
               display: "flex", alignItems: "center", gap: 12, cursor: "pointer", transition: "opacity 0.1s",
             }}>
-              <DollarSign size={24} color={C.accent} strokeWidth={2} />
+              <TrendingUp size={24} color={C.accent} strokeWidth={2} />
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Обмен валют</div>
-                <div style={{ fontSize: 10, color: C.muted }}>По курсу банка</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>На брокерский</div>
+                <div style={{ fontSize: 10, color: C.muted }}>Пополнение счёта</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        )}
+
+        {/* Deposit nudge — contextual deposit promotion */}
+        {blockVis.depositNudge && (
+        <div style={{ padding: "0 20px", order: blockOrder.indexOf("depositNudge") }}>
+          <div style={{
+            backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`,
+            padding: "20px", position: "relative", overflow: "hidden",
+          }}>
+            {/* Subtle accent gradient orb */}
+            <div style={{ position: "absolute", top: -20, right: -20, width: 100, height: 100, borderRadius: "50%", background: `radial-gradient(circle, ${C.accent}15, transparent 70%)`, pointerEvents: "none" }} />
+            <div style={{ position: "relative" }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: C.accent, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 10 }}>Ваши деньги могут работать</div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14, gap: 12 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 12, color: C.sub }}>На счетах</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", marginTop: 2, whiteSpace: "nowrap" }}>
+                    {fmtCompact(totalInKZT)} <span style={{ fontSize: 12, color: C.muted }}>₸</span>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right", minWidth: 0 }}>
+                  <div style={{ fontSize: 12, color: C.sub }}>Доход на депозите</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: C.accent, fontFeatureSettings: "'tnum'", marginTop: 2, whiteSpace: "nowrap" }}>
+                    +{fmtFull(Math.round(totalInKZT * DEPOSIT_RATE_KZT / 100 / 12))} <span style={{ fontSize: 12 }}>₸/мес</span>
+                  </div>
+                </div>
+              </div>
+              <div data-press style={{
+                backgroundColor: C.accent, borderRadius: 12, padding: "13px 0",
+                textAlign: "center", cursor: "pointer", transition: "opacity 0.1s",
+                boxShadow: `0 4px 16px ${C.accent}33`,
+              }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: C.accentFg }}>Открыть депозит →</span>
+              </div>
+              <div style={{ textAlign: "center", marginTop: 8 }}>
+                <span style={{ fontSize: 11, color: C.muted }}>до {DEPOSIT_RATE_KZT}% годовых · КФГД</span>
               </div>
             </div>
           </div>
@@ -1110,6 +1237,17 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         {blockVis.banners && (() => {
           const bannerOrder = blockOrder.indexOf("banners");
           const banners = [
+            { bg: `linear-gradient(135deg, #F59E0B, #EF4444)`, content: (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <TrendingUp size={26} color="#fff" strokeWidth={2} />
+                  <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>Депозиты</span>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.9)", marginBottom: 10, lineHeight: 1.4 }}>Высокие ставки в тенге и валюте</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 6 }}>до 14.5% годовых</div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>КФГД · без комиссий · онлайн открытие</div>
+              </>
+            )},
             { bg: `linear-gradient(135deg, ${C.accent}, #06B6D4)`, content: (
               <>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
@@ -1135,17 +1273,6 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                 <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.9)", marginBottom: 10, lineHeight: 1.4 }}>Кэшбэк Freedom Tokens за каждую покупку</div>
                 <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 6 }}>до 5% кэшбэк</div>
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>Бесплатное обслуживание · Apple Pay</div>
-              </>
-            )},
-            { bg: `linear-gradient(135deg, #F59E0B, #EF4444)`, content: (
-              <>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <TrendingUp size={26} color="#fff" strokeWidth={2} />
-                  <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>Депозиты</span>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.9)", marginBottom: 10, lineHeight: 1.4 }}>Высокие ставки в тенге и валюте</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 6 }}>до 14.5% годовых</div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>КФГД · без комиссий · онлайн открытие</div>
               </>
             )},
           ];
@@ -1234,13 +1361,13 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         {productTab === "bank" && (
           <div>
             {/* Recent transactions */}
-            <div style={{ padding: "16px 20px 0" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            {(subVis.expenses || subVis.transactions) && <div style={{ padding: "16px 20px 0" }}>
+              {subVis.transactions && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}>Транзакции</span>
-              </div>
+              </div>}
 
               {/* Weekly spending chart */}
-              <div style={{ backgroundColor: C.card, borderRadius: 16, padding: "20px 20px 18px", border: `1px solid ${C.border}`, marginBottom: 16 }}>
+              {subVis.expenses && <div style={{ backgroundColor: C.card, borderRadius: 16, padding: "20px 20px 18px", border: `1px solid ${C.border}`, marginBottom: 16 }}>
                 <div style={{ fontSize: 13, color: C.sub, marginBottom: 16 }}>Расходы за неделю</div>
                 {(() => {
                   const maxAmt = Math.max(...WEEK_SPEND_KZT.filter((_, j) => j <= TODAY_INDEX));
@@ -1284,7 +1411,8 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                     </>
                   );
                 })()}
-              </div>
+              </div>}
+              {subVis.transactions && <>
               <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: "hidden" }}>
                 {[
                   { Icon: ShoppingCart, name: "Магнум", desc: "Продукты", amount: "-12 500 ₸", time: "Сегодня, 14:32" },
@@ -1323,7 +1451,8 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                 fontSize: 14, fontWeight: 600, color: C.accent,
                 transition: "opacity 0.1s",
               }}>Все транзакции</div>
-            </div>
+              </>}
+            </div>}
 
             {/* Card chips — horizontal scroll */}
             <div style={{ paddingLeft: 20, marginBottom: 0, marginTop: 16 }}>
@@ -1564,7 +1693,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             backgroundColor: C.accent, borderRadius: 12, padding: "15px 0",
             textAlign: "center", cursor: "pointer", transition: "opacity 0.1s",
           }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: C.accentFg }}>Новая карта или продукт</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: C.accentFg }}>Открыть депозит</span>
           </div>
         </div>
         )}
@@ -1662,6 +1791,7 @@ export default function FreedomV6() {
     BLOCK_LABELS.reduce((acc, b) => ({ ...acc, [b.key]: true }), {})
   );
   const [blockOrder, setBlockOrder] = useState(BLOCK_LABELS.map(b => b.key));
+  const [subVis, setSubVis] = useState({ expenses: true, transactions: true });
 
   const scrollRef = useRef(null);
   const sentinelRef = useRef(null);
@@ -1716,7 +1846,7 @@ export default function FreedomV6() {
   if (theme === "stripe") {
     return (
       <>
-        {debugOpen && <BottomSheet theme={theme} setTheme={setTheme} onClose={() => setDebugOpen(false)} blockVis={blockVis} setBlockVis={setBlockVis} blockOrder={blockOrder} setBlockOrder={setBlockOrder} colors={theme === "stripe" ? LIGHT_COLORS : DARK_COLORS} />}
+        {debugOpen && <BottomSheet theme={theme} setTheme={setTheme} onClose={() => setDebugOpen(false)} blockVis={blockVis} setBlockVis={setBlockVis} blockOrder={blockOrder} setBlockOrder={setBlockOrder} subVis={subVis} setSubVis={setSubVis} colors={theme === "stripe" ? LIGHT_COLORS : DARK_COLORS} />}
         <StripeThemeApp
           onAvatarClick={() => setDebugOpen(true)}
           wallets={wallets}
@@ -1737,6 +1867,7 @@ export default function FreedomV6() {
           setFcExpanded={setFcExpanded}
           blockVis={blockVis}
           blockOrder={blockOrder}
+          subVis={subVis}
           colors={LIGHT_COLORS}
           scrollRef={scrollRef}
           sentinelRef={sentinelRef}
@@ -1748,7 +1879,7 @@ export default function FreedomV6() {
 
   return (
     <>
-      {debugOpen && <BottomSheet theme={theme} setTheme={setTheme} onClose={() => setDebugOpen(false)} blockVis={blockVis} setBlockVis={setBlockVis} blockOrder={blockOrder} setBlockOrder={setBlockOrder} colors={theme === "stripe" ? LIGHT_COLORS : DARK_COLORS} />}
+      {debugOpen && <BottomSheet theme={theme} setTheme={setTheme} onClose={() => setDebugOpen(false)} blockVis={blockVis} setBlockVis={setBlockVis} blockOrder={blockOrder} setBlockOrder={setBlockOrder} subVis={subVis} setSubVis={setSubVis} colors={theme === "stripe" ? LIGHT_COLORS : DARK_COLORS} />}
       <StripeThemeApp
         onAvatarClick={() => setDebugOpen(true)}
         wallets={wallets}
@@ -1769,6 +1900,7 @@ export default function FreedomV6() {
         setFcExpanded={setFcExpanded}
         blockVis={blockVis}
         blockOrder={blockOrder}
+        subVis={subVis}
         colors={DARK_COLORS}
         scrollRef={scrollRef}
         sentinelRef={sentinelRef}

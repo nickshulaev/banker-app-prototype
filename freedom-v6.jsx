@@ -80,6 +80,15 @@ const RECENT_CONTACTS = [
 
 const DEPOSIT_RATE_KZT = 14.5;
 
+/* ─── Empty State Data ─── */
+const EMPTY_RAW_ACCOUNTS = [
+  { product: "DepositCard VISA", last4: "4521", currency: "KZT", balance: 0 },
+];
+const EMPTY_CARDS = [
+  { id: 1, name: "DepositCard VISA", last4: "4521", network: "visa", frozen: false },
+];
+const ONBOARDING_EXAMPLE_AMOUNT = 500000;
+
 const CURRENCY_META = {
   KZT: { symbol: "₸", flag: "🇰🇿", color: "#22C55E", name: "Тенге" },
   USD: { symbol: "$", flag: "🇺🇸", color: "#3B82F6", name: "Доллар" },
@@ -550,7 +559,7 @@ const BLOCK_LABELS = [
 ];
 
 /* ─── Debug Theme Switcher ─── */
-function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrder, setBlockOrder, subVis, setSubVis, colors }) {
+function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrder, setBlockOrder, subVis, setSubVis, emptyState, setEmptyState, colors }) {
   const C = colors;
   const isDark = C.bg === '#0F172A';
   const themes = [
@@ -621,6 +630,9 @@ function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrd
 
   const labelMap = {};
   BLOCK_LABELS.forEach(b => { labelMap[b.key] = b.label; });
+  if (emptyState) {
+    labelMap.recentTransfers = "Онбординг";
+  }
 
   return (
     <>
@@ -668,6 +680,28 @@ function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrd
             ))}
           </div>
 
+          {/* Empty state toggle */}
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.04em" }}>Состояние</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", marginBottom: 16, borderBottom: `1px solid ${C.border}` }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Empty State</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{emptyState ? "Новый пользователь: 1 карта, 0₸" : "Активный пользователь"}</div>
+            </div>
+            <div onClick={() => setEmptyState(v => !v)} style={{
+              width: 44, height: 24, borderRadius: 12,
+              backgroundColor: emptyState ? C.accent : (isDark ? "#475569" : "#D1D5DB"),
+              position: "relative", transition: "background-color 0.2s",
+              cursor: "pointer", flexShrink: 0,
+            }}>
+              <div style={{
+                width: 20, height: 20, borderRadius: 10,
+                backgroundColor: "#fff", position: "absolute", top: 2,
+                left: emptyState ? 22 : 2, transition: "left 0.2s",
+                boxShadow: "0 1px 3px #00000033",
+              }} />
+            </div>
+          </div>
+
           {/* Block list */}
           <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.04em" }}>Блоки</div>
           <div
@@ -677,7 +711,7 @@ function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrd
               const on = blockVis[key];
               const isDragged = index === dragIndex;
               const displacement = getDisplacement(index);
-              const SUB_ITEMS = key === "products" && on ? [
+              const SUB_ITEMS = key === "products" && on && !emptyState ? [
                 { sKey: "expenses", label: "Расходы за неделю" },
                 { sKey: "transactions", label: "Транзакции" },
               ] : null;
@@ -778,7 +812,7 @@ const DARK_COLORS = {
 };
 
 /* ─── Stripe Light Theme ─── */
-function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT, productTab, setProductTab, openCurrency, setOpenCurrency, searchQuery, setSearchQuery, searchFocused, setSearchFocused, fcExpanded, setFcExpanded, blockVis, blockOrder, subVis, colors, scrollRef, sentinelRef, searchStuck }) {
+function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT, productTab, setProductTab, openCurrency, setOpenCurrency, searchQuery, setSearchQuery, searchFocused, setSearchFocused, fcExpanded, setFcExpanded, blockVis, blockOrder, subVis, colors, scrollRef, sentinelRef, searchStuck, emptyState, activeCards }) {
   const C = colors;
   const isDark = C.bg === '#0F172A';
 
@@ -922,8 +956,8 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             );
           })()}
 
-          {/* Freedom Tokens — badge + expandable details */}
-          {(() => {
+          {/* Freedom Tokens — badge + expandable details (hidden in empty state) */}
+          {!emptyState && (() => {
             const fcBalance = wallets.find(w => w.code === "FREEDOM")?.total || 0;
             const fcValueUsd = (fcBalance / 10000 * FRHC_PRICE);
             return (
@@ -1023,6 +1057,35 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         {/* Recent transfers — frequent contacts */}
         {blockVis.recentTransfers && (
         <div style={{ padding: 0, order: blockOrder.indexOf("recentTransfers") }}>
+          {emptyState ? (
+          /* Onboarding card — replaces contacts in empty state */
+          <div style={{ padding: "0 20px" }}>
+            <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: "20px", position: "relative", overflow: "hidden" }}>
+              <div style={{ position: "absolute", top: -15, left: -15, width: 80, height: 80, borderRadius: "50%", background: `radial-gradient(circle, ${C.accent}12, transparent 70%)`, pointerEvents: "none" }} />
+              <div style={{ position: "relative" }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 14 }}>3 шага для начала</div>
+                {[
+                  { num: "①", text: "Пополните карту" },
+                  { num: "②", text: "Отправьте первый перевод" },
+                  { num: "③", text: "Откройте депозит" },
+                ].map((step, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: i < 2 ? 10 : 16 }}>
+                    <span style={{ fontSize: 14, color: C.accent }}>{step.num}</span>
+                    <span style={{ fontSize: 13, color: C.sub }}>{step.text}</span>
+                  </div>
+                ))}
+                <div data-press style={{
+                  backgroundColor: C.accent, borderRadius: 10, padding: "11px 0",
+                  textAlign: "center", cursor: "pointer", transition: "opacity 0.1s",
+                }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.accentFg }}>Пополнить →</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          ) : (
+          /* Normal state — contact avatars */
+          <>
           <div style={{ padding: "0 20px", marginBottom: 10 }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}>Частые переводы</span>
           </div>
@@ -1042,7 +1105,6 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                 </div>
               </div>
             ))}
-            {/* Add new contact */}
             <div data-press style={{ flexShrink: 0, width: 56, cursor: "pointer", transition: "opacity 0.1s", display: "flex", flexDirection: "column", alignItems: "center" }}>
               <div style={{
                 width: 52, height: 52, borderRadius: "50%",
@@ -1058,6 +1120,8 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
               </div>
             </div>
           </div>
+          </>
+          )}
         </div>
         )}
 
@@ -1206,15 +1270,15 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
               <div style={{ fontSize: 11, fontWeight: 600, color: C.accent, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 10 }}>Ваши деньги могут работать</div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14, gap: 12 }}>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 12, color: C.sub }}>На счетах</div>
+                  <div style={{ fontSize: 12, color: C.sub }}>{emptyState ? "Если положите" : "На счетах"}</div>
                   <div style={{ fontSize: 18, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", marginTop: 2, whiteSpace: "nowrap" }}>
-                    {fmtCompact(totalInKZT)} <span style={{ fontSize: 12, color: C.muted }}>₸</span>
+                    {emptyState ? fmtCompact(ONBOARDING_EXAMPLE_AMOUNT) : fmtCompact(totalInKZT)} <span style={{ fontSize: 12, color: C.muted }}>₸</span>
                   </div>
                 </div>
                 <div style={{ textAlign: "right", minWidth: 0 }}>
                   <div style={{ fontSize: 12, color: C.sub }}>Доход на депозите</div>
                   <div style={{ fontSize: 18, fontWeight: 700, color: C.accent, fontFeatureSettings: "'tnum'", marginTop: 2, whiteSpace: "nowrap" }}>
-                    +{fmtFull(Math.round(totalInKZT * DEPOSIT_RATE_KZT / 100 / 12))} <span style={{ fontSize: 12 }}>₸/мес</span>
+                    +{fmtFull(Math.round((emptyState ? ONBOARDING_EXAMPLE_AMOUNT : totalInKZT) * DEPOSIT_RATE_KZT / 100 / 12))} <span style={{ fontSize: 12 }}>₸/мес</span>
                   </div>
                 </div>
               </div>
@@ -1237,6 +1301,29 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
         {blockVis.banners && (() => {
           const bannerOrder = blockOrder.indexOf("banners");
           const banners = [
+            ...(emptyState ? [{ bg: `linear-gradient(135deg, #1E293B, #334155)`, content: (
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 6, lineHeight: 1.2 }}>Откройте счёт</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "rgba(255,255,255,0.7)", marginBottom: 16, lineHeight: 1.4 }}>для поездок в Россию</div>
+                  <div data-press style={{ display: "inline-block", padding: "10px 24px", borderRadius: 20, backgroundColor: "#22C55E", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", transition: "opacity 0.1s" }}>Подробнее</div>
+                </div>
+                <div style={{ width: 100, height: 140, position: "relative", flexShrink: 0 }}>
+                  <div style={{ position: "absolute", bottom: 0, right: 0, width: 90, height: 130, background: "linear-gradient(160deg, #1a1a2e, #0f0f1a)", borderRadius: 10, transform: "rotate(8deg)", boxShadow: "0 4px 20px rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", overflow: "hidden" }}>
+                    <div style={{ position: "absolute", bottom: -10, right: -10, width: 80, height: 80, background: "linear-gradient(135deg, #22C55E, #059669)", borderRadius: "50%", opacity: 0.3 }}/>
+                    <div style={{ position: "absolute", bottom: -20, right: 10, width: 50, height: 50, background: "linear-gradient(135deg, #22C55E, #059669)", borderRadius: "50%", opacity: 0.2 }}/>
+                    <div style={{ padding: "12px 10px 0", position: "relative" }}>
+                      <div style={{ fontSize: 11, fontWeight: 900, color: "#fff", letterSpacing: 1, lineHeight: 1.1 }}>ЦИФРА</div>
+                      <div style={{ fontSize: 7, fontWeight: 600, color: "rgba(255,255,255,0.6)", letterSpacing: 0.5 }}>банк</div>
+                    </div>
+                    <div style={{ position: "absolute", bottom: 12, left: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ width: 20, height: 14, borderRadius: 2, background: "linear-gradient(135deg, #FFD700, #FFA500)", opacity: 0.8 }}/>
+                      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)" }}>))))</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}] : []),
             { bg: `linear-gradient(135deg, #F59E0B, #EF4444)`, content: (
               <>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
@@ -1367,7 +1454,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
               </div>}
 
               {/* Weekly spending chart */}
-              {subVis.expenses && <div style={{ backgroundColor: C.card, borderRadius: 16, padding: "20px 20px 18px", border: `1px solid ${C.border}`, marginBottom: 16 }}>
+              {subVis.expenses && !emptyState && <div style={{ backgroundColor: C.card, borderRadius: 16, padding: "20px 20px 18px", border: `1px solid ${C.border}`, marginBottom: 16 }}>
                 <div style={{ fontSize: 13, color: C.sub, marginBottom: 16 }}>Расходы за неделю</div>
                 {(() => {
                   const maxAmt = Math.max(...WEEK_SPEND_KZT.filter((_, j) => j <= TODAY_INDEX));
@@ -1412,7 +1499,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                   );
                 })()}
               </div>}
-              {subVis.transactions && <>
+              {subVis.transactions && !emptyState && <>
               <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: "hidden" }}>
                 {[
                   { Icon: ShoppingCart, name: "Магнум", desc: "Продукты", amount: "-12 500 ₸", time: "Сегодня, 14:32" },
@@ -1452,6 +1539,16 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                 transition: "opacity 0.1s",
               }}>Все транзакции</div>
               </>}
+              {emptyState && (
+                <div style={{
+                  backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`,
+                  padding: "32px 20px", textAlign: "center",
+                }}>
+                  <div style={{ fontSize: 28, marginBottom: 8 }}>📋</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: C.sub, marginBottom: 4 }}>Пока нет транзакций</div>
+                  <div style={{ fontSize: 12, color: C.muted }}>Здесь появится история после первой оплаты</div>
+                </div>
+              )}
             </div>}
 
             {/* Card chips — horizontal scroll */}
@@ -1461,7 +1558,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                 <span style={{ fontSize: 12, color: C.accent, fontWeight: 500, cursor: "pointer" }}>Управление</span>
               </div>
               <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, paddingRight: 20, scrollbarWidth: "none" }}>
-                {CARDS.map(c => (
+                {activeCards.map(c => (
                   <div key={c.id} data-press style={{
                     flexShrink: 0, width: 118, height: 74, borderRadius: 12, padding: "10px 12px",
                     backgroundColor: C.card,
@@ -1600,6 +1697,21 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             <div style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>Расчёт приблизительный и не является офертой</div>
 
             {/* Deposit list */}
+            {emptyState ? (
+              <div style={{
+                backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`,
+                padding: "32px 20px", textAlign: "center",
+              }}>
+                <div style={{ fontSize: 28, marginBottom: 8 }}>💰</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.sub, marginBottom: 8 }}>Нет активных депозитов</div>
+                <div data-press style={{
+                  backgroundColor: C.accent, borderRadius: 10, padding: "10px 0",
+                  textAlign: "center", cursor: "pointer", transition: "opacity 0.1s",
+                }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.accentFg }}>Открыть первый депозит</span>
+                </div>
+              </div>
+            ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {DEPOSITS.map(dep => {
                 const cm = CURRENCY_META[dep.currency] || { symbol: dep.currency };
@@ -1622,12 +1734,28 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
                 );
               })}
             </div>
+            )}
           </div>
         )}
 
         {productTab === "broker" && (
           <div style={{ padding: "16px 20px 0" }}>
-            {BROKER_ACCOUNTS.map((group, gi) => (
+            {emptyState ? (
+              <div style={{
+                backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`,
+                padding: "32px 20px", textAlign: "center",
+              }}>
+                <div style={{ fontSize: 28, marginBottom: 8 }}>📈</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.sub, marginBottom: 8 }}>Нет брокерских счетов</div>
+                <div data-press style={{
+                  backgroundColor: C.accent, borderRadius: 10, padding: "10px 0",
+                  textAlign: "center", cursor: "pointer", transition: "opacity 0.1s",
+                }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.accentFg }}>Открыть счёт</span>
+                </div>
+              </div>
+            ) : null}
+            {!emptyState && BROKER_ACCOUNTS.map((group, gi) => (
               <div key={gi} style={{ marginBottom: gi < BROKER_ACCOUNTS.length - 1 ? 24 : 0 }}>
                 <span style={{ fontSize: 20, fontWeight: 700, color: C.text, display: "block", marginBottom: 14 }}>{group.group}</span>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -1693,7 +1821,7 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
             backgroundColor: C.accent, borderRadius: 12, padding: "15px 0",
             textAlign: "center", cursor: "pointer", transition: "opacity 0.1s",
           }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: C.accentFg }}>Открыть депозит</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: C.accentFg }}>Открыть новый продукт</span>
           </div>
         </div>
         )}
@@ -1792,35 +1920,37 @@ export default function FreedomV6() {
   );
   const [blockOrder, setBlockOrder] = useState(BLOCK_LABELS.map(b => b.key));
   const [subVis, setSubVis] = useState({ expenses: true, transactions: true });
+  const [emptyState, setEmptyState] = useState(false);
 
   const scrollRef = useRef(null);
   const sentinelRef = useRef(null);
 
+  const activeAccounts = emptyState ? EMPTY_RAW_ACCOUNTS : RAW_ACCOUNTS;
+  const activeCards = emptyState ? EMPTY_CARDS : CARDS;
+
   const wallets = useMemo(() => {
     const map = {};
-    RAW_ACCOUNTS.forEach(acc => {
+    activeAccounts.forEach(acc => {
       if (!map[acc.currency]) map[acc.currency] = { total: 0, accounts: [] };
       map[acc.currency].total += acc.balance;
       map[acc.currency].accounts.push(acc);
     });
-    // Sort accounts within each currency by balance desc
     Object.values(map).forEach(w => {
       w.accounts.sort((a, b) => b.balance - a.balance);
     });
     return Object.entries(map).sort((a, b) => b[1].total - a[1].total).map(([code, data]) => ({ code, ...data }));
-  }, []);
+  }, [activeAccounts]);
 
   const availableCurrencies = useMemo(() => Object.keys(CURRENCY_META).filter(c => c !== "FREEDOM"), []);
 
-  // Total balance in KZT, then convert to display currency
   const totalInKZT = useMemo(() => {
     let sum = 0;
-    RAW_ACCOUNTS.forEach(acc => {
+    activeAccounts.forEach(acc => {
       const rate = RATES_TO_KZT[acc.currency] || 1;
       sum += acc.balance * rate;
     });
     return sum;
-  }, []);
+  }, [activeAccounts]);
 
   const totalDisplay = convertTo(totalInKZT, displayCurrency);
   const displayMeta = CURRENCY_META[displayCurrency] || { symbol: displayCurrency, flag: "💰" };
@@ -1846,7 +1976,7 @@ export default function FreedomV6() {
   if (theme === "stripe") {
     return (
       <>
-        {debugOpen && <BottomSheet theme={theme} setTheme={setTheme} onClose={() => setDebugOpen(false)} blockVis={blockVis} setBlockVis={setBlockVis} blockOrder={blockOrder} setBlockOrder={setBlockOrder} subVis={subVis} setSubVis={setSubVis} colors={theme === "stripe" ? LIGHT_COLORS : DARK_COLORS} />}
+        {debugOpen && <BottomSheet theme={theme} setTheme={setTheme} onClose={() => setDebugOpen(false)} blockVis={blockVis} setBlockVis={setBlockVis} blockOrder={blockOrder} setBlockOrder={setBlockOrder} subVis={subVis} setSubVis={setSubVis} emptyState={emptyState} setEmptyState={setEmptyState} colors={theme === "stripe" ? LIGHT_COLORS : DARK_COLORS} />}
         <StripeThemeApp
           onAvatarClick={() => setDebugOpen(true)}
           wallets={wallets}
@@ -1872,6 +2002,8 @@ export default function FreedomV6() {
           scrollRef={scrollRef}
           sentinelRef={sentinelRef}
           searchStuck={searchStuck}
+          emptyState={emptyState}
+          activeCards={activeCards}
         />
       </>
     );
@@ -1879,7 +2011,7 @@ export default function FreedomV6() {
 
   return (
     <>
-      {debugOpen && <BottomSheet theme={theme} setTheme={setTheme} onClose={() => setDebugOpen(false)} blockVis={blockVis} setBlockVis={setBlockVis} blockOrder={blockOrder} setBlockOrder={setBlockOrder} subVis={subVis} setSubVis={setSubVis} colors={theme === "stripe" ? LIGHT_COLORS : DARK_COLORS} />}
+      {debugOpen && <BottomSheet theme={theme} setTheme={setTheme} onClose={() => setDebugOpen(false)} blockVis={blockVis} setBlockVis={setBlockVis} blockOrder={blockOrder} setBlockOrder={setBlockOrder} subVis={subVis} setSubVis={setSubVis} emptyState={emptyState} setEmptyState={setEmptyState} colors={theme === "stripe" ? LIGHT_COLORS : DARK_COLORS} />}
       <StripeThemeApp
         onAvatarClick={() => setDebugOpen(true)}
         wallets={wallets}
@@ -1905,6 +2037,8 @@ export default function FreedomV6() {
         scrollRef={scrollRef}
         sentinelRef={sentinelRef}
         searchStuck={searchStuck}
+        emptyState={emptyState}
+        activeCards={activeCards}
       />
     </>
   );

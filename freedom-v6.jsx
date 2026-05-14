@@ -744,15 +744,15 @@ function MainScreen({
   // Dark palette for the hero area (creates contrast against light products area below)
   const topC = {
     ...C,
-    bg: "#0F1115",
-    card: "#1A1D24",
-    text: "#FAFAF7",
-    sub: "rgba(250,250,247,0.7)",
-    muted: "rgba(250,250,247,0.45)",
-    faint: "rgba(250,250,247,0.05)",
-    border: "rgba(250,250,247,0.08)",
-    borderStrong: "rgba(250,250,247,0.16)",
-    divider: "rgba(250,250,247,0.06)",
+    bg: "#0F172A",
+    card: "#1E293B",
+    text: "#F8FAFC",
+    sub: "rgba(248,250,252,0.7)",
+    muted: "rgba(248,250,252,0.45)",
+    faint: "rgba(248,250,252,0.05)",
+    border: "rgba(248,250,252,0.08)",
+    borderStrong: "rgba(248,250,252,0.16)",
+    divider: "rgba(248,250,252,0.06)",
   };
 
   return (

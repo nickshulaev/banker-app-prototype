@@ -1,107 +1,109 @@
-import { useState, useMemo, useRef, useEffect, useCallback, Fragment } from "react";
-import { ArrowLeftRight, Phone, CreditCard, Globe, TrendingUp, DollarSign, Star, Shield, BarChart3, Newspaper, ShoppingCart, Utensils, Fuel, Home, Wallet, Send as SendIcon, Plane } from "lucide-react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { Search, Bell, Plus, ChevronRight, ChevronDown, X, ArrowLeftRight, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid } from "lucide-react";
 
-/* ─── Pressable helper ─── */
-function usePressable() {
-  const [pressed, setPressed] = useState(false);
-  const handlers = {
-    onPointerDown: () => setPressed(true),
-    onPointerUp: () => setPressed(false),
-    onPointerLeave: () => setPressed(false),
-  };
-  return { pressed, handlers };
-}
+/* ═══════════════════════════════════════════════
+   DATA
+   ═══════════════════════════════════════════════ */
 
-/* ─── Data ─── */
-const RAW_ACCOUNTS = [
-  { product: "DepositCard R VISA Rew", last4: "4521", currency: "KZT", balance: 1350320.50 },
-  { product: "DepositCard R VISA Rew", last4: "4521", currency: "USD", balance: 412.80 },
-  { product: "DepositCARD MC WE Rez7val VIP", last4: "4357", currency: "USD", balance: 523.15 },
-  { product: "Business Premium Card", last4: "6608", currency: "KZT", balance: 387640.00 },
-  { product: "Business Premium Card", last4: "0120", currency: "KZT", balance: 52100.00 },
-  { product: "DepositCARD MCWorld Rez7val", last4: "3674", currency: "KZT", balance: 164230.45 },
-  { product: "Deposit card DC ZP 0 Premium", last4: "4787", currency: "KZT", balance: 89410.20 },
-  { product: "Инвестиционная карта Global", last4: "1862", currency: "USD", balance: 358.42 },
-  { product: "Инвестиционная карта Global", last4: "1862", currency: "KZT", balance: 30649.22 },
-  { product: "Инвестиционная карта Global", last4: "1862", currency: "EUR", balance: 185.16 },
-  { product: "Инвестиционная карта TFOS", last4: "0160", currency: "USD", balance: 86.50 },
-  { product: "Инвестиционная карта TFOS", last4: "0160", currency: "RUB", balance: 12340.75 },
-  { product: "Инвестиционная карта Global", last4: "9201", currency: "KZT", balance: 15800.00 },
-  { product: "DepositCARD MCWorld Rez7val", last4: "3674", currency: "FREEDOM", balance: 12 },
-  { product: "EcoCard MC World Unlim", last4: "0426", currency: "USD", balance: 3.00 },
-  { product: "Deposit card DC ZP 0 Premium", last4: "4787", currency: "KZT", balance: 42710.55 },
+const PENDING_REQUESTS = [
+  { id: 1, type: "request", from: "Валентин Г.", amount: 2100, currency: "EUR", status: "ожидается", initials: "ВГ" },
+  { id: 2, type: "request", from: "Алия К.", amount: 500, currency: "USD", status: "ожидается", initials: "АК" },
+  { id: 3, type: "invoice", from: "ТОО Магнум", amount: 15800, currency: "KZT", status: "к оплате", initials: "М" },
 ];
 
-const CARDS = [
-  { id: 1, name: "DepositCard VISA Rew", last4: "4521", network: "visa", frozen: false },
-  { id: 2, name: "MC WE Rez7val VIP", last4: "4357", network: "mc", frozen: false },
-  { id: 3, name: "Business Premium", last4: "6608", network: "mc", frozen: false },
-  { id: 4, name: "Инвест Global", last4: "1862", network: "visa", frozen: false },
-  { id: 5, name: "Инвест TFOS", last4: "0160", network: "visa", frozen: false },
-  { id: 6, name: "EcoCard Unlim", last4: "0426", network: "mc", frozen: true },
-  { id: 7, name: "DC ZP Premium", last4: "4787", network: "visa", frozen: false },
-  { id: 8, name: "MCWorld Rez7val", last4: "3674", network: "mc", frozen: false },
-  { id: 9, name: "Business Premium", last4: "0120", network: "visa", frozen: false },
-  { id: 10, name: "Инвест Global", last4: "9201", network: "visa", frozen: false },
+const PROMOS = [
+  { id: 1, title: "Частное размещение акций Freedom Holding Corp.", body: "С дисконтом 10%", cta: "Перейти", color: "#163300", textColor: "#9FE870" },
+  { id: 2, title: "Кэшбэк до 5% на путешествия", body: "Весь март", cta: "Активировать", color: "#0F172A", textColor: "#FFFFFF" },
+  { id: 3, title: "Депозит «Премиум» — до 18% годовых", body: "От 100 000 ₸", cta: "Открыть", color: "#FEF3C7", textColor: "#92400E" },
 ];
 
-const CARD_NET = Object.fromEntries(CARDS.map(c => [c.last4, c.network]));
-
-const STORIES = [
-  { id: 1, title: "FC кэшбэк", Icon: Star, viewed: false, bg: "linear-gradient(135deg, #F59E0B, #EF4444)" },
-  { id: 2, title: "Депозиты", Icon: TrendingUp, viewed: false, bg: "linear-gradient(135deg, #22C55E, #06B6D4)" },
-  { id: 3, title: "Страхование", Icon: Shield, viewed: true, bg: "linear-gradient(135deg, #0AB321, #06B6D4)" },
-  { id: 4, title: "Тарифы", Icon: BarChart3, viewed: true, bg: "linear-gradient(135deg, #3B82F6, #6366F1)" },
-  { id: 5, title: "Новости", Icon: Newspaper, viewed: true, bg: "linear-gradient(135deg, #EC4899, #F59E0B)" },
-  { id: 6, title: "Invest Card", Icon: CreditCard, viewed: true, bg: "linear-gradient(135deg, #6366F1, #A855F7)" },
+const PROMOS_EMPTY = [
+  { id: 1, title: "Откройте счёт в Цифра банк", body: "Для поездок в Россию", cta: "Подробнее", color: "#0F172A", textColor: "#FFFFFF" },
+  { id: 2, title: "Пополните карту и получите 1 000 ₸", body: "Приветственный бонус", cta: "Пополнить", color: "#163300", textColor: "#9FE870" },
 ];
 
-/* ─── FRHC / Freedom Currency mock data ─── */
-const FRHC_PRICE = 194;
-const FRHC_CHANGE = 12.4; // % за месяц
-
-const WEEK_SPEND_KZT = [15200, 8500, 22100, 12800, 0, 0, 0];
-const WEEK_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
-const TODAY_INDEX = 3;
-
-const NEWS = [
-  { id: 1, featured: true, title: "Freedom Bank запускает мультивалютные переводы без комиссии", subtitle: "Новый тарифный план для премиум-клиентов с моментальными переводами в 12 валютах", time: "2ч назад", tag: "Срочное" },
-  { id: 2, featured: false, title: "Изменение базовых ставок по депозитам с 1 апреля", time: "5ч назад" },
-  { id: 3, featured: false, title: "Техническое обслуживание: плановые работы в ночь с 5 на 6 марта", time: "Вчера" },
+const RECENT_TRANSFERS = [
+  { id: 1, name: "Константин", surname: "К.", initials: "К", color: "#22C55E" },
+  { id: 2, name: "Иван", surname: "В.", initials: "И", color: "#3B82F6" },
+  { id: 3, name: "Виктор", surname: "Д.", initials: "В", color: "#8B5CF6" },
+  { id: 4, name: "Умар", surname: "Д.", initials: "У", color: "#F59E0B" },
+  { id: 5, name: "Ирина", surname: "У.", initials: "И", color: "#EC4899" },
 ];
 
-const RECENT_CONTACTS = [
-  { id: 1, name: "Алия", initials: "АК", color: "#6366F1" },
-  { id: 2, name: "Марат", initials: "МТ", color: "#F59E0B" },
-  { id: 3, name: "Дарья", initials: "ДС", color: "#EC4899" },
-  { id: 4, name: "Банк RU", initials: "🏦", color: "#3B82F6" },
-  { id: 5, name: "Мама", initials: "МШ", color: "#22C55E" },
-];
-
-const DEPOSIT_RATE_KZT = 14.5;
-
-/* ─── Empty State Data ─── */
-const EMPTY_RAW_ACCOUNTS = [
-  { product: "DepositCard VISA", last4: "4521", currency: "KZT", balance: 0 },
-];
-const EMPTY_CARDS = [
-  { id: 1, name: "DepositCard VISA", last4: "4521", network: "visa", frozen: false },
-];
-const ONBOARDING_EXAMPLE_AMOUNT = 500000;
-
-const CURRENCY_META = {
-  KZT: { symbol: "₸", flag: "🇰🇿", color: "#22C55E", name: "Тенге" },
-  USD: { symbol: "$", flag: "🇺🇸", color: "#3B82F6", name: "Доллар" },
-  EUR: { symbol: "€", flag: "🇪🇺", color: "#A78BFA", name: "Евро" },
-  RUB: { symbol: "₽", flag: "🇷🇺", color: "#F59E0B", name: "Рубль" },
-  FREEDOM: { symbol: "F", flag: "⭐", color: "#64748B", name: "Freedom" },
+const FEATURED_NEWS = {
+  id: 1, tag: "Срочное",
+  title: "Freedom Bank запускает мультивалютные переводы без комиссии",
+  subtitle: "Новый тарифный план для премиум-клиентов",
+  author: "Редакция", time: "2 часа назад",
 };
 
+const FEATURED_NEWS_EMPTY = {
+  id: 2, tag: "Гид",
+  title: "Как начать пользоваться Freedom Banker",
+  subtitle: "5 первых шагов для нового клиента",
+  author: "Freedom Bank", time: "только что",
+};
+
+const CARD_PRODUCTS = [
+  {
+    bank: "Freedom KZ",
+    cards: [
+      { id: "superpickle", name: "SuperPickle", last4: "0088", primaryBalance: 897691.32, primaryCurrency: "USD",
+        breakdown: [
+          { currency: "KZT", amount: 35251706.16 },
+          { currency: "USD", amount: 113324.68 },
+          { currency: "KRW", amount: 30268.06 },
+        ], color: "#84CC16", visual: "pickle", fcBalance: 409.18,
+      },
+      { id: "invest-prestige", name: "Invest Prestige Card", sub: "D75003 — Freedom24", last4: "0011",
+        primaryBalance: 122683.74, primaryCurrency: "USD", breakdown: [], color: "#1E1B4B",
+        visual: "prestige", fcBalance: 87.42,
+      },
+      { id: "harvey-queen", name: "Supercard Harvey Queen", last4: "0088", primaryBalance: 1069.42, primaryCurrency: "USD",
+        breakdown: [
+          { currency: "USD", amount: 251709.36 },
+          { currency: "KZT", amount: 528.06 },
+          { currency: "TRY", amount: 420.23 },
+        ], color: "#F472B6", visual: "harvey", fcBalance: 287.42,
+      },
+    ],
+  },
+  {
+    bank: "Cifra Bank",
+    cards: [
+      { id: "ru-card", name: "Ru Card", last4: "1222", primaryBalance: 1699039.81, primaryCurrency: "USD",
+        breakdown: [
+          { currency: "KZT", amount: 1577523.88 },
+          { currency: "USD", amount: 29258.06 },
+        ], color: "#0D9488", visual: "ru-threads", fcBalance: 156.78,
+      },
+    ],
+  },
+];
+
+const ACCOUNTS_LIST = [
+  { id: "a1", name: "Текущий счёт", number: "KZ81 ALM3 X562 0014 5USD", balance: 12345.67, currency: "USD" },
+  { id: "a2", name: "Евровый мой счёт", number: "KZ67 BTQ2 Y742 0007 88EU", balance: 8910.12, currency: "EUR" },
+  { id: "a3", name: "Рублики", number: "KZ44 CNR9 Z812 0002 56RU", balance: 543210.50, currency: "RUB" },
+  { id: "a4", name: "Евросы", number: "KZ95 DVN5 W932 0006 43EU", balance: 3475.89, currency: "EUR" },
+  { id: "a5", name: "Мой счёт в USD", number: "KZ12 EK57 J452 0009 07US", balance: 25000.00, currency: "USD" },
+];
+
+const LOANS = [
+  { id: "l1", name: "Долг Олексх Х.", returnDate: "31.10.2025", balance: 5250.00, currency: "KZT", baseAmount: 5000, rate: 5 },
+  { id: "l2", name: "Долг Иван К.", returnDate: "01.06.2026", balance: 15990.90, currency: "KZT", baseAmount: 15500, rate: 3 },
+];
+
+const CREDITS = [
+  { id: "c1", name: "Кредит на дом мечты", payoffDate: "31.10.2025", monthly: 12089.09, currency: "KZT", rate: 4.97, paidPercent: 62 },
+  { id: "c2", name: "Машина", payoffDate: "01.02.2027", monthly: 223940.00, currency: "KZT", rate: 14.03, paidPercent: 35 },
+];
+
 const DEPOSITS = [
-  { id: 1, name: 'Депозит "КОПИЛКА" новый', closingDate: "10 Mar 2026", rate: 9.2, currency: "KZT", balance: 452145.41 },
-  { id: 2, name: 'Депозит "КОПИЛКА" новый', closingDate: "03 Feb 2027", rate: 1.0, currency: "USD", balance: 115700.60 },
-  { id: 3, name: 'Депозит "КОПИЛКА" новый', closingDate: "07 Dec 2026", rate: 16.0, currency: "KZT", balance: 18621557.07 },
-  { id: 4, name: 'Депозит "КОПИЛКА" новый', closingDate: "31 May 2027", rate: 0.8, currency: "EUR", balance: 51658.01 },
+  { id: 1, name: 'Депозит «КОПИЛКА»', closingDate: "10 мар 2026", rate: 9.2, currency: "KZT", balance: 452145.41 },
+  { id: 2, name: 'Депозит «КОПИЛКА»', closingDate: "03 фев 2027", rate: 1.0, currency: "USD", balance: 115700.60 },
+  { id: 3, name: 'Депозит «КОПИЛКА»', closingDate: "07 дек 2026", rate: 16.0, currency: "KZT", balance: 18621557.07 },
+  { id: 4, name: 'Депозит «КОПИЛКА»', closingDate: "31 мая 2027", rate: 0.8, currency: "EUR", balance: 51658.01 },
 ];
 
 const BROKER_ACCOUNTS = [
@@ -115,292 +117,370 @@ const BROKER_ACCOUNTS = [
   ]},
 ];
 
-// Approximate rates to KZT for display conversion
-const RATES_TO_KZT = {
-  KZT: 1,
-  USD: 455.0,
-  EUR: 495.0,
-  RUB: 5.1,
-  FREEDOM: 100.0,
+const EMPTY_CARD_PRODUCTS = [
+  { bank: "Freedom KZ", cards: [{ id: "first-card", name: "DepositCard", last4: "4521", primaryBalance: 0, primaryCurrency: "KZT", breakdown: [], color: "#22C55E", visual: "fresh", fcBalance: 0 }] },
+];
+
+/* ═══════════════════════════════════════════════
+   UTILITIES
+   ═══════════════════════════════════════════════ */
+
+const CURRENCY_META = {
+  KZT: { symbol: "₸", flag: "🇰🇿", name: "Тенге" },
+  USD: { symbol: "$", flag: "🇺🇸", name: "Доллар" },
+  EUR: { symbol: "€", flag: "🇪🇺", name: "Евро" },
+  RUB: { symbol: "₽", flag: "🇷🇺", name: "Рубль" },
+  KRW: { symbol: "₩", flag: "🇰🇷", name: "Вона" },
+  TRY: { symbol: "₺", flag: "🇹🇷", name: "Лира" },
 };
 
+const RATES_TO_KZT = { KZT: 1, USD: 455.0, EUR: 495.0, RUB: 5.1, KRW: 0.33, TRY: 12.5 };
+
 function fmtCompact(n) {
-  if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
-  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "K";
+  const abs = Math.abs(n);
+  if (abs >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
+  if (abs >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "K";
   return n.toFixed(2);
 }
 function fmtFull(n) {
   return n.toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
-
+function fmtInt(n) {
+  return Math.round(n).toLocaleString("ru-RU");
+}
+function convertToKZT(amount, currency) {
+  return amount * (RATES_TO_KZT[currency] || 1);
+}
 function convertTo(amountInKZT, targetCurrency) {
-  const rate = RATES_TO_KZT[targetCurrency] || 1;
-  return amountInKZT / rate;
+  return amountInKZT / (RATES_TO_KZT[targetCurrency] || 1);
 }
 
-/* ─── Stories ─── */
-function StoryItem({ s }) {
-  const { pressed, handlers } = usePressable();
-  return (
-    <div {...handlers} style={{ flexShrink: 0, width: 68, cursor: "pointer", opacity: pressed ? 0.7 : 1, transition: "opacity 0.1s" }}>
+/* ═══════════════════════════════════════════════
+   COLOR PALETTES — clean, Wise-like
+   ═══════════════════════════════════════════════ */
+
+const LIGHT_COLORS = {
+  bg: "#F7F7F5",
+  card: "#FFFFFF",
+  text: "#0E0F0C",
+  sub: "#5C5F66",
+  muted: "#9296A3",
+  faint: "rgba(14,15,12,0.04)",
+  border: "rgba(14,15,12,0.08)",
+  divider: "rgba(14,15,12,0.06)",
+  accent: "#9FE870",
+  accentDark: "#163300",
+  accentFg: "#163300",
+  accentSoft: "rgba(159,232,112,0.18)",
+  cardShadow: "none",
+};
+
+const DARK_COLORS = {
+  bg: "#0E0F0C",
+  card: "#1A1C19",
+  text: "#FAFAF7",
+  sub: "rgba(250,250,247,0.7)",
+  muted: "rgba(250,250,247,0.45)",
+  faint: "rgba(250,250,247,0.05)",
+  border: "rgba(250,250,247,0.08)",
+  divider: "rgba(250,250,247,0.06)",
+  accent: "#9FE870",
+  accentDark: "#163300",
+  accentFg: "#163300",
+  accentSoft: "rgba(159,232,112,0.14)",
+  cardShadow: "none",
+};
+
+/* ═══════════════════════════════════════════════
+   BLOCKS
+   ═══════════════════════════════════════════════ */
+
+const BLOCK_LABELS = [
+  { key: "balance", label: "Баланс" },
+  { key: "requests", label: "Запросы" },
+  { key: "promo", label: "Промо" },
+  { key: "transfers", label: "Последние переводы" },
+  { key: "news", label: "Новости" },
+  { key: "products", label: "Продукты" },
+  { key: "cta", label: "CTA" },
+];
+
+/* ═══════════════════════════════════════════════
+   CARD ART — flat, simple
+   ═══════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════
+   CARD HERO — large image-rich horizontal card
+   ═══════════════════════════════════════════════ */
+
+function CardArtwork({ visual }) {
+  const artworks = {
+    pickle: (
       <div style={{
-        width: 68, height: 68, borderRadius: 20,
-        border: s.viewed ? "1.5px solid #334155" : "1.5px solid #22C55E",
-        padding: 2, boxSizing: "border-box",
+        position: "absolute", inset: 0,
+        background: `
+          radial-gradient(circle at 15% 25%, rgba(190,242,100,0.5) 0%, transparent 35%),
+          radial-gradient(circle at 85% 80%, rgba(22,101,52,0.7) 0%, transparent 45%),
+          radial-gradient(circle at 65% 35%, rgba(74,222,128,0.35) 0%, transparent 30%),
+          linear-gradient(135deg, #3F6212 0%, #65A30D 50%, #84CC16 100%)
+        `,
       }}>
         <div style={{
-          width: "100%", height: "100%", borderRadius: 12, background: s.bg || "linear-gradient(135deg, #1E293B, #334155)",
-          display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
-        }}><s.Icon size={24} color="#fff" strokeWidth={2} /></div>
+          position: "absolute", top: "52%", left: "62%",
+          transform: "translate(-50%, -50%) rotate(-15deg)",
+          fontSize: 130, opacity: 0.18, lineHeight: 1, filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.2))",
+        }}>🥒</div>
       </div>
-      <div style={{ fontSize: 10, fontWeight: 500, color: s.viewed ? "#64748B" : "#94A3B8", textAlign: "center", marginTop: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {s.title}
+    ),
+    prestige: (
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `
+          radial-gradient(circle at 80% 15%, rgba(129,140,248,0.3) 0%, transparent 50%),
+          radial-gradient(circle at 15% 85%, rgba(244,114,182,0.2) 0%, transparent 45%),
+          linear-gradient(135deg, #020617 0%, #1E1B4B 50%, #312E81 100%)
+        `,
+      }}>
+        {/* Gold accent lines */}
+        <div style={{ position: "absolute", top: "30%", right: "5%", width: 120, height: 1, backgroundColor: "rgba(252,211,77,0.35)", transform: "rotate(-30deg)" }} />
+        <div style={{ position: "absolute", bottom: "35%", left: "5%", width: 80, height: 1, backgroundColor: "rgba(252,211,77,0.25)", transform: "rotate(-30deg)" }} />
+        <div style={{
+          position: "absolute", top: "55%", left: "58%",
+          transform: "translate(-50%, -50%)",
+          fontSize: 110, opacity: 0.12, lineHeight: 1,
+        }}>🎩</div>
       </div>
-    </div>
-  );
-}
-
-function StoriesRow() {
-  return (
-    <div style={{ display: "flex", gap: 12, overflowX: "auto", padding: "0 20px", scrollbarWidth: "none" }}>
-      {STORIES.map(s => (
-        <StoryItem key={s.id} s={s} />
-      ))}
-    </div>
-  );
-}
-
-/* ─── Currency Wallet ─── */
-function CurrencyWallet({ code, total, accounts, isOpen, onToggle }) {
-  const meta = CURRENCY_META[code] || { symbol: code, flag: "💰", color: "#64748B" };
-  const { pressed, handlers } = usePressable();
-  // Sort accounts by balance descending
-  const sorted = [...accounts].sort((a, b) => b.balance - a.balance);
-
-  return (
-    <div>
-      <div {...handlers} onClick={onToggle} style={{
-        display: "flex", alignItems: "center", padding: "13px 0",
-        cursor: "pointer", borderBottom: isOpen ? "none" : "1px solid #1E293B",
-        opacity: pressed ? 0.7 : 1, transition: "opacity 0.1s",
+    ),
+    harvey: (
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `
+          radial-gradient(ellipse at 28% 35%, rgba(255,255,255,0.35) 0%, transparent 28%),
+          radial-gradient(circle at 75% 25%, rgba(96,165,250,0.5) 0%, transparent 35%),
+          radial-gradient(circle at 70% 80%, rgba(0,0,0,0.4) 0%, transparent 40%),
+          linear-gradient(135deg, #9D174D 0%, #BE185D 45%, #EC4899 100%)
+        `,
+      }}>
+        <div style={{ position: "absolute", top: "20%", left: "18%", width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.18)" }} />
+        <div style={{ position: "absolute", bottom: "22%", right: "22%", width: 34, height: 34, borderRadius: "50%", background: "rgba(59,130,246,0.35)" }} />
+        <div style={{ position: "absolute", top: "60%", left: "30%", width: 20, height: 20, borderRadius: "50%", background: "rgba(255,255,255,0.12)" }} />
+        <div style={{
+          position: "absolute", top: "50%", left: "55%",
+          transform: "translate(-50%, -50%) rotate(18deg)",
+          fontSize: 110, opacity: 0.2, lineHeight: 1,
+        }}>🃏</div>
+      </div>
+    ),
+    "ru-threads": (
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `
+          repeating-linear-gradient(60deg, transparent 0, transparent 16px, rgba(255,255,255,0.07) 16px, rgba(255,255,255,0.07) 17px),
+          repeating-linear-gradient(120deg, transparent 0, transparent 20px, rgba(0,0,0,0.12) 20px, rgba(0,0,0,0.12) 21px),
+          linear-gradient(135deg, #042F2E 0%, #0F766E 45%, #14B8A6 100%)
+        `,
       }}>
         <div style={{
-          width: 38, height: 38, borderRadius: 20, backgroundColor: meta.color + "15",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 18, marginRight: 12, flexShrink: 0,
-        }}>{meta.flag}</div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 600, color: "#F1F5F9" }}>{code}</div>
-          <div style={{ fontSize: 11, color: "#64748B", marginTop: 1 }}>
-            {sorted.length} {sorted.length === 1 ? "счёт" : sorted.length < 5 ? "счёта" : "счетов"}
-          </div>
-        </div>
-        <div style={{ fontSize: 16, fontWeight: 700, color: "#F1F5F9", fontFeatureSettings: "'tnum'", letterSpacing: "-0.01em" }}>
-          {fmtFull(total)}
-          <span style={{ fontSize: 11, fontWeight: 500, color: "#64748B", marginLeft: 3 }}>{meta.symbol}</span>
-        </div>
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ marginLeft: 8, transition: "transform 0.2s", transform: isOpen ? "rotate(180deg)" : "rotate(0)" }}>
-          <path d="M3.5 5.25l3.5 3.5 3.5-3.5" stroke="#64748B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+          position: "absolute", top: "50%", left: "55%",
+          transform: "translate(-50%, -50%)",
+          fontSize: 105, opacity: 0.18, lineHeight: 1,
+        }}>🪆</div>
       </div>
-      {isOpen && (
-        <div style={{ paddingBottom: 6, marginBottom: 2, borderBottom: "1px solid #1E293B" }}>
-          {sorted.map((acc, i) => {
-            const net = CARD_NET[acc.last4];
-            return (
-              <div key={i} {...handlers} style={{
-                display: "flex", alignItems: "center", gap: 12,
-                padding: "12px 0 12px 12px", cursor: "pointer",
-                borderBottom: i < sorted.length - 1 ? "1px solid #1E293B" : "none",
-                opacity: pressed ? 0.7 : 1, transition: "opacity 0.1s",
-              }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                  backgroundColor: net === "visa" ? "#1A1F71" : net === "mc" ? "#EB001B" : "#1E293B",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: "#fff", letterSpacing: "0.02em" }}>
-                    {net === "visa" ? "VISA" : net === "mc" ? "MC" : "💳"}
-                  </span>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: "#F1F5F9", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{acc.product}</div>
-                  <div style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>••{acc.last4}</div>
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "#F1F5F9", fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
-                  {fmtFull(acc.balance)}
-                </div>
-                <svg width="7" height="12" viewBox="0 0 7 12" fill="none" style={{ flexShrink: 0, marginLeft: 2 }}>
-                  <path d="M1 1l5 5-5 5" stroke="#64748B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+    ),
+    fresh: (
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `
+          radial-gradient(circle at 20% 30%, rgba(159,232,112,0.4) 0%, transparent 40%),
+          radial-gradient(circle at 80% 70%, rgba(22,101,52,0.5) 0%, transparent 45%),
+          linear-gradient(135deg, #14532D 0%, #166534 50%, #22C55E 100%)
+        `,
+      }}>
+        <div style={{
+          position: "absolute", top: "50%", left: "55%",
+          transform: "translate(-50%, -50%)",
+          fontSize: 100, opacity: 0.18, lineHeight: 1,
+        }}>✨</div>
+      </div>
+    ),
+  };
+  return artworks[visual] || artworks.fresh;
 }
 
-/* ─── Card chip ─── */
-function CardChip({ card }) {
-  const { pressed, handlers } = usePressable();
+function CardHero({ card, bank, C }) {
+  const cm = CURRENCY_META[card.primaryCurrency] || { symbol: card.primaryCurrency };
+  const allCurrencies = [card.primaryCurrency, ...card.breakdown.map(b => b.currency)];
+  const uniqueCurrencies = [...new Set(allCurrencies)];
+  const subtitle = card.sub
+    || (uniqueCurrencies.length > 1
+      ? uniqueCurrencies.join(" · ")
+      : "Активна");
+
   return (
-    <div {...handlers} style={{
-      flexShrink: 0, width: 118, height: 74, borderRadius: 12, padding: "10px 12px",
-      backgroundColor: "#1E293B",
-      border: card.frozen ? "1px dashed #334155" : "1px solid #334155",
-      display: "flex", flexDirection: "column", justifyContent: "space-between",
-      cursor: "pointer", position: "relative", opacity: pressed ? 0.7 : card.frozen ? 0.45 : 1,
-      transition: "opacity 0.1s",
+    <div data-press style={{
+      flexShrink: 0,
+      width: 178, height: 138,
+      borderRadius: 14,
+      backgroundColor: C.card,
+      border: `1px solid ${C.border}`,
+      scrollSnapAlign: "start",
+      cursor: "pointer",
+      position: "relative",
+      padding: "58px 18px 14px",
     }}>
-      <div style={{ fontSize: 11, fontWeight: 600, color: "#94A3B8", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.name}</div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-        <span style={{ fontSize: 11, color: "#64748B", fontFeatureSettings: "'tnum'" }}>••{card.last4}</span>
-        <span style={{ fontSize: 9, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em" }}>{card.network}</span>
-      </div>
-      {card.frozen && (
-        <div style={{ position: "absolute", top: 6, right: 8, fontSize: 8, fontWeight: 700, color: "#64748B", backgroundColor: "#0F172A", borderRadius: 8, padding: "1px 4px", textTransform: "uppercase" }}>frozen</div>
-      )}
-    </div>
-  );
-}
-
-/* ─── News ─── */
-function NewsBlock({ onAvatarClick }) {
-  const featured = NEWS.find(n => n.featured);
-  const secondary = NEWS.filter(n => !n.featured);
-  return (
-    <div>
-      {featured && (
-        <div data-press style={{ cursor: "pointer", marginBottom: 8, transition: "opacity 0.1s" }}>
-          <div style={{
-            height: 140, borderRadius: 12,
-            backgroundColor: "#1E293B", border: "1px solid #334155",
-            display: "flex", alignItems: "flex-end", padding: 16,
-          }}>
-            <div>
-              <div style={{ display: "inline-block", fontSize: 10, fontWeight: 700, color: "#E11D48", backgroundColor: "#E11D4818", borderRadius: 8, padding: "2px 8px", marginBottom: 8, letterSpacing: "0.04em", textTransform: "uppercase" }}>{featured.tag}</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "#F1F5F9", lineHeight: 1.35 }}>{featured.title}</div>
-              <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4, lineHeight: 1.3 }}>{featured.subtitle}</div>
-            </div>
-          </div>
-          <div style={{ fontSize: 11, color: "#64748B", marginTop: 6, paddingLeft: 2 }}>{featured.time}</div>
-        </div>
-      )}
-      {secondary.map(n => (
-        <div key={n.id} data-press style={{ padding: "12px 0", borderTop: "1px solid #1E293B", cursor: "pointer", transition: "opacity 0.1s" }}>
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-            {n.tag && <div style={{ fontSize: 10, fontWeight: 600, color: "#64748B", backgroundColor: "#1E293B", borderRadius: 8, padding: "2px 7px", flexShrink: 0, marginTop: 2 }}>{n.tag}</div>}
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#94A3B8", lineHeight: 1.35 }}>{n.title}</div>
-              <div style={{ fontSize: 11, color: "#64748B", marginTop: 3 }}>{n.time}</div>
-            </div>
-          </div>
-        </div>
-      ))}
-      <div onClick={onAvatarClick} style={{ textAlign: "center", padding: "14px 0", cursor: "pointer", borderTop: "1px solid #1E293B", marginTop: 4 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "#22C55E" }}>Все новости →</span>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Action button ─── */
-function ActionBtn({ children, label, accent }) {
-  const { pressed, handlers } = usePressable();
-  return (
-    <div {...handlers} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, cursor: "pointer", flex: 1, opacity: pressed ? 0.7 : 1, transition: "opacity 0.1s" }}>
+      {/* Card image — same as list view */}
       <div style={{
-        width: 48, height: 48, borderRadius: 20,
-        backgroundColor: accent ? "#22C55E" : "#1E293B",
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}>{children}</div>
-      <span style={{ fontSize: 11, color: accent ? "#22C55E" : "#94A3B8", fontWeight: 500 }}>{label}</span>
+        position: "absolute",
+        top: -14, left: 18,
+        filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.18))",
+      }}>
+        <CardArt color={card.color} last4={card.last4} />
+      </div>
+
+      {/* Text content */}
+      <div>
+        <div style={{
+          fontSize: 12, fontWeight: 600, color: C.text,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>{card.name}</div>
+        <div style={{
+          fontSize: 17, fontWeight: 800, color: C.text,
+          fontFeatureSettings: "'tnum'", letterSpacing: -0.3, lineHeight: 1.1,
+          marginTop: 6,
+        }}>
+          {fmtFull(card.primaryBalance)} <span style={{ fontSize: 11, fontWeight: 600, color: C.muted }}>{cm.symbol}</span>
+        </div>
+        <div style={{
+          fontSize: 11, color: C.muted, marginTop: 8,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>{subtitle}</div>
+      </div>
     </div>
   );
 }
 
-/* ─── Search bar ─── */
-function SearchBar({ stuck, searchQuery, setSearchQuery, searchFocused, setSearchFocused }) {
+/* ═══════════════════════════════════════════════
+   ACCOUNT HERO — clean minimal card in carousel
+   ═══════════════════════════════════════════════ */
+
+function AccountHero({ account, C }) {
+  const cm = CURRENCY_META[account.currency] || { symbol: account.currency, flag: "💰" };
+  const ibanTail = account.number.replace(/\s/g, '').slice(-6);
+
+  return (
+    <div data-press style={{
+      flexShrink: 0,
+      width: 200, height: 124,
+      borderRadius: 14,
+      backgroundColor: C.card,
+      border: `1px solid ${C.border}`,
+      scrollSnapAlign: "start",
+      cursor: "pointer",
+      padding: "14px 16px",
+      display: "flex", flexDirection: "column", justifyContent: "space-between",
+    }}>
+      <div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+          <span style={{ fontSize: 15 }}>{cm.flag}</span>
+          <span style={{
+            fontSize: 11, fontWeight: 700, color: C.muted,
+            letterSpacing: 0.4, textTransform: "uppercase",
+          }}>{account.currency}</span>
+        </div>
+        <div style={{
+          fontSize: 13, fontWeight: 600, color: C.text,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>{account.name}</div>
+      </div>
+      <div>
+        <div style={{
+          fontSize: 18, fontWeight: 700, color: C.text,
+          fontFeatureSettings: "'tnum'", letterSpacing: -0.3, lineHeight: 1.1,
+        }}>
+          {fmtFull(account.balance)} <span style={{ fontSize: 12, fontWeight: 600, color: C.muted }}>{cm.symbol}</span>
+        </div>
+        <div style={{
+          fontSize: 10, color: C.muted, marginTop: 4,
+          fontFeatureSettings: "'tnum'",
+        }}>••{ibanTail}</div>
+      </div>
+    </div>
+  );
+}
+
+function CardArt({ color, last4 }) {
   return (
     <div style={{
-      padding: stuck ? "8px 20px" : "0 20px",
-      backgroundColor: stuck ? "#0F172A" : "transparent",
-      borderBottom: stuck ? "1px solid #1E293B" : "none",
-      display: "flex", alignItems: "center", gap: 8,
+      width: 88, height: 56, borderRadius: 7,
+      backgroundColor: color, position: "relative",
+      flexShrink: 0,
     }}>
+      {/* Chip */}
       <div style={{
-        flex: 1,
-        display: "flex", alignItems: "center", gap: 8,
-        backgroundColor: "#1E293B", borderRadius: 12, padding: "9px 14px",
-        border: searchFocused ? "1px solid #22C55E" : "1px solid #334155",
-        transition: "border-color 0.15s",
-      }}>
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-          <circle cx="7" cy="7" r="4.5" stroke="#64748B" strokeWidth="1.5"/>
-          <path d="M10.5 10.5L14 14" stroke="#64748B" strokeWidth="1.5" strokeLinecap="round"/>
-        </svg>
-        <input
-          value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-          onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)}
-          placeholder="Найти контакт, продукт..."
-          style={{ flex: 1, background: "none", border: "none", outline: "none", color: "#F1F5F9", fontSize: 14, fontFamily: "inherit" }}
-        />
-      </div>
-      <div data-press style={{
-        width: 40, height: 40, borderRadius: 12,
-        backgroundColor: "#1E293B", border: "1px solid #334155",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        cursor: "pointer", flexShrink: 0, transition: "opacity 0.1s",
-      }}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" fill="#94A3B8"/>
-        </svg>
-      </div>
+        position: "absolute", top: 8, left: 9,
+        width: 14, height: 10, borderRadius: 2,
+        background: "linear-gradient(135deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.15) 100%)",
+      }} />
+      {/* Contactless wave */}
+      <div style={{
+        position: "absolute", top: 9, left: 27,
+        width: 8, height: 8, borderRadius: "50%",
+        border: "1px solid rgba(255,255,255,0.35)",
+        borderRight: "1px solid transparent",
+        borderBottom: "1px solid transparent",
+        transform: "rotate(-45deg)",
+      }} />
+      {/* Network logo */}
+      <div style={{
+        position: "absolute", bottom: 6, right: 8,
+        fontSize: 9, fontWeight: 800, color: "rgba(255,255,255,0.95)",
+        letterSpacing: 0.5, fontStyle: "italic",
+      }}>VISA</div>
+      {/* Last 4 hint */}
+      <div style={{
+        position: "absolute", bottom: 6, left: 8,
+        fontSize: 7, fontWeight: 600, color: "rgba(255,255,255,0.55)",
+        letterSpacing: 0.3, fontFeatureSettings: "'tnum'",
+      }}>••{last4}</div>
     </div>
   );
 }
 
-/* ─── Currency Picker Dropdown ─── */
-function CurrencyPicker({ current, currencies, onSelect, onClose }) {
+/* ═══════════════════════════════════════════════
+   CURRENCY PICKER
+   ═══════════════════════════════════════════════ */
+
+function CurrencyPicker({ current, currencies, onSelect, onClose, C }) {
   return (
     <div onClick={onClose} style={{
-      position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: "#00000066", zIndex: 100,
+      position: "fixed", inset: 0,
+      backgroundColor: "rgba(0,0,0,0.35)", zIndex: 100,
       display: "flex", alignItems: "center", justifyContent: "center",
     }}>
       <div onClick={e => e.stopPropagation()} style={{
-        backgroundColor: "#1E293B", borderRadius: 20, padding: "8px 0",
-        width: 260, maxHeight: 340, overflow: "auto",
-        boxShadow: "0 20px 60px #00000088",
+        backgroundColor: C.card, borderRadius: 16, padding: "8px 0",
+        width: 280, maxHeight: 360, overflow: "auto",
+        border: `1px solid ${C.border}`,
       }}>
-        <div style={{ padding: "12px 20px 8px", fontSize: 13, fontWeight: 600, color: "#64748B", letterSpacing: "0.04em", textTransform: "uppercase" }}>
-          Отображать баланс в
+        <div style={{ padding: "14px 20px 8px", fontSize: 12, fontWeight: 600, color: C.muted }}>
+          Отображать в валюте
         </div>
         {currencies.map(code => {
-          const meta = CURRENCY_META[code] || { symbol: code, flag: "💰", name: code, color: "#64748B" };
+          const meta = CURRENCY_META[code] || { symbol: code, name: code };
           const isActive = code === current;
           return (
             <div key={code} onClick={() => { onSelect(code); onClose(); }}
               style={{
                 display: "flex", alignItems: "center", gap: 12,
                 padding: "12px 20px", cursor: "pointer",
-                backgroundColor: isActive ? "#334155" : "transparent",
-                transition: "background-color 0.1s",
-              }}
-            >
+                backgroundColor: isActive ? C.faint : "transparent",
+              }}>
               <span style={{ fontSize: 20 }}>{meta.flag}</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 600, color: "#F1F5F9" }}>{code}</div>
-                <div style={{ fontSize: 11, color: "#64748B" }}>{meta.name}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{code}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>{meta.name}</div>
               </div>
-              <span style={{ fontSize: 14, color: "#64748B" }}>{meta.symbol}</span>
-              {isActive && (
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M3 8.5l3.5 3.5L13 5" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              )}
+              {isActive && <div style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: C.accentDark }} />}
             </div>
           );
         })}
@@ -409,171 +489,21 @@ function CurrencyPicker({ current, currencies, onSelect, onClose }) {
   );
 }
 
-/* ─── Bank Tab Content (currency-wallet model per brief) ─── */
-function BankContent({ wallets, openCurrency, setOpenCurrency }) {
-  return (
-    <div>
-      {/* Card chips — horizontal scroll */}
-      <div style={{ paddingLeft: 20, marginBottom: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingRight: 20, marginBottom: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "#64748B", letterSpacing: "0.04em", textTransform: "uppercase" }}>Карты</span>
-          <span style={{ fontSize: 12, color: "#22C55E", fontWeight: 500, cursor: "pointer" }}>Управление</span>
-        </div>
-        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, paddingRight: 20, scrollbarWidth: "none" }}>
-          {CARDS.map(c => <CardChip key={c.id} card={c} />)}
-          <div style={{
-            flexShrink: 0, width: 74, height: 74, borderRadius: 12,
-            border: "1px dashed #334155",
-            display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-          }}>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M10 4V16M4 10H16" stroke="#64748B" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          </div>
-        </div>
-      </div>
+/* ═══════════════════════════════════════════════
+   BOTTOM SHEET — Constructor
+   ═══════════════════════════════════════════════ */
 
-      {/* Currency wallets — expandable rows */}
-      <div style={{ padding: "0 20px" }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#64748B", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 6 }}>Валюты</div>
-        {wallets.filter(w => w.code !== "FREEDOM").map(w => (
-          <CurrencyWallet key={w.code} code={w.code} total={w.total} accounts={w.accounts}
-            isOpen={openCurrency === w.code}
-            onToggle={() => setOpenCurrency(openCurrency === w.code ? null : w.code)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ─── Deposits Tab Content ─── */
-function DepositsContent() {
-  return (
-    <div style={{ padding: "0 20px" }}>
-      {/* Promo banner */}
-      <div style={{
-        borderRadius: 12, padding: "20px 22px", marginBottom: 24, position: "relative", overflow: "hidden",
-        backgroundColor: "#1E293B", border: "1px solid #334155",
-      }}>
-        <div style={{ fontSize: 17, fontWeight: 700, color: "#F1F5F9", lineHeight: 1.3, marginBottom: 8 }}>
-          Long-term investment
-        </div>
-        <div style={{ fontSize: 13, color: "#94A3B8", lineHeight: 1.4 }}>
-          up to 7.28% per annum in USD
-        </div>
-        <div style={{ fontSize: 13, color: "#94A3B8", lineHeight: 1.4 }}>
-          up to 3.15% per annum in EUR
-        </div>
-        <div style={{ position: "absolute", right: 18, top: "50%", transform: "translateY(-50%)", display: "flex" }}>
-          <div style={{ width: 36, height: 36, borderRadius: 20, backgroundColor: "#334155", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: "#94A3B8" }}>$</div>
-          <div style={{ width: 36, height: 36, borderRadius: 20, backgroundColor: "#334155", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: "#94A3B8", marginLeft: -8 }}>€</div>
-        </div>
-      </div>
-
-      {/* Section header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-        <span style={{ fontSize: 20, fontWeight: 700, color: "#F1F5F9" }}>Депозиты</span>
-        <div style={{
-          width: 28, height: 28, borderRadius: 8, border: "1.5px solid #22C55E",
-          display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-        }}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M7 3v8M3 7h8" stroke="#22C55E" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-        </div>
-      </div>
-      <div style={{ fontSize: 12, color: "#64748B", marginBottom: 16 }}>Расчёт приблизительный и не является офертой</div>
-
-      {/* Deposit list */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {DEPOSITS.map(dep => {
-          const cm = CURRENCY_META[dep.currency] || { symbol: dep.currency };
-          return (
-            <div key={dep.id} style={{
-              backgroundColor: "#1E293B", borderRadius: 12, padding: "14px 18px",
-              cursor: "pointer", border: "1px solid #334155",
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#F1F5F9", maxWidth: "55%" }}>{dep.name}</span>
-                <span style={{ fontSize: 16, fontWeight: 700, color: "#F1F5F9", fontFeatureSettings: "'tnum'" }}>
-                  {fmtFull(dep.balance)} <span style={{ color: "#22C55E" }}>{cm.symbol}</span>
-                </span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 12, color: "#64748B" }}>Дата закрытия — {dep.closingDate}</span>
-                <span style={{ fontSize: 12, color: "#64748B" }}>Ставка {dep.rate}%</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/* ─── Broker Tab Content ─── */
-function BrokerContent() {
-  return (
-    <div style={{ padding: "0 20px" }}>
-      {BROKER_ACCOUNTS.map((group, gi) => (
-        <div key={gi} style={{ marginBottom: 24 }}>
-          <span style={{ fontSize: 20, fontWeight: 700, color: "#F1F5F9", display: "block", marginBottom: 14 }}>{group.group}</span>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {group.accounts.map(acc => {
-              const cm = CURRENCY_META[acc.currency] || { symbol: acc.currency };
-              return (
-                <div key={acc.id} style={{
-                  backgroundColor: "#1E293B", borderRadius: 12, padding: "14px 18px",
-                  cursor: "pointer", border: "1px solid #334155",
-                }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: "#F1F5F9" }}>{acc.id}</span>
-                    <span style={{ fontSize: 17, fontWeight: 700, color: "#F1F5F9", fontFeatureSettings: "'tnum'" }}>
-                      {fmtFull(acc.balance)} <span style={{ fontSize: 13, color: "#64748B" }}>{acc.currency}</span>
-                    </span>
-                  </div>
-                  <span style={{ fontSize: 12, color: "#64748B" }}>{acc.type}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-const BLOCK_LABELS = [
-  { key: "balance", label: "Баланс" },
-  { key: "actions", label: "Быстрые действия" },
-  { key: "search", label: "Поиск" },
-  { key: "recentTransfers", label: "Частые переводы" },
-  { key: "transfers", label: "Переводы и платежи" },
-  { key: "stories", label: "Stories" },
-  { key: "depositNudge", label: "Депозитный оффер" },
-  { key: "banners", label: "Промо-баннеры" },
-  { key: "products", label: "Продукты" },
-  { key: "news", label: "Новости" },
-  { key: "cta", label: "CTA кнопка" },
-];
-
-/* ─── Debug Theme Switcher ─── */
-function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrder, setBlockOrder, subVis, setSubVis, emptyState, setEmptyState, colors }) {
-  const C = colors;
-  const isDark = C.bg === '#0F172A';
+function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrder, setBlockOrder, emptyState, setEmptyState, C }) {
+  const isDark = C.bg === '#0E0F0C';
   const themes = [
-    { key: "dark", label: "Dark (v6)", desc: "Тёмная тема, зелёный акцент" },
-    { key: "stripe", label: "Stripe Light", desc: "Светлая тема, зелёный акцент" },
+    { key: "stripe", label: "Light", desc: "Светлая" },
+    { key: "dark", label: "Dark", desc: "Тёмная" },
   ];
 
-  // DnD state
   const [dragIndex, setDragIndex] = useState(null);
   const [overIndex, setOverIndex] = useState(null);
   const [dragY, setDragY] = useState(0);
-  const [dragStartY, setDragStartY] = useState(0);
-  const ROW_H = 46; // row height + gap
-
+  const ROW_H = 48;
   const dragRef = useRef({ index: null, startY: 0, overIndex: null });
 
   const handleDragStart = (index, e) => {
@@ -581,7 +511,6 @@ function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrd
     dragRef.current = { index, startY: e.clientY, overIndex: index };
     setDragIndex(index);
     setOverIndex(index);
-    setDragStartY(e.clientY);
     setDragY(0);
   };
 
@@ -597,1305 +526,1022 @@ function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrd
     };
     const onUp = () => {
       const { index: fromIdx, overIndex: toIdx } = dragRef.current;
-      if (fromIdx !== null && toIdx !== null && fromIdx !== toIdx) {
-        setBlockOrder(bo => {
-          const next = [...bo];
-          const [moved] = next.splice(fromIdx, 1);
-          next.splice(toIdx, 0, moved);
+      if (fromIdx !== toIdx) {
+        setBlockOrder(prev => {
+          const next = [...prev];
+          const [item] = next.splice(fromIdx, 1);
+          next.splice(toIdx, 0, item);
           return next;
         });
       }
-      dragRef.current = { index: null, startY: 0, overIndex: null };
       setDragIndex(null);
       setOverIndex(null);
       setDragY(0);
     };
-    document.addEventListener("pointermove", onMove);
-    document.addEventListener("pointerup", onUp);
-    return () => {
-      document.removeEventListener("pointermove", onMove);
-      document.removeEventListener("pointerup", onUp);
-    };
-  }, [dragIndex, blockOrder.length, setBlockOrder]);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
+  }, [dragIndex]);
 
   const getDisplacement = (index) => {
-    if (dragIndex === null || overIndex === null || index === dragIndex) return 0;
-    if (dragIndex < overIndex) {
-      if (index > dragIndex && index <= overIndex) return -ROW_H;
-    } else {
-      if (index >= overIndex && index < dragIndex) return ROW_H;
-    }
+    if (dragIndex === null) return 0;
+    if (index === dragIndex) return dragY;
+    if (dragIndex < overIndex && index > dragIndex && index <= overIndex) return -ROW_H;
+    if (dragIndex > overIndex && index < dragIndex && index >= overIndex) return ROW_H;
     return 0;
   };
 
-  const labelMap = {};
-  BLOCK_LABELS.forEach(b => { labelMap[b.key] = b.label; });
-  if (emptyState) {
-    labelMap.recentTransfers = "Онбординг";
-  }
-
   return (
     <>
-      {/* Overlay */}
-      <div onClick={onClose} style={{
-        position: "fixed", inset: 0, backgroundColor: "#00000055", zIndex: 200,
-        animation: "sheetOverlay 0.2s ease-out",
-      }} />
-      {/* Sheet */}
-      <div onClick={e => e.stopPropagation()} style={{
-        position: "fixed", bottom: 0, left: 0, right: 0,
-        maxWidth: 393, margin: "0 auto",
-        backgroundColor: C.card,
-        borderRadius: "20px 20px 0 0",
-        maxHeight: "75vh",
-        display: "flex", flexDirection: "column",
-        zIndex: 201,
-        animation: "sheetUp 0.3s cubic-bezier(0.22, 1, 0.36, 1)",
-        boxShadow: "0 -8px 40px #00000018",
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.35)", zIndex: 200 }} />
+      <div style={{
+        position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
+        width: "100%", maxWidth: 430, zIndex: 201,
+        backgroundColor: C.card, borderRadius: "20px 20px 0 0",
+        padding: "12px 20px 40px", maxHeight: "82vh", overflowY: "auto",
       }}>
-        {/* Pill handle */}
-        <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 0" }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: C.border }} />
-        </div>
-        {/* Header */}
-        <div style={{ padding: "14px 24px 0" }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>Конструктор</div>
-          <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Тема, порядок и видимость блоков</div>
-        </div>
-        {/* Scrollable content */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px 32px", WebkitOverflowScrolling: "touch" }}>
-          {/* Theme switcher */}
-          <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.04em" }}>Тема</div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-            {themes.map(t => (
-              <div key={t.key} onClick={() => { setTheme(t.key); }} style={{
-                flex: 1, padding: "10px 12px", borderRadius: 12, cursor: "pointer",
-                backgroundColor: theme === t.key ? (isDark ? "#334155" : `${C.accent}10`) : "transparent",
-                border: theme === t.key ? `1.5px solid ${C.accent}` : `1.5px solid ${C.border}`,
-                transition: "all 0.15s",
-              }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{t.label}</div>
-                {theme === t.key && <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, marginTop: 2 }}>ACTIVE</div>}
-              </div>
-            ))}
-          </div>
+        <div style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: C.border, margin: "0 auto 20px" }} />
+        <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 24 }}>Конструктор</div>
 
-          {/* Empty state toggle */}
-          <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.04em" }}>Состояние</div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", marginBottom: 16, borderBottom: `1px solid ${C.border}` }}>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Empty State</div>
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{emptyState ? "Новый пользователь: 1 карта, 0₸" : "Активный пользователь"}</div>
-            </div>
-            <div onClick={() => setEmptyState(v => !v)} style={{
-              width: 44, height: 24, borderRadius: 12,
-              backgroundColor: emptyState ? C.accent : (isDark ? "#475569" : "#D1D5DB"),
-              position: "relative", transition: "background-color 0.2s",
-              cursor: "pointer", flexShrink: 0,
+        <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>Тема</div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+          {themes.map(t => (
+            <div key={t.key} onClick={() => setTheme(t.key)} style={{
+              flex: 1, padding: "12px 14px", borderRadius: 10, cursor: "pointer",
+              backgroundColor: theme === t.key ? C.accentSoft : "transparent",
+              border: `1px solid ${theme === t.key ? C.accent : C.border}`,
             }}>
-              <div style={{
-                width: 20, height: 20, borderRadius: 10,
-                backgroundColor: "#fff", position: "absolute", top: 2,
-                left: emptyState ? 22 : 2, transition: "left 0.2s",
-                boxShadow: "0 1px 3px #00000033",
-              }} />
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{t.label}</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{t.desc}</div>
             </div>
-          </div>
+          ))}
+        </div>
 
-          {/* Block list */}
-          <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.04em" }}>Блоки</div>
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: 2, position: "relative" }}
-          >
-            {blockOrder.map((key, index) => {
-              const on = blockVis[key];
-              const isDragged = index === dragIndex;
-              const displacement = getDisplacement(index);
-              const SUB_ITEMS = key === "products" && on && !emptyState ? [
-                { sKey: "expenses", label: "Расходы за неделю" },
-                { sKey: "transactions", label: "Транзакции" },
-              ] : null;
-              return (
-                <Fragment key={key}>
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  padding: "10px 8px", borderRadius: 10,
-                  backgroundColor: isDragged ? (isDark ? "#334155" : "#F3F4F6") : "transparent",
-                  transform: isDragged ? `translateY(${dragY}px) scale(1.02)` : `translateY(${displacement}px)`,
-                  transition: isDragged ? "box-shadow 0.15s" : "transform 0.2s cubic-bezier(0.2,0,0,1), background-color 0.15s",
-                  zIndex: isDragged ? 10 : 1,
-                  boxShadow: isDragged ? `0 4px 16px ${isDark ? "#00000044" : "#00000018"}` : "none",
-                  userSelect: "none",
-                  touchAction: "none",
-                  position: "relative",
+        <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>Состояние</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", marginBottom: 16, borderBottom: `1px solid ${C.divider}` }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Empty state</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 1 }}>{emptyState ? "Новый пользователь" : "Активный пользователь"}</div>
+          </div>
+          <div onClick={() => setEmptyState(v => !v)} style={{
+            width: 44, height: 24, borderRadius: 12,
+            backgroundColor: emptyState ? C.accentDark : (isDark ? "rgba(255,255,255,0.15)" : "#D1D5DB"),
+            position: "relative", cursor: "pointer", flexShrink: 0, transition: "background-color 0.2s",
+          }}>
+            <div style={{
+              width: 20, height: 20, borderRadius: 10, backgroundColor: "#fff",
+              position: "absolute", top: 2, left: emptyState ? 22 : 2,
+              transition: "left 0.2s",
+            }} />
+          </div>
+        </div>
+
+        <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>Блоки</div>
+        <div style={{ position: "relative" }}>
+          {blockOrder.map((key, index) => {
+            const block = BLOCK_LABELS.find(b => b.key === key);
+            const on = blockVis[key];
+            const isDragged = index === dragIndex;
+            const displacement = getDisplacement(index);
+            return (
+              <div key={key} style={{
+                display: "flex", alignItems: "center", gap: 10, padding: "12px 0",
+                borderBottom: `1px solid ${C.divider}`,
+                transform: `translateY(${displacement}px)`,
+                transition: isDragged ? "none" : "transform 0.2s",
+                zIndex: isDragged ? 10 : 1, position: "relative",
+                backgroundColor: isDragged ? C.card : "transparent",
+                opacity: isDragged ? 0.92 : 1,
+              }}>
+                <div onPointerDown={(e) => handleDragStart(index, e)} style={{
+                  cursor: "grab", padding: "4px 2px", touchAction: "none",
                 }}>
-                  {/* Grip handle */}
-                  <div
-                    onPointerDown={(e) => handleDragStart(index, e)}
-                    style={{
-                      width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
-                      cursor: isDragged ? "grabbing" : "grab", color: C.muted, fontSize: 16, flexShrink: 0,
-                      borderRadius: 6,
-                    }}
-                  >⠿</div>
-                  {/* Label */}
-                  <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: on ? C.text : C.muted }}>{labelMap[key]}</span>
-                  {/* Toggle */}
-                  <div onClick={(e) => { e.stopPropagation(); setBlockVis(prev => ({ ...prev, [key]: !prev[key] })); }} style={{
-                    width: 40, height: 22, borderRadius: 11,
-                    backgroundColor: on ? C.accent : (isDark ? "#475569" : "#D1D5DB"),
-                    position: "relative", transition: "background-color 0.2s",
-                    cursor: "pointer", flexShrink: 0,
-                  }}>
-                    <div style={{
-                      width: 18, height: 18, borderRadius: 9,
-                      backgroundColor: "#fff", position: "absolute", top: 2,
-                      left: on ? 20 : 2, transition: "left 0.2s",
-                      boxShadow: "0 1px 3px #00000033",
-                    }} />
-                  </div>
+                  <svg width="12" height="14" viewBox="0 0 12 14" fill="none">
+                    {[3, 7, 11].map(y => (<g key={y}>
+                      <circle cx="4" cy={y} r="1" fill={C.muted} />
+                      <circle cx="8" cy={y} r="1" fill={C.muted} />
+                    </g>))}
+                  </svg>
                 </div>
-                {SUB_ITEMS && SUB_ITEMS.map(({ sKey, label }) => {
-                  const sOn = subVis[sKey];
-                  return (
-                    <div key={sKey} style={{
-                      display: "flex", alignItems: "center", gap: 10,
-                      padding: "8px 8px 8px 44px", borderRadius: 8,
-                    }}>
-                      <span style={{ flex: 1, fontSize: 13, fontWeight: 400, color: sOn ? C.sub : C.muted }}>{label}</span>
-                      <div onClick={(e) => { e.stopPropagation(); setSubVis(prev => ({ ...prev, [sKey]: !prev[sKey] })); }} style={{
-                        width: 40, height: 22, borderRadius: 11,
-                        backgroundColor: sOn ? C.accent : (isDark ? "#475569" : "#D1D5DB"),
-                        position: "relative", transition: "background-color 0.2s",
-                        cursor: "pointer", flexShrink: 0,
-                      }}>
-                        <div style={{
-                          width: 18, height: 18, borderRadius: 9,
-                          backgroundColor: "#fff", position: "absolute", top: 2,
-                          left: sOn ? 20 : 2, transition: "left 0.2s",
-                          boxShadow: "0 1px 3px #00000033",
-                        }} />
-                      </div>
-                    </div>
-                  );
-                })}
-                </Fragment>
-              );
-            })}
-          </div>
-
-          {/* Reset */}
-          <div onClick={() => {
-            setBlockVis(BLOCK_LABELS.reduce((acc, b) => ({ ...acc, [b.key]: true }), {}));
-            setBlockOrder(BLOCK_LABELS.map(b => b.key));
-            setSubVis({ expenses: true, transactions: true });
-          }}
-            style={{ fontSize: 12, fontWeight: 600, color: C.accent, textAlign: "center", marginTop: 16, cursor: "pointer", padding: "8px 0" }}>
-            Сбросить всё
-          </div>
+                <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: on ? C.text : C.muted }}>{block.label}</span>
+                <div onClick={() => setBlockVis(prev => ({ ...prev, [key]: !prev[key] }))} style={{
+                  width: 38, height: 22, borderRadius: 11,
+                  backgroundColor: on ? C.accentDark : (isDark ? "rgba(255,255,255,0.15)" : "#D1D5DB"),
+                  position: "relative", cursor: "pointer", flexShrink: 0,
+                }}>
+                  <div style={{
+                    width: 18, height: 18, borderRadius: 9, backgroundColor: "#fff",
+                    position: "absolute", top: 2, left: on ? 18 : 2,
+                    transition: "left 0.15s",
+                  }} />
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </>
   );
 }
 
-const LIGHT_COLORS = {
-  bg: "#F0EFEB", card: "#FFFFFF", accent: "#0AB321",
-  text: "#1A1A1A", sub: "#6B7280", muted: "#9CA3AF", border: "#E5E5E0",
-  accentFg: "#FFFFFF",
-};
+/* ═══════════════════════════════════════════════
+   STATUS BAR — minimal
+   ═══════════════════════════════════════════════ */
 
-const DARK_COLORS = {
-  bg: "#0F172A", card: "#1E293B", accent: "#22C55E",
-  text: "#F1F5F9", sub: "#94A3B8", muted: "#64748B", border: "#334155",
-  accentFg: "#0F172A",
-};
+function StatusBar({ C }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "12px 20px 4px", fontSize: 14, fontWeight: 600, color: C.text,
+    }}>
+      <span style={{ fontFeatureSettings: "'tnum'", letterSpacing: 0.3 }}>9:41</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="none">
+          <rect x="0" y="7" width="3" height="4" rx="0.5" fill={C.text}/>
+          <rect x="5" y="5" width="3" height="6" rx="0.5" fill={C.text}/>
+          <rect x="10" y="3" width="3" height="8" rx="0.5" fill={C.text}/>
+          <rect x="14" y="0" width="3" height="11" rx="0.5" fill={C.text}/>
+        </svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none">
+          <path d="M7.5 1C4.6 1 1.9 2 0 3.6l1.5 1.5C3 3.8 5.2 3 7.5 3s4.5 0.8 6 2.1L15 3.6C13.1 2 10.4 1 7.5 1z" fill={C.text}/>
+          <path d="M7.5 5C5.7 5 4 5.7 2.7 6.8l1.5 1.5c0.9-0.8 2-1.3 3.3-1.3s2.4 0.5 3.3 1.3l1.5-1.5C11 5.7 9.3 5 7.5 5z" fill={C.text}/>
+          <path d="M7.5 9c-0.7 0-1.3 0.3-1.7 0.7L7.5 11l1.7-1.3C8.8 9.3 8.2 9 7.5 9z" fill={C.text}/>
+        </svg>
+        <div style={{
+          width: 25, height: 12, borderRadius: 3, position: "relative",
+          border: `1px solid ${C.text}`, opacity: 0.8,
+        }}>
+          <div style={{ position: "absolute", inset: 1, borderRadius: 1.5, backgroundColor: C.text, width: 20 }} />
+          <div style={{ position: "absolute", right: -2, top: 3, width: 1.5, height: 4, borderRadius: 1, backgroundColor: C.text }} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
-/* ─── Stripe Light Theme ─── */
-function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen, totalInKZT, productTab, setProductTab, openCurrency, setOpenCurrency, searchQuery, setSearchQuery, searchFocused, setSearchFocused, fcExpanded, setFcExpanded, blockVis, blockOrder, subVis, colors, scrollRef, sentinelRef, searchStuck, emptyState, activeCards }) {
-  const C = colors;
-  const isDark = C.bg === '#0F172A';
+/* ═══════════════════════════════════════════════
+   SECTION HEADER
+   ═══════════════════════════════════════════════ */
 
+function SectionHeader({ title, action, onAdd, onToggleView, viewMode, C }) {
+  return (
+    <div style={{
+      display: "flex", justifyContent: "space-between", alignItems: "center",
+      marginBottom: 12,
+    }}>
+      <span style={{ fontSize: 15, fontWeight: 700, color: C.text, letterSpacing: -0.2 }}>{title}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        {action && <span data-press style={{ fontSize: 13, color: C.text, fontWeight: 500, cursor: "pointer", opacity: 0.7, marginRight: 4 }}>{action}</span>}
+        {onToggleView && (
+          <div data-press onClick={onToggleView} style={{
+            width: 24, height: 24, borderRadius: 6,
+            border: `1px solid ${C.border}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer",
+          }}>
+            {viewMode === "carousel"
+              ? <LayoutList size={13} color={C.text} strokeWidth={2} />
+              : <LayoutGrid size={13} color={C.text} strokeWidth={2} />
+            }
+          </div>
+        )}
+        {onAdd && (
+          <div data-press onClick={onAdd} style={{
+            width: 24, height: 24, borderRadius: 6,
+            border: `1px solid ${C.border}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer",
+          }}>
+            <Plus size={13} color={C.text} strokeWidth={2} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   MAIN SCREEN
+   ═══════════════════════════════════════════════ */
+
+function MainScreen({
+  onAvatarClick, displayCurrency, setDisplayCurrency, pickerOpen, setPickerOpen,
+  totalInKZT, productTab, setProductTab,
+  blockVis, blockOrder, emptyState, activeCardProducts, activeAccounts,
+  activeLoans, activeCredits, activePromos, activeNews, activeRequests,
+  C, theme,
+}) {
+  const isDark = C.bg === '#0E0F0C';
   const totalDisplay = convertTo(totalInKZT, displayCurrency);
-  const displayMeta = CURRENCY_META[displayCurrency] || { symbol: displayCurrency, flag: "💰" };
-  const availableCurrencies = Object.keys(CURRENCY_META).filter(c => c !== "FREEDOM");
-  const [activeBanner, setActiveBanner] = useState(0);
-  const bannerScrollRef = useRef(null);
+  const displayMeta = CURRENCY_META[displayCurrency] || { symbol: displayCurrency };
+  const availableCurrencies = Object.keys(CURRENCY_META).filter(c => ["KZT","USD","EUR","RUB"].includes(c));
+
+  const [promoIndex, setPromoIndex] = useState(0);
+  const [requestIndex, setRequestIndex] = useState(0);
+  const [cardsView, setCardsView] = useState("carousel");
+  const [accountsView, setAccountsView] = useState("carousel");
+
+  // Dark palette for the hero area (creates contrast against light products area below)
+  const topC = {
+    ...C,
+    bg: "#0F172A",
+    card: "#1E293B",
+    text: "#F8FAFC",
+    sub: "rgba(248,250,252,0.7)",
+    muted: "rgba(248,250,252,0.45)",
+    faint: "rgba(248,250,252,0.05)",
+    border: "rgba(248,250,252,0.08)",
+    borderStrong: "rgba(248,250,252,0.16)",
+    divider: "rgba(248,250,252,0.06)",
+  };
 
   return (
     <div style={{
-      maxWidth: 393, margin: "0 auto", backgroundColor: C.bg,
-      height: "100vh", display: "flex", flexDirection: "column",
-      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
-      position: "relative", overflow: "hidden",
+      maxWidth: 430, margin: "0 auto", minHeight: "100dvh",
+      backgroundColor: C.bg,
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', system-ui, sans-serif",
+      overflowX: "hidden", position: "relative",
+      paddingBottom: 80,
     }}>
-      <style>{`[data-press]:active { opacity: 0.7 !important; }
-@keyframes sparkle-pulse { 0%,100% { transform: scale(1) rotate(0deg); opacity: 1; } 50% { transform: scale(1.18) rotate(18deg); opacity: 0.85; } }
-@keyframes aurora-drift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-@keyframes orb-float-1 { 0%,100% { transform: translate(0,0) scale(1); } 33% { transform: translate(30px,-20px) scale(1.1); } 66% { transform: translate(-20px,15px) scale(0.95); } }
-@keyframes orb-float-2 { 0%,100% { transform: translate(0,0) scale(1); } 33% { transform: translate(-25px,25px) scale(1.05); } 66% { transform: translate(35px,-10px) scale(0.9); } }
-@keyframes orb-float-3 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(15px,30px) scale(1.08); } }
-@keyframes shimmer-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
-@keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
-@keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-@keyframes sheetOverlay { from { opacity: 0; } to { opacity: 1; } }`}</style>
-
-      {/* Currency picker modal — light styled */}
       {pickerOpen && (
-        <div onClick={() => setPickerOpen(false)} style={{
-          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: "#00000033", zIndex: 100,
+        <CurrencyPicker current={displayCurrency} currencies={availableCurrencies}
+          onSelect={setDisplayCurrency} onClose={() => setPickerOpen(false)} C={C} />
+      )}
+
+      {/* ═════════════ DARK HERO AREA ═════════════ */}
+      <div style={{ backgroundColor: topC.bg, color: topC.text, position: "relative" }}>
+      {(() => {
+        const C = topC; // shadow: all blocks below use dark palette
+        return (
+      <>
+      <StatusBar C={C} />
+
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 20px 0" }}>
+        <div onClick={onAvatarClick} data-press style={{
+          width: 36, height: 36, borderRadius: "50%",
+          backgroundColor: C.accentDark,
           display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
-          <div onClick={e => e.stopPropagation()} style={{
-            backgroundColor: C.card, borderRadius: 20, padding: "8px 0",
-            width: 260, maxHeight: 340, overflow: "auto",
-            boxShadow: "0 20px 60px #00000022", border: `1px solid ${C.border}`,
+          fontSize: 12, fontWeight: 700, color: C.accent, cursor: "pointer",
+        }}>НШ</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <div data-press style={{
+            width: 36, height: 36, borderRadius: "50%",
+            border: `1px solid ${C.border}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer",
           }}>
-            <div style={{ padding: "12px 20px 8px", fontSize: 13, fontWeight: 600, color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}>
-              Отображать баланс в
+            <Search size={17} color={C.text} strokeWidth={1.8} />
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ BALANCE ═══ */}
+      {blockVis.balance && (
+      <div style={{ order: blockOrder.indexOf("balance"), padding: "32px 20px 24px", textAlign: "center" }}>
+        <div style={{ fontSize: 13, color: C.muted, fontWeight: 500, marginBottom: 10 }}>Общий баланс</div>
+        <div style={{
+          fontSize: 40, fontWeight: 700, color: C.text,
+          letterSpacing: -1.5, fontFeatureSettings: "'tnum'", lineHeight: 1,
+        }}>
+          {fmtInt(totalDisplay)}<span style={{ fontSize: 22, fontWeight: 600, color: C.muted, marginLeft: 6 }}>{displayMeta.symbol}</span>
+        </div>
+        <div onClick={() => setPickerOpen(true)} data-press style={{
+          display: "inline-flex", alignItems: "center", gap: 5,
+          padding: "6px 12px", borderRadius: 10,
+          backgroundColor: C.faint, cursor: "pointer", marginTop: 14,
+        }}>
+          <span style={{ fontSize: 13 }}>{displayMeta.flag}</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{displayCurrency}</span>
+          <ChevronDown size={11} color={C.muted} />
+        </div>
+      </div>
+      )}
+
+      {/* ═══ REQUESTS ═══ */}
+      {blockVis.requests && activeRequests.length > 0 && (
+      <div style={{ order: blockOrder.indexOf("requests"), padding: "0 20px 16px" }}>
+        <div data-press style={{
+          backgroundColor: C.card, borderRadius: 12, padding: "14px 16px",
+          border: `1px solid ${C.border}`, cursor: "pointer",
+          display: "flex", alignItems: "center", gap: 12,
+        }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: "50%",
+            backgroundColor: C.faint,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 12, fontWeight: 700, color: C.text,
+          }}>{activeRequests[requestIndex].initials}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
+              {activeRequests[requestIndex].type === "request" ? "Запрос денег" : "Счёт к оплате"}
             </div>
-            {availableCurrencies.map(code => {
-              const meta = CURRENCY_META[code] || { symbol: code, flag: "💰", name: code, color: C.muted };
-              const isActive = code === displayCurrency;
-              return (
-                <div key={code} onClick={() => { setDisplayCurrency(code); setPickerOpen(false); }}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 12,
-                    padding: "12px 20px", cursor: "pointer",
-                    backgroundColor: isActive ? C.border : "transparent",
-                  }}
-                >
-                  <span style={{ fontSize: 20 }}>{meta.flag}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{code}</div>
-                    <div style={{ fontSize: 11, color: C.muted }}>{meta.name}</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{activeRequests[requestIndex].from}</div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
+              {fmtFull(activeRequests[requestIndex].amount)} <span style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>{CURRENCY_META[activeRequests[requestIndex].currency]?.symbol || activeRequests[requestIndex].currency}</span>
+            </div>
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 3, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 3 }}>
+              <Clock size={10} color={C.muted} />
+              {activeRequests[requestIndex].status}
+            </div>
+          </div>
+        </div>
+        {activeRequests.length > 1 && (
+          <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 10 }}>
+            {activeRequests.map((_, i) => (
+              <div key={i} onClick={() => setRequestIndex(i)} style={{
+                width: i === requestIndex ? 14 : 4, height: 4, borderRadius: 2,
+                backgroundColor: i === requestIndex ? C.text : C.border,
+                cursor: "pointer", transition: "all 0.2s",
+              }} />
+            ))}
+          </div>
+        )}
+      </div>
+      )}
+
+      {/* ═══ PROMO ═══ */}
+      {blockVis.promo && activePromos.length > 0 && (
+      <div style={{ order: blockOrder.indexOf("promo"), padding: "0 20px 24px" }}>
+        <div data-press style={{
+          borderRadius: 12, padding: "18px 20px", cursor: "pointer",
+          backgroundColor: activePromos[promoIndex].color,
+          color: activePromos[promoIndex].textColor,
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14,
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.3, marginBottom: 6 }}>{activePromos[promoIndex].title}</div>
+            <div style={{ fontSize: 12, opacity: 0.75 }}>{activePromos[promoIndex].body}</div>
+          </div>
+          <div style={{
+            padding: "6px 14px", borderRadius: 8,
+            backgroundColor: activePromos[promoIndex].textColor,
+            color: activePromos[promoIndex].color,
+            fontSize: 12, fontWeight: 700, flexShrink: 0,
+          }}>{activePromos[promoIndex].cta}</div>
+        </div>
+        {activePromos.length > 1 && (
+          <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 10 }}>
+            {activePromos.map((_, i) => (
+              <div key={i} onClick={() => setPromoIndex(i)} style={{
+                width: i === promoIndex ? 14 : 4, height: 4, borderRadius: 2,
+                backgroundColor: i === promoIndex ? C.text : C.border,
+                cursor: "pointer", transition: "all 0.2s",
+              }} />
+            ))}
+          </div>
+        )}
+      </div>
+      )}
+
+      {/* ═══ RECENT TRANSFERS ═══ */}
+      {blockVis.transfers && (
+      <div style={{ order: blockOrder.indexOf("transfers"), padding: "0 0 24px" }}>
+        <div style={{ padding: "0 20px" }}>
+          <SectionHeader title="Переводы" action={!emptyState ? "Все" : null} C={C} />
+        </div>
+        {emptyState ? (
+          <div style={{ padding: "0 20px" }}>
+            <div style={{
+              padding: "20px", borderRadius: 12,
+              backgroundColor: C.card, border: `1px solid ${C.border}`,
+              fontSize: 13, color: C.muted, textAlign: "center",
+            }}>
+              Здесь появятся ваши последние переводы
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            display: "flex", gap: 18, overflowX: "auto",
+            padding: "0 20px", scrollbarWidth: "none",
+          }}>
+            {RECENT_TRANSFERS.map(c => (
+              <div key={c.id} data-press style={{
+                flexShrink: 0, display: "flex", flexDirection: "column",
+                alignItems: "center", gap: 6, cursor: "pointer", width: 52,
+              }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: "50%",
+                  backgroundColor: c.color,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 15, fontWeight: 700, color: "#fff",
+                }}>{c.initials}</div>
+                <span style={{ fontSize: 11, color: C.sub, fontWeight: 500, textAlign: "center", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 52 }}>
+                  {c.name}
+                </span>
+              </div>
+            ))}
+            <div data-press style={{
+              flexShrink: 0, display: "flex", flexDirection: "column",
+              alignItems: "center", gap: 6, cursor: "pointer", width: 52,
+            }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: "50%",
+                backgroundColor: C.faint,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Plus size={18} color={C.sub} strokeWidth={1.8} />
+              </div>
+              <span style={{ fontSize: 11, color: C.muted }}>Новый</span>
+            </div>
+          </div>
+        )}
+      </div>
+      )}
+
+      {/* ═══ NEWS ═══ */}
+      {blockVis.news && (
+      <div style={{ order: blockOrder.indexOf("news"), padding: "0 20px 24px" }}>
+        <div data-press style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1px solid ${C.border}`, padding: "12px 14px",
+          cursor: "pointer",
+          display: "flex", alignItems: "center", gap: 12,
+        }}>
+          <div style={{
+            width: 38, height: 38, borderRadius: 10,
+            backgroundColor: "rgba(220,38,38,0.08)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0,
+          }}>
+            <Newspaper size={17} color="#DC2626" strokeWidth={1.8} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+              <span style={{
+                fontSize: 10, fontWeight: 700, color: "#DC2626",
+                textTransform: "uppercase", letterSpacing: 0.4,
+              }}>{activeNews.tag}</span>
+              <span style={{ fontSize: 11, color: C.muted }}>· {activeNews.time}</span>
+            </div>
+            <div style={{
+              fontSize: 13, fontWeight: 600, color: C.text, lineHeight: 1.3,
+              overflow: "hidden", textOverflow: "ellipsis",
+              display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+            }}>{activeNews.title}</div>
+          </div>
+          <ChevronRight size={16} color={C.muted} strokeWidth={1.8} />
+        </div>
+      </div>
+      )}
+
+      </>
+      ); })()}
+      </div>
+      {/* ═════════════ END DARK HERO AREA ═════════════ */}
+
+      {/* ═════════════ FOLDER TABS — bridge dark→light ═════════════ */}
+      {blockVis.products && (
+        <div style={{ backgroundColor: topC.bg, padding: "16px 12px 0" }}>
+          <div style={{ display: "flex", gap: 4, position: "relative" }}>
+            {(() => {
+              const bankCount = activeCardProducts.reduce((s, g) => s + g.cards.length, 0);
+              const depositCount = emptyState ? 0 : DEPOSITS.length;
+              const brokerCount = emptyState ? 0 : BROKER_ACCOUNTS.reduce((s, g) => s + g.accounts.length, 0);
+              const brokerNotif = emptyState ? 0 : 1;
+              const EAR = 10;
+              return [
+                { key: "bank", label: "Банк", count: bankCount },
+                { key: "deposits", label: "Депозиты", count: depositCount },
+                { key: "broker", label: "Брокер", count: brokerCount, notif: brokerNotif },
+              ].map(tab => {
+                const active = productTab === tab.key;
+                return (
+                  <div key={tab.key} onClick={() => setProductTab(tab.key)} style={{
+                    position: "relative",
+                    flex: 1,
+                    padding: "11px 10px 13px", cursor: "pointer",
+                    fontSize: 13, fontWeight: 700,
+                    color: active ? C.text : "rgba(250,250,247,0.7)",
+                    backgroundColor: active ? C.bg : "rgba(250,250,247,0.06)",
+                    borderRadius: active ? "14px 14px 0 0" : "12px 12px 10px 10px",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+                    transition: "background-color 0.18s, color 0.18s",
+                    zIndex: active ? 2 : 1,
+                  }}>
+                    {/* Folder-tab "ears" — concave curves at the bottom corners of the active tab */}
+                    {active && (
+                      <>
+                        <div style={{
+                          position: "absolute", left: -EAR, bottom: 0,
+                          width: EAR, height: EAR,
+                          backgroundImage: `radial-gradient(circle at top left, transparent ${EAR}px, ${C.bg} ${EAR}px)`,
+                          pointerEvents: "none",
+                        }} />
+                        <div style={{
+                          position: "absolute", right: -EAR, bottom: 0,
+                          width: EAR, height: EAR,
+                          backgroundImage: `radial-gradient(circle at top right, transparent ${EAR}px, ${C.bg} ${EAR}px)`,
+                          pointerEvents: "none",
+                        }} />
+                      </>
+                    )}
+                    <span>{tab.label}</span>
+                    {tab.count > 0 && (
+                      <span style={{
+                        fontSize: 11, fontWeight: 600,
+                        color: active ? C.muted : "rgba(250,250,247,0.45)",
+                      }}>· {tab.count}</span>
+                    )}
+                    {tab.notif > 0 && (
+                      <div style={{
+                        minWidth: 16, height: 16, padding: "0 4px", borderRadius: 8,
+                        backgroundColor: "#EF4444",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 9, fontWeight: 700, color: "#fff",
+                        fontFeatureSettings: "'tnum'", lineHeight: 1,
+                      }}>{tab.notif}</div>
+                    )}
                   </div>
-                  <span style={{ fontSize: 14, color: C.muted }}>{meta.symbol}</span>
-                  {isActive && (
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M3 8.5l3.5 3.5L13 5" stroke={C.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  )}
-                </div>
-              );
-            })}
+                );
+              });
+            })()}
           </div>
         </div>
       )}
 
-      {/* Aurora gradient — fixed behind scroll content, fades at bottom */}
-      <div style={{
-        position: "absolute", top: 0, left: 0, right: 0, height: 520,
-        backgroundImage: isDark
-          ? `linear-gradient(135deg, ${C.accent}28 0%, #6366F125 25%, ${C.bg} 50%, #06B6D420 75%, ${C.accent}18 100%)`
-          : `linear-gradient(135deg, ${C.accent}12 0%, #6366F115 25%, ${C.bg} 50%, #06B6D410 75%, ${C.accent}0D 100%)`,
-        backgroundSize: "400% 400%",
-        animation: "aurora-drift 15s ease infinite",
-        zIndex: 0,
-        pointerEvents: "none",
-        maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
-        WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
-      }} />
-      {/* Floating orbs */}
-      <div style={{ position: "absolute", top: -30, right: -20, width: 140, height: 140, borderRadius: "50%", background: `radial-gradient(circle, ${C.accent}${isDark ? "30" : "18"}, transparent 70%)`, animation: "orb-float-1 8s ease-in-out infinite", zIndex: 0, pointerEvents: "none" }} />
-      <div style={{ position: "absolute", top: 300, left: -30, width: 120, height: 120, borderRadius: "50%", background: `radial-gradient(circle, ${isDark ? "#6366F128" : "#6366F112"}, transparent 70%)`, animation: "orb-float-2 10s ease-in-out infinite", zIndex: 0, pointerEvents: "none" }} />
-      <div style={{ position: "absolute", top: 180, left: "60%", width: 100, height: 100, borderRadius: "50%", background: `radial-gradient(circle, ${isDark ? "#06B6D422" : "#06B6D410"}, transparent 70%)`, animation: "orb-float-3 12s ease-in-out infinite", zIndex: 0, pointerEvents: "none" }} />
+      {/* ═════════════ LIGHT PRODUCTS AREA ═════════════ */}
+      {blockVis.products && (
+      <div style={{ order: blockOrder.indexOf("products"), padding: "24px 20px 24px", backgroundColor: C.bg }}>
 
-      <div ref={scrollRef} style={{ flex: 1, overflow: "auto", position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 40, paddingBottom: 40 }}>
-        {/* Header */}
-        <div style={{ padding: "16px 24px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start", order: -1 }}>
-          <div>
-            <div style={{ fontSize: 32, fontWeight: 800, color: C.accent, lineHeight: 1.15, letterSpacing: "-0.03em", textShadow: isDark ? `0 0 30px ${C.accent}40` : "none" }}>Freedom</div>
-            <div style={{ fontSize: 32, fontWeight: 800, color: C.text, lineHeight: 1.15, letterSpacing: "-0.03em" }}>Banker</div>
-          </div>
-          <div onClick={onAvatarClick} data-press style={{ cursor: "pointer", position: "relative", transition: "opacity 0.1s" }}>
-            <div style={{
-              width: 40, height: 40, borderRadius: "50%",
-              backgroundColor: C.accent,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", lineHeight: 1 }}>НШ</span>
-            </div>
-            {/* Notification dot */}
-            <div style={{
-              position: "absolute", top: 0, right: 0,
-              width: 10, height: 10, borderRadius: "50%",
-              backgroundColor: "#EF4444",
-              border: `2px solid ${C.bg}`,
-              boxSizing: "content-box",
-            }} />
-          </div>
-        </div>
-
-        {/* Balance */}
-        {blockVis.balance && (
-        <div style={{ padding: "0 24px", order: blockOrder.indexOf("balance") }}>
-          <div style={{ fontSize: 14, color: C.sub, marginBottom: 6 }}>
-            Общий баланс
-          </div>
-          {(() => {
-            const balanceStr = fmtFull(totalDisplay);
-            const len = balanceStr.length;
-            const balanceFontSize = len <= 5 ? 56 : len <= 8 ? 50 : len <= 11 ? 44 : len <= 14 ? 38 : 30;
-            return (
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ fontSize: balanceFontSize, fontWeight: 800, color: C.text, fontFeatureSettings: "'tnum'", letterSpacing: "-0.03em", lineHeight: 1, whiteSpace: "nowrap" }}>
-                  {balanceStr}
-                </div>
-                <div onClick={() => setPickerOpen(true)} data-press style={{
-                  width: Math.round(balanceFontSize * 0.78), height: Math.round(balanceFontSize * 0.78),
-                  borderRadius: "50%", backgroundColor: C.accent,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  cursor: "pointer", flexShrink: 0,
-                  transition: "transform 0.15s", boxShadow: `0 2px 8px ${C.accent}33, 0 0 20px ${C.accent}22, inset 0 1px 1px #ffffff30`,
-                }}>
-                  <span style={{ fontSize: Math.round(balanceFontSize * 0.38), fontWeight: 700, color: "#fff", lineHeight: 1 }}>{displayMeta.symbol}</span>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Freedom Tokens — badge + expandable details (hidden in empty state) */}
-          {!emptyState && (() => {
-            const fcBalance = wallets.find(w => w.code === "FREEDOM")?.total || 0;
-            const fcValueUsd = (fcBalance / 10000 * FRHC_PRICE);
-            return (
-              <div style={{ marginTop: 14 }}>
-                {/* Collapsed badge — always visible */}
-                <div data-press onClick={() => setFcExpanded(v => !v)} style={{
-                  display: "flex", alignItems: "center", gap: 8, cursor: "pointer", transition: "opacity 0.1s",
-                }}>
-                  <div style={{
-                    display: "flex", alignItems: "center", gap: 4,
-                    backgroundColor: isDark ? `${C.card}CC` : `${C.card}EE`,
-                    backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
-                    borderRadius: 10, border: `1px solid ${isDark ? "#ffffff10" : C.border}`,
-                    padding: "4px 10px",
-                    boxShadow: isDark ? `0 0 12px ${C.accent}10` : "0 1px 4px #0000000A",
-                  }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: C.accent }}>F</span>
-                    <span style={{ fontSize: 12, color: C.text, fontWeight: 600, fontFeatureSettings: "'tnum'" }}>
-                      {fcBalance.toLocaleString("ru-RU")}
-                    </span>
-                  </div>
-                  <span style={{ fontSize: 12, color: C.sub, fontWeight: 500 }}>Freedom Tokens</span>
-                  <span style={{
-                    fontSize: 10, color: C.muted, transition: "transform 0.2s",
-                    transform: fcExpanded ? "rotate(180deg)" : "rotate(0deg)",
-                    display: "inline-block",
-                  }}>▼</span>
-                </div>
-
-                {/* Expanded details — FRHC price, FC value */}
-                {fcExpanded && (
-                  <div style={{
-                    marginTop: 8, backgroundColor: C.card, borderRadius: 12,
-                    border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.accent}`,
-                    padding: "10px 14px",
-                    animation: "fadeIn 0.15s ease-out",
-                  }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 11, color: C.muted }}>FRHC</span>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: C.text, fontFeatureSettings: "'tnum'" }}>${FRHC_PRICE}</span>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: C.accent }}>↑ {FRHC_CHANGE}%</span>
-                      </div>
-                      <span style={{ fontSize: 12, color: C.muted, fontFeatureSettings: "'tnum'" }}>≈ ${fcValueUsd.toFixed(2)}</span>
-                    </div>
-                    <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 11, color: C.sub }}>1 акция FRHC = 10 000 FC</span>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: C.accent, cursor: "pointer" }}>Подробнее →</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-        </div>
-        )}
-
-        {/* Action buttons */}
-        {blockVis.actions && (
-        <div style={{ display: "flex", padding: "0 20px", order: blockOrder.indexOf("actions") }}>
-          {[
-            { label: "Отправить", accent: true, d: "M10 16V4M10 4L5 9M10 4L15 9" },
-            { label: "Запросить", accent: false, d: "M10 4V16M10 16L5 11M10 16L15 11" },
-            { label: "Обмен", accent: false, d: "M4 7H16M16 7L13 4M16 7L13 10M16 13H4M4 13L7 10M4 13L7 16" },
-            { label: "Ещё", accent: false, d: null },
-          ].map((btn, i) => (
-            <div key={i} data-press style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, cursor: "pointer", flex: 1, transition: "opacity 0.1s" }}>
-              <div style={{
-                width: 52, height: 52, borderRadius: 18,
-                background: btn.accent ? `linear-gradient(135deg, ${C.accent}, #06B6D4)` : (isDark ? `${C.card}CC` : `${C.card}BB`),
-                border: btn.accent ? "none" : `1px solid ${isDark ? "#ffffff12" : "#00000008"}`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                backdropFilter: btn.accent ? "none" : "blur(12px)",
-                WebkitBackdropFilter: btn.accent ? "none" : "blur(12px)",
-                boxShadow: btn.accent
-                  ? `0 4px 16px ${C.accent}44, 0 0 24px ${C.accent}22, inset 0 1px 1px #ffffff30`
-                  : (isDark ? "0 2px 8px #00000022, inset 0 1px 0 #ffffff08" : "0 2px 8px #0000000A, inset 0 1px 0 #ffffff60"),
-                transition: "transform 0.15s, box-shadow 0.15s",
-              }}>
-                {btn.d ? (
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path d={btn.d} stroke={btn.accent ? C.accentFg : C.sub} strokeWidth={btn.label === "Обмен" ? "1.5" : "2"} strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                ) : (
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <circle cx="5" cy="10" r="1.5" fill={C.sub}/><circle cx="10" cy="10" r="1.5" fill={C.sub}/><circle cx="15" cy="10" r="1.5" fill={C.sub}/>
-                  </svg>
-                )}
-              </div>
-              <span style={{ fontSize: 11, color: btn.accent ? C.accent : C.sub, fontWeight: 500 }}>{btn.label}</span>
-              {btn.label === "Обмен" && <span style={{ fontSize: 9, color: C.muted, fontFeatureSettings: "'tnum'", marginTop: -3 }}>1$ = {RATES_TO_KZT.USD}₸</span>}
-            </div>
-          ))}
-        </div>
-        )}
-
-        {/* Recent transfers — frequent contacts */}
-        {blockVis.recentTransfers && (
-        <div style={{ padding: 0, order: blockOrder.indexOf("recentTransfers") }}>
-          {emptyState ? (
-          /* Onboarding card — replaces contacts in empty state */
-          <div style={{ padding: "0 20px" }}>
-            <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: "20px", position: "relative", overflow: "hidden" }}>
-              <div style={{ position: "absolute", top: -15, left: -15, width: 80, height: 80, borderRadius: "50%", background: `radial-gradient(circle, ${C.accent}12, transparent 70%)`, pointerEvents: "none" }} />
-              <div style={{ position: "relative" }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 14 }}>3 шага для начала</div>
-                {[
-                  { num: "①", text: "Пополните карту" },
-                  { num: "②", text: "Отправьте первый перевод" },
-                  { num: "③", text: "Откройте депозит" },
-                ].map((step, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: i < 2 ? 10 : 16 }}>
-                    <span style={{ fontSize: 14, color: C.accent }}>{step.num}</span>
-                    <span style={{ fontSize: 13, color: C.sub }}>{step.text}</span>
-                  </div>
-                ))}
-                <div data-press style={{
-                  backgroundColor: C.accent, borderRadius: 10, padding: "11px 0",
-                  textAlign: "center", cursor: "pointer", transition: "opacity 0.1s",
-                }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: C.accentFg }}>Пополнить →</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          ) : (
-          /* Normal state — contact avatars */
-          <>
-          <div style={{ padding: "0 20px", marginBottom: 10 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}>Частые переводы</span>
-          </div>
-          <div style={{ display: "flex", gap: 14, overflowX: "auto", padding: "0 20px", scrollbarWidth: "none" }}>
-            {RECENT_CONTACTS.map(c => (
-              <div key={c.id} data-press style={{ flexShrink: 0, width: 56, cursor: "pointer", transition: "opacity 0.1s", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <div style={{
-                  width: 52, height: 52, borderRadius: "50%",
-                  backgroundColor: c.color + "20",
-                  border: `2px solid ${c.color}40`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  <span style={{ fontSize: 16, fontWeight: 700, color: c.color }}>{c.initials}</span>
-                </div>
-                <div style={{ fontSize: 10, fontWeight: 500, color: C.sub, textAlign: "center", marginTop: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%" }}>
-                  {c.name}
-                </div>
-              </div>
-            ))}
-            <div data-press style={{ flexShrink: 0, width: 56, cursor: "pointer", transition: "opacity 0.1s", display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <div style={{
-                width: 52, height: 52, borderRadius: "50%",
-                border: `2px dashed ${C.border}`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M10 4V16M4 10H16" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-              </div>
-              <div style={{ fontSize: 10, fontWeight: 500, color: C.muted, textAlign: "center", marginTop: 6 }}>
-                Новый
-              </div>
-            </div>
-          </div>
-          </>
-          )}
-        </div>
-        )}
-
-        {/* Search bar — sentinel + spacer in ordered flow */}
-        <div style={{ order: blockOrder.indexOf("search") }}>
-        <div ref={sentinelRef} style={{ height: 0 }} />
-        {blockVis.search && !searchStuck && (
-        <div style={{
-          padding: "0 20px", display: "flex", alignItems: "center", gap: 8,
-        }}>
-          <div style={{
-            flex: 1, display: "flex", alignItems: "center", gap: 8,
-            backgroundColor: C.card, borderRadius: 12, padding: "0 14px",
-            height: 40, boxSizing: "border-box",
-            border: searchFocused ? `1px solid ${C.accent}` : `1px solid ${C.border}`,
-            transition: "border-color 0.15s",
-          }}>
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-              <circle cx="7" cy="7" r="4.5" stroke={C.muted} strokeWidth="1.5"/>
-              <path d="M10.5 10.5L14 14" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-            <input
-              value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)}
-              placeholder="Найти контакт, продукт..."
-              style={{ flex: 1, background: "none", border: "none", outline: "none", color: C.text, fontSize: 14, fontFamily: "inherit" }}
-            />
-          </div>
-          <div data-press style={{
-            width: 40, height: 40, borderRadius: 12,
-            background: `linear-gradient(135deg, ${C.accent}, #06B6D4)`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer", flexShrink: 0, transition: "opacity 0.1s",
-            boxShadow: `0 2px 8px ${C.accent}44`,
-          }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ animation: "sparkle-pulse 2s ease-in-out infinite" }}>
-              <path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" fill="#FFFFFF"/>
-            </svg>
-          </div>
-        </div>
-        )}
-        {blockVis.search && searchStuck && <div style={{ height: 56 }} />}
-        </div>
-
-        {/* Stories */}
-        {blockVis.stories && (
-        <div style={{ padding: 0, order: blockOrder.indexOf("stories") }}>
-          <div style={{ display: "flex", gap: 12, overflowX: "auto", padding: "0 20px", scrollbarWidth: "none" }}>
-            {STORIES.map(s => (
-              <div key={s.id} data-press style={{ flexShrink: 0, width: 68, cursor: "pointer", transition: "opacity 0.1s" }}>
-                <div style={{
-                  width: 68, height: 68, borderRadius: 20,
-                  border: s.viewed ? `1.5px solid ${C.border}` : `1.5px solid ${C.accent}`,
-                  padding: 2, boxSizing: "border-box",
-                }}>
-                  <div style={{
-                    width: "100%", height: "100%", borderRadius: 16,
-                    background: s.bg || C.card,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}><s.Icon size={24} color="#fff" strokeWidth={2} /></div>
-                </div>
-                <div style={{ fontSize: 10, fontWeight: 500, color: s.viewed ? C.muted : C.sub, textAlign: "center", marginTop: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {s.title}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        )}
-
-        {/* Transfers & Payments — bento grid (FX-first layout) */}
-        {blockVis.transfers && (
-        <div style={{ padding: "0 20px", order: blockOrder.indexOf("transfers") }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 12 }}>Переводы и платежи</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gridAutoRows: "auto", gap: 10 }}>
-            {/* Row 1: Обмен валют (big, FX=95% revenue) + По номеру + На карту */}
-            <div data-press style={{
-              gridColumn: "1 / 3", padding: "16px", borderRadius: 16,
-              backgroundColor: C.card, border: `1px solid ${C.border}`,
-              display: "flex", alignItems: "center", gap: 12, cursor: "pointer", transition: "opacity 0.1s",
-            }}>
-              <DollarSign size={24} color={C.accent} strokeWidth={2} />
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Обмен валют</div>
-                <div style={{ fontSize: 10, color: C.muted, fontFeatureSettings: "'tnum'" }}>1$ = {RATES_TO_KZT.USD}₸</div>
-              </div>
-            </div>
-            <div data-press style={{
-              padding: "14px 4px", borderRadius: 16,
-              backgroundColor: C.card, border: `1px solid ${C.border}`,
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", transition: "opacity 0.1s",
-            }}>
-              <Phone size={22} color={C.sub} strokeWidth={1.8} />
-              <span style={{ fontSize: 9, fontWeight: 500, color: C.sub, textAlign: "center", lineHeight: 1.2 }}>По номеру</span>
-            </div>
-            <div data-press style={{
-              padding: "14px 4px", borderRadius: 16,
-              backgroundColor: C.card, border: `1px solid ${C.border}`,
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", transition: "opacity 0.1s",
-            }}>
-              <CreditCard size={22} color={C.sub} strokeWidth={1.8} />
-              <span style={{ fontSize: 9, fontWeight: 500, color: C.sub, textAlign: "center", lineHeight: 1.2 }}>На карту</span>
-            </div>
-            {/* Row 2: SWIFT + Между своими + Коммунальные (big, KZ receivers retention) */}
-            <div data-press style={{
-              padding: "14px 4px", borderRadius: 16,
-              backgroundColor: C.card, border: `1px solid ${C.border}`,
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", transition: "opacity 0.1s",
-            }}>
-              <Globe size={22} color={C.sub} strokeWidth={1.8} />
-              <span style={{ fontSize: 9, fontWeight: 500, color: C.sub, textAlign: "center", lineHeight: 1.2 }}>SWIFT</span>
-            </div>
-            <div data-press style={{
-              padding: "14px 4px", borderRadius: 16,
-              backgroundColor: C.card, border: `1px solid ${C.border}`,
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", transition: "opacity 0.1s",
-            }}>
-              <ArrowLeftRight size={22} color={C.sub} strokeWidth={1.8} />
-              <span style={{ fontSize: 9, fontWeight: 500, color: C.sub, textAlign: "center", lineHeight: 1.2 }}>Между своими</span>
-            </div>
-            <div data-press style={{
-              gridColumn: "3 / 5", padding: "16px", borderRadius: 16,
-              backgroundColor: C.card, border: `1px solid ${C.border}`,
-              display: "flex", alignItems: "center", gap: 12, cursor: "pointer", transition: "opacity 0.1s",
-            }}>
-              <TrendingUp size={24} color={C.accent} strokeWidth={2} />
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>На брокерский</div>
-                <div style={{ fontSize: 10, color: C.muted }}>Пополнение счёта</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        )}
-
-        {/* Deposit nudge — contextual deposit promotion */}
-        {blockVis.depositNudge && (
-        <div style={{ padding: "0 20px", order: blockOrder.indexOf("depositNudge") }}>
-          <div style={{
-            backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`,
-            padding: "20px", position: "relative", overflow: "hidden",
-          }}>
-            {/* Subtle accent gradient orb */}
-            <div style={{ position: "absolute", top: -20, right: -20, width: 100, height: 100, borderRadius: "50%", background: `radial-gradient(circle, ${C.accent}15, transparent 70%)`, pointerEvents: "none" }} />
-            <div style={{ position: "relative" }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: C.accent, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 10 }}>Ваши деньги могут работать</div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14, gap: 12 }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 12, color: C.sub }}>{emptyState ? "Если положите" : "На счетах"}</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", marginTop: 2, whiteSpace: "nowrap" }}>
-                    {emptyState ? fmtCompact(ONBOARDING_EXAMPLE_AMOUNT) : fmtCompact(totalInKZT)} <span style={{ fontSize: 12, color: C.muted }}>₸</span>
-                  </div>
-                </div>
-                <div style={{ textAlign: "right", minWidth: 0 }}>
-                  <div style={{ fontSize: 12, color: C.sub }}>Доход на депозите</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: C.accent, fontFeatureSettings: "'tnum'", marginTop: 2, whiteSpace: "nowrap" }}>
-                    +{fmtFull(Math.round((emptyState ? ONBOARDING_EXAMPLE_AMOUNT : totalInKZT) * DEPOSIT_RATE_KZT / 100 / 12))} <span style={{ fontSize: 12 }}>₸/мес</span>
-                  </div>
-                </div>
-              </div>
-              <div data-press style={{
-                backgroundColor: C.accent, borderRadius: 12, padding: "13px 0",
-                textAlign: "center", cursor: "pointer", transition: "opacity 0.1s",
-                boxShadow: `0 4px 16px ${C.accent}33`,
-              }}>
-                <span style={{ fontSize: 14, fontWeight: 700, color: C.accentFg }}>Открыть депозит →</span>
-              </div>
-              <div style={{ textAlign: "center", marginTop: 8 }}>
-                <span style={{ fontSize: 11, color: C.muted }}>до {DEPOSIT_RATE_KZT}% годовых · КФГД</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        )}
-
-        {/* Promo banners carousel */}
-        {blockVis.banners && (() => {
-          const bannerOrder = blockOrder.indexOf("banners");
-          const banners = [
-            ...(emptyState ? [{ bg: `linear-gradient(135deg, #1E293B, #334155)`, content: (
-              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 6, lineHeight: 1.2 }}>Откройте счёт</div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: "rgba(255,255,255,0.7)", marginBottom: 16, lineHeight: 1.4 }}>для поездок в Россию</div>
-                  <div data-press style={{ display: "inline-block", padding: "10px 24px", borderRadius: 20, backgroundColor: "#22C55E", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", transition: "opacity 0.1s" }}>Подробнее</div>
-                </div>
-                <div style={{ width: 100, height: 140, position: "relative", flexShrink: 0 }}>
-                  <div style={{ position: "absolute", bottom: 0, right: 0, width: 90, height: 130, background: "linear-gradient(160deg, #1a1a2e, #0f0f1a)", borderRadius: 10, transform: "rotate(8deg)", boxShadow: "0 4px 20px rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", overflow: "hidden" }}>
-                    <div style={{ position: "absolute", bottom: -10, right: -10, width: 80, height: 80, background: "linear-gradient(135deg, #22C55E, #059669)", borderRadius: "50%", opacity: 0.3 }}/>
-                    <div style={{ position: "absolute", bottom: -20, right: 10, width: 50, height: 50, background: "linear-gradient(135deg, #22C55E, #059669)", borderRadius: "50%", opacity: 0.2 }}/>
-                    <div style={{ padding: "12px 10px 0", position: "relative" }}>
-                      <div style={{ fontSize: 11, fontWeight: 900, color: "#fff", letterSpacing: 1, lineHeight: 1.1 }}>ЦИФРА</div>
-                      <div style={{ fontSize: 7, fontWeight: 600, color: "rgba(255,255,255,0.6)", letterSpacing: 0.5 }}>банк</div>
-                    </div>
-                    <div style={{ position: "absolute", bottom: 12, left: 10, display: "flex", alignItems: "center", gap: 6 }}>
-                      <div style={{ width: 20, height: 14, borderRadius: 2, background: "linear-gradient(135deg, #FFD700, #FFA500)", opacity: 0.8 }}/>
-                      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)" }}>))))</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}] : []),
-            { bg: `linear-gradient(135deg, #F59E0B, #EF4444)`, content: (
-              <>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <TrendingUp size={26} color="#fff" strokeWidth={2} />
-                  <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>Депозиты</span>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.9)", marginBottom: 10, lineHeight: 1.4 }}>Высокие ставки в тенге и валюте</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 6 }}>до 14.5% годовых</div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>КФГД · без комиссий · онлайн открытие</div>
-              </>
-            )},
-            { bg: `linear-gradient(135deg, ${C.accent}, #06B6D4)`, content: (
-              <>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <Globe size={26} color="#fff" strokeWidth={2} />
-                  <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>Переводы</span>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.9)", marginBottom: 10, lineHeight: 1.4 }}>12 валют без комиссии</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  {[{ from: "🇰🇿", to: "🇷🇺" }, { from: "🇰🇿", to: "🇬🇪" }, { from: "🇰🇿", to: "🇺🇿" }].map((c, i) => (
-                    <span key={i} style={{ fontSize: 13, color: "#fff", backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 8, padding: "3px 8px" }}>{c.from}→{c.to}</span>
-                  ))}
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", fontWeight: 500 }}>+9</span>
-                </div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>SWIFT · Western Union · Золотая Корона</div>
-              </>
-            )},
-            { bg: `linear-gradient(135deg, #6366F1, #A855F7)`, content: (
-              <>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <CreditCard size={26} color="#fff" strokeWidth={2} />
-                  <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>Invest Card</span>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.9)", marginBottom: 10, lineHeight: 1.4 }}>Кэшбэк Freedom Tokens за каждую покупку</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 6 }}>до 5% кэшбэк</div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>Бесплатное обслуживание · Apple Pay</div>
-              </>
-            )},
-          ];
-          const handleScroll = () => {
-            const el = bannerScrollRef.current;
-            if (!el || !el.children.length) return;
-            const child = el.children[0];
-            const gap = 12;
-            const step = child.offsetWidth + gap;
-            const idx = Math.round(el.scrollLeft / step);
-            setActiveBanner(Math.min(idx, banners.length - 1));
-          };
-          const scrollTo = (idx) => {
-            const el = bannerScrollRef.current;
-            if (!el || !el.children[idx]) return;
-            const child = el.children[0];
-            const gap = 12;
-            const step = child.offsetWidth + gap;
-            el.scrollTo({ left: step * idx, behavior: "smooth" });
-          };
-          return (
-            <div style={{ marginBottom: 0, order: bannerOrder }}>
-              <div ref={bannerScrollRef} onScroll={handleScroll} style={{
-                display: "flex", overflowX: "auto", scrollSnapType: "x mandatory",
-                WebkitOverflowScrolling: "touch",
-                scrollbarWidth: "none", padding: "0 20px", gap: 12,
-                msOverflowStyle: "none",
-              }}>
-                {banners.map((b, i) => (
-                  <div key={i} data-press style={{
-                    flex: `0 0 calc(100% - 40px)`, scrollSnapAlign: "center",
-                    padding: "20px 20px 18px", borderRadius: 16, cursor: "pointer",
-                    background: b.bg, position: "relative", overflow: "hidden",
-                    transition: "opacity 0.1s",
-                  }}>
-                    <div style={{ position: "absolute", top: -20, right: -20, width: 80, height: 80, borderRadius: "50%", background: "rgba(255,255,255,0.1)" }}/>
-                    <div style={{ position: "absolute", bottom: -12, left: 40, width: 50, height: 50, borderRadius: "50%", background: "rgba(255,255,255,0.07)" }}/>
-                    <div style={{ position: "relative" }}>{b.content}</div>
-                  </div>
-                ))}
-              </div>
-              {/* Pagination dots */}
-              <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10 }}>
-                {banners.map((_, i) => (
-                  <div key={i} onClick={() => scrollTo(i)} style={{
-                    width: activeBanner === i ? 16 : 6, height: 6, borderRadius: 3,
-                    backgroundColor: activeBanner === i ? C.accent : C.border,
-                    transition: "all 0.25s ease", cursor: "pointer",
-                  }}/>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Product tabs */}
-        {blockVis.products && (<div style={{ order: blockOrder.indexOf("products") }}>
-        <div style={{ padding: "0 20px" }}>
-          <div style={{
-            display: "flex", backgroundColor: C.card, borderRadius: 12, padding: 3,
-            border: `1px solid ${C.border}`,
-          }}>
-            {[
-              { key: "bank", label: "Банк" },
-              { key: "deposits", label: "Депозиты" },
-              { key: "broker", label: "Брокер" },
-            ].map(tab => {
-              const active = productTab === tab.key;
-              return (
-                <div key={tab.key} data-press onClick={() => setProductTab(tab.key)} style={{
-                  flex: 1, textAlign: "center", padding: "9px 0", borderRadius: 10,
-                  backgroundColor: active ? C.text : "transparent",
-                  cursor: "pointer", transition: "background-color 0.15s, opacity 0.1s",
-                }}>
-                  <span style={{
-                    fontSize: 13, fontWeight: 600,
-                    color: active ? C.card : C.muted,
-                  }}>{tab.label}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Tab content */}
+        {/* ─── BANK TAB ─── */}
         {productTab === "bank" && (
           <div>
-            {/* Recent transactions */}
-            {(subVis.expenses || subVis.transactions) && <div style={{ padding: "16px 20px 0" }}>
-              {subVis.transactions && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}>Транзакции</span>
-              </div>}
-
-              {/* Weekly spending chart */}
-              {subVis.expenses && !emptyState && <div style={{ backgroundColor: C.card, borderRadius: 16, padding: "20px 20px 18px", border: `1px solid ${C.border}`, marginBottom: 16 }}>
-                <div style={{ fontSize: 13, color: C.sub, marginBottom: 16 }}>Расходы за неделю</div>
-                {(() => {
-                  const maxAmt = Math.max(...WEEK_SPEND_KZT.filter((_, j) => j <= TODAY_INDEX));
-                  const totalWeek = WEEK_SPEND_KZT.reduce((s, v) => s + v, 0);
-                  return (
-                    <>
-                      <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 100 }}>
-                        {WEEK_SPEND_KZT.map((amt, i) => {
-                          const pct = maxAmt > 0 && amt > 0 ? (amt / maxAmt) * 100 : 0;
-                          const isFuture = i > TODAY_INDEX;
-                          const isToday = i === TODAY_INDEX;
+            {/* Cards — toggle between carousel and list */}
+            <div style={{ marginBottom: 28 }}>
+              <SectionHeader
+                title="Карты"
+                onAdd={() => {}}
+                onToggleView={() => setCardsView(v => v === "carousel" ? "list" : "carousel")}
+                viewMode={cardsView}
+                C={C}
+              />
+              {cardsView === "carousel" ? (
+                <div style={{
+                  display: "flex", gap: 10,
+                  overflowX: "auto", overflowY: "visible",
+                  scrollSnapType: "x mandatory",
+                  scrollbarWidth: "none",
+                  padding: "20px 0 12px",
+                }}>
+                  {activeCardProducts
+                    .flatMap(g => g.cards.map(c => ({ ...c, bank: g.bank })))
+                    .sort((a, b) => b.primaryBalance - a.primaryBalance)
+                    .map(card => (
+                      <CardHero key={card.id} card={card} bank={card.bank} C={C} />
+                    ))}
+                  <div data-press style={{
+                    flexShrink: 0,
+                    width: 76, height: 138,
+                    borderRadius: 14,
+                    border: `1.5px dashed ${C.borderStrong}`,
+                    backgroundColor: C.faint,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6,
+                    cursor: "pointer",
+                    scrollSnapAlign: "start",
+                  }}>
+                    <div style={{
+                      width: 30, height: 30, borderRadius: "50%",
+                      backgroundColor: C.card, border: `1px solid ${C.border}`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <Plus size={16} color={C.muted} strokeWidth={1.8} />
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 500, color: C.muted, textAlign: "center", padding: "0 6px" }}>Новая карта</span>
+                  </div>
+                </div>
+              ) : (
+                /* List view — grouped by bank */
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  {activeCardProducts.map((group, gi) => (
+                    <div key={gi}>
+                      <div style={{
+                        fontSize: 12, fontWeight: 700, color: C.muted,
+                        textTransform: "uppercase", letterSpacing: 0.4,
+                        marginBottom: 8, padding: "0 4px",
+                      }}>{group.bank}</div>
+                      <div style={{
+                        backgroundColor: C.card, borderRadius: 12,
+                        border: `1px solid ${C.border}`, overflow: "hidden",
+                      }}>
+                        {[...group.cards].sort((a, b) => b.primaryBalance - a.primaryBalance).map((card, ci, sortedCards) => {
+                          const cm = CURRENCY_META[card.primaryCurrency] || { symbol: card.primaryCurrency };
+                          const allCurrencies = [card.primaryCurrency, ...card.breakdown.map(b => b.currency)];
+                          const uniqueCurrencies = [...new Set(allCurrencies)];
+                          const subtitle = card.sub
+                            || (uniqueCurrencies.length > 1
+                              ? uniqueCurrencies.join(" · ")
+                              : "Активна");
                           return (
-                            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", height: "100%" }}>
-                              <div style={{ flex: 1, width: "100%", display: "flex", alignItems: "flex-end" }}>
+                            <div key={card.id} data-press style={{
+                              display: "flex", alignItems: "center", gap: 14,
+                              padding: "16px", cursor: "pointer",
+                              borderBottom: ci < sortedCards.length - 1 ? `1px solid ${C.divider}` : "none",
+                            }}>
+                              <CardArt color={card.color} last4={card.last4} />
+                              <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{
-                                  width: "100%",
-                                  height: isFuture ? "20%" : `${Math.max(pct, 6)}%`,
-                                  borderRadius: 4,
-                                  backgroundColor: isToday ? C.accent : isFuture ? "transparent" : C.border,
-                                  border: isFuture ? `1.5px dashed ${C.border}` : "none",
-                                }} />
+                                  fontSize: 14, fontWeight: 600, color: C.text, lineHeight: 1.3,
+                                  overflow: "hidden", textOverflow: "ellipsis",
+                                  display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+                                }}>{card.name}</div>
+                                <div style={{
+                                  fontSize: 12, color: C.muted, marginTop: 3,
+                                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                }}>{subtitle}</div>
                               </div>
-                              <div style={{
-                                fontSize: 11, marginTop: 8,
-                                color: isToday ? C.text : C.muted,
-                                fontWeight: isToday ? 700 : 400,
-                              }}>{WEEK_LABELS[i]}</div>
+                              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                                <div style={{ fontSize: 15, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", lineHeight: 1.3 }}>
+                                  {fmtFull(card.primaryBalance)}
+                                </div>
+                                <div style={{ fontSize: 11, color: C.muted, marginTop: 3, fontWeight: 600 }}>
+                                  {card.primaryCurrency}
+                                </div>
+                              </div>
                             </div>
                           );
                         })}
                       </div>
-                      <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14, marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                        <div>
-                          <span style={{ fontSize: 13, color: C.sub }}>Итого</span>
-                          <span style={{ fontSize: 20, fontWeight: 700, color: C.text, marginLeft: 10, fontFeatureSettings: "'tnum'" }}>
-                            {fmtFull(convertTo(totalWeek, displayCurrency))} {displayMeta.symbol}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: C.accent }}>↓ 12% к пр. неделе</div>
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>}
-              {subVis.transactions && !emptyState && <>
-              <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: "hidden" }}>
-                {[
-                  { Icon: ShoppingCart, name: "Магнум", desc: "Продукты", amount: "-12 500 ₸", time: "Сегодня, 14:32" },
-                  { Icon: Globe, name: "SWIFT перевод", desc: "→ Грузия", amount: "-$320.00", time: "Сегодня, 11:05" },
-                  { Icon: Utensils, name: "Glovo", desc: "Доставка еды", amount: "-4 800 ₸", time: "Вчера, 20:18" },
-                  { Icon: Fuel, name: "КМГ АЗС", desc: "Топливо", amount: "-15 000 ₸", time: "Вчера, 09:41" },
-                  { Icon: Home, name: "Аренда", desc: "Ежемесячный", amount: "-€580.00", time: "1 мар, 08:00" },
-                  { Icon: Wallet, name: "Зарплата", desc: "Входящий", amount: "+$2 400.00", time: "28 фев, 10:00", income: true },
-                ].map((tx, i, arr) => (
-                  <div key={i} data-press style={{
-                    display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
-                    borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none",
-                    cursor: "pointer", transition: "background 0.1s",
-                  }}>
-                    <div style={{
-                      width: 40, height: 40, borderRadius: 20,
-                      backgroundColor: C.bg, border: `1px solid ${C.border}`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      flexShrink: 0,
-                    }}><tx.Icon size={18} color={tx.income ? C.accent : C.sub} strokeWidth={1.8} /></div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: C.text, lineHeight: 1.3 }}>{tx.name}</div>
-                      <div style={{ fontSize: 12, color: C.sub, marginTop: 1 }}>{tx.desc} · {tx.time}</div>
                     </div>
-                    <div style={{
-                      fontSize: 14, fontWeight: 600, fontFeatureSettings: "'tnum'", flexShrink: 0,
-                      color: tx.income ? C.accent : C.text,
-                    }}>{tx.amount}</div>
-                  </div>
-                ))}
-              </div>
-              <div data-press style={{
-                marginTop: 12, padding: "14px 0", borderRadius: 12,
-                backgroundColor: C.card, border: `1px solid ${C.border}`,
-                textAlign: "center", cursor: "pointer",
-                fontSize: 14, fontWeight: 600, color: C.accent,
-                transition: "opacity 0.1s",
-              }}>Все транзакции</div>
-              </>}
-              {emptyState && (
-                <div style={{
-                  backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`,
-                  padding: "32px 20px", textAlign: "center",
-                }}>
-                  <div style={{ fontSize: 28, marginBottom: 8 }}>📋</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: C.sub, marginBottom: 4 }}>Пока нет транзакций</div>
-                  <div style={{ fontSize: 12, color: C.muted }}>Здесь появится история после первой оплаты</div>
+                  ))}
                 </div>
               )}
-            </div>}
+            </div>
 
-            {/* Card chips — horizontal scroll */}
-            <div style={{ paddingLeft: 20, marginBottom: 0, marginTop: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingRight: 20, marginBottom: 10 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}>Карты</span>
-                <span style={{ fontSize: 12, color: C.accent, fontWeight: 500, cursor: "pointer" }}>Управление</span>
-              </div>
-              <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, paddingRight: 20, scrollbarWidth: "none" }}>
-                {activeCards.map(c => (
-                  <div key={c.id} data-press style={{
-                    flexShrink: 0, width: 118, height: 74, borderRadius: 12, padding: "10px 12px",
-                    backgroundColor: C.card,
-                    border: c.frozen ? `1px dashed ${C.border}` : `1px solid ${C.border}`,
-                    display: "flex", flexDirection: "column", justifyContent: "space-between",
-                    cursor: "pointer", position: "relative",
-                    opacity: c.frozen ? 0.45 : 1, transition: "opacity 0.1s",
+            {/* Accounts — toggle between carousel and list */}
+            <div style={{ marginBottom: 28 }}>
+              <SectionHeader
+                title="Счета"
+                onAdd={() => {}}
+                onToggleView={activeAccounts.length > 0 ? () => setAccountsView(v => v === "carousel" ? "list" : "carousel") : null}
+                viewMode={accountsView}
+                C={C}
+              />
+              {activeAccounts.length === 0 ? (
+                <div data-press style={{
+                  backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+                  padding: "18px 16px", cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: 12,
+                }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 8,
+                    backgroundColor: C.faint,
+                    display: "flex", alignItems: "center", justifyContent: "center",
                   }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: C.sub, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-                      <span style={{ fontSize: 11, color: C.muted, fontFeatureSettings: "'tnum'" }}>••{c.last4}</span>
-                      <span style={{ fontSize: 9, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>{c.network}</span>
-                    </div>
-                    {c.frozen && (
-                      <div style={{ position: "absolute", top: 6, right: 8, fontSize: 8, fontWeight: 700, color: C.muted, backgroundColor: C.bg, borderRadius: 8, padding: "1px 4px", textTransform: "uppercase" }}>frozen</div>
-                    )}
+                    <Plus size={16} color={C.text} strokeWidth={1.8} />
                   </div>
-                ))}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Открыть счёт</div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Мультивалютный — KZT, USD, EUR, RUB</div>
+                  </div>
+                </div>
+              ) : accountsView === "carousel" ? (
                 <div style={{
-                  flexShrink: 0, width: 74, height: 74, borderRadius: 12,
-                  border: `1px dashed ${C.border}`,
-                  display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                  display: "flex", gap: 10,
+                  overflowX: "auto", overflowY: "visible",
+                  scrollSnapType: "x mandatory",
+                  scrollbarWidth: "none",
+                  padding: "4px 0 8px",
                 }}>
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path d="M10 4V16M4 10H16" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* Currency wallets — expandable rows */}
-            <div style={{ padding: "0 20px 0", marginTop: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 6 }}>Валюты</div>
-              {wallets.filter(w => w.code !== "FREEDOM").map(w => {
-                const meta = CURRENCY_META[w.code] || { symbol: w.code, flag: "💰", color: C.muted };
-                const isOpen = openCurrency === w.code;
-                const sorted = [...w.accounts].sort((a, b) => b.balance - a.balance);
-                return (
-                  <div key={w.code}>
-                    <div data-press onClick={() => setOpenCurrency(isOpen ? null : w.code)} style={{
-                      display: "flex", alignItems: "center", padding: "13px 0",
-                      cursor: "pointer", borderBottom: isOpen ? "none" : `1px solid ${C.border}`,
-                      transition: "opacity 0.1s",
-                    }}>
-                      <div style={{
-                        width: 38, height: 38, borderRadius: 20, backgroundColor: (meta.color || C.muted) + "15",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 18, marginRight: 12, flexShrink: 0,
-                      }}>{meta.flag}</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{w.code}</div>
-                        <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>
-                          {sorted.length} {sorted.length === 1 ? "счёт" : sorted.length < 5 ? "счёта" : "счетов"}
-                        </div>
-                      </div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", letterSpacing: "-0.01em" }}>
-                        {fmtFull(w.total)}
-                        <span style={{ fontSize: 11, fontWeight: 500, color: C.muted, marginLeft: 3 }}>{meta.symbol}</span>
-                      </div>
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ marginLeft: 8, transition: "transform 0.2s", transform: isOpen ? "rotate(180deg)" : "rotate(0)" }}>
-                        <path d="M3.5 5.25l3.5 3.5 3.5-3.5" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
-                    {isOpen && (
-                      <div style={{ paddingBottom: 6, marginBottom: 2, borderBottom: `1px solid ${C.border}` }}>
-                        {sorted.map((acc, j) => {
-                          const net = CARD_NET[acc.last4];
-                          return (
-                            <div key={j} data-press style={{
-                              display: "flex", alignItems: "center", gap: 12,
-                              padding: "12px 0 12px 12px", cursor: "pointer",
-                              borderBottom: j < sorted.length - 1 ? `1px solid ${C.border}` : "none",
-                              transition: "opacity 0.1s",
-                            }}>
-                              <div style={{
-                                width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                                backgroundColor: net === "visa" ? "#1A1F71" : net === "mc" ? "#EB001B" : C.bg,
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                              }}>
-                                <span style={{ fontSize: 11, fontWeight: 800, color: net ? "#fff" : C.muted, letterSpacing: "0.02em" }}>
-                                  {net === "visa" ? "VISA" : net === "mc" ? "MC" : "💳"}
-                                </span>
-                              </div>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 14, fontWeight: 500, color: C.text, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{acc.product}</div>
-                                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>••{acc.last4}</div>
-                              </div>
-                              <div style={{ fontSize: 14, fontWeight: 600, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
-                                {fmtFull(acc.balance)}
-                              </div>
-                              <svg width="7" height="12" viewBox="0 0 7 12" fill="none" style={{ flexShrink: 0, marginLeft: 2 }}>
-                                <path d="M1 1l5 5-5 5" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {productTab === "deposits" && (
-          <div style={{ padding: "16px 20px 0" }}>
-            {/* Promo banner */}
-            <div style={{
-              borderRadius: 12, padding: "20px 22px", marginBottom: 16, position: "relative", overflow: "hidden",
-              backgroundColor: C.card, border: `1px solid ${C.border}`,
-            }}>
-              <div style={{ fontSize: 17, fontWeight: 700, color: C.text, lineHeight: 1.3, marginBottom: 8 }}>
-                Долгосрочные вложения
-              </div>
-              <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.4 }}>до 7.28% годовых в USD</div>
-              <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.4 }}>до 3.15% годовых в EUR</div>
-              <div style={{ position: "absolute", right: 18, top: "50%", transform: "translateY(-50%)", display: "flex" }}>
-                <div style={{ width: 36, height: 36, borderRadius: 20, backgroundColor: C.border, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: C.sub }}>$</div>
-                <div style={{ width: 36, height: 36, borderRadius: 20, backgroundColor: C.border, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: C.sub, marginLeft: -8 }}>€</div>
-              </div>
-            </div>
-
-            {/* Section header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <span style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Депозиты</span>
-              <div style={{
-                width: 28, height: 28, borderRadius: 8, border: `1.5px solid ${C.accent}`,
-                display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-              }}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M7 3v8M3 7h8" stroke={C.accent} strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-              </div>
-            </div>
-            <div style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>Расчёт приблизительный и не является офертой</div>
-
-            {/* Deposit list */}
-            {emptyState ? (
-              <div style={{
-                backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`,
-                padding: "32px 20px", textAlign: "center",
-              }}>
-                <div style={{ fontSize: 28, marginBottom: 8 }}>💰</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: C.sub, marginBottom: 8 }}>Нет активных депозитов</div>
-                <div data-press style={{
-                  backgroundColor: C.accent, borderRadius: 10, padding: "10px 0",
-                  textAlign: "center", cursor: "pointer", transition: "opacity 0.1s",
-                }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: C.accentFg }}>Открыть первый депозит</span>
-                </div>
-              </div>
-            ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {DEPOSITS.map(dep => {
-                const cm = CURRENCY_META[dep.currency] || { symbol: dep.currency };
-                return (
-                  <div key={dep.id} style={{
-                    backgroundColor: C.card, borderRadius: 12, padding: "14px 18px",
-                    cursor: "pointer", border: `1px solid ${C.border}`,
+                  {activeAccounts.map(acc => (
+                    <AccountHero key={acc.id} account={acc} C={C} />
+                  ))}
+                  <div data-press style={{
+                    flexShrink: 0,
+                    width: 80, height: 124,
+                    borderRadius: 14,
+                    border: `1.5px dashed ${C.borderStrong}`,
+                    backgroundColor: C.faint,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6,
+                    cursor: "pointer",
+                    scrollSnapAlign: "start",
                   }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: C.text, maxWidth: "55%" }}>{dep.name}</span>
-                      <span style={{ fontSize: 16, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
-                        {fmtFull(dep.balance)} <span style={{ color: C.accent }}>{cm.symbol}</span>
-                      </span>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: "50%",
+                      backgroundColor: C.card, border: `1px solid ${C.border}`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <Plus size={16} color={C.muted} strokeWidth={1.8} />
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 12, color: C.muted }}>Дата закрытия — {dep.closingDate}</span>
-                      <span style={{ fontSize: 12, color: C.muted }}>Ставка {dep.rate}%</span>
-                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 500, color: C.muted, textAlign: "center", padding: "0 6px" }}>Новый счёт</span>
                   </div>
-                );
-              })}
-            </div>
-            )}
-          </div>
-        )}
-
-        {productTab === "broker" && (
-          <div style={{ padding: "16px 20px 0" }}>
-            {emptyState ? (
-              <div style={{
-                backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`,
-                padding: "32px 20px", textAlign: "center",
-              }}>
-                <div style={{ fontSize: 28, marginBottom: 8 }}>📈</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: C.sub, marginBottom: 8 }}>Нет брокерских счетов</div>
-                <div data-press style={{
-                  backgroundColor: C.accent, borderRadius: 10, padding: "10px 0",
-                  textAlign: "center", cursor: "pointer", transition: "opacity 0.1s",
-                }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: C.accentFg }}>Открыть счёт</span>
                 </div>
-              </div>
-            ) : null}
-            {!emptyState && BROKER_ACCOUNTS.map((group, gi) => (
-              <div key={gi} style={{ marginBottom: gi < BROKER_ACCOUNTS.length - 1 ? 24 : 0 }}>
-                <span style={{ fontSize: 20, fontWeight: 700, color: C.text, display: "block", marginBottom: 14 }}>{group.group}</span>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {group.accounts.map(acc => {
-                    const cm = CURRENCY_META[acc.currency] || { symbol: acc.currency };
+              ) : (
+                /* List view */
+                <div style={{
+                  backgroundColor: C.card, borderRadius: 12,
+                  border: `1px solid ${C.border}`, overflow: "hidden",
+                }}>
+                  {activeAccounts.map((acc, i) => {
+                    const cm = CURRENCY_META[acc.currency] || { symbol: acc.currency, flag: "💰" };
+                    const ibanTail = acc.number.replace(/\s/g, '').slice(-6);
                     return (
-                      <div key={acc.id} style={{
-                        backgroundColor: C.card, borderRadius: 12, padding: "14px 18px",
-                        cursor: "pointer", border: `1px solid ${C.border}`,
+                      <div key={acc.id} data-press style={{
+                        padding: "14px 16px", cursor: "pointer",
+                        borderBottom: i < activeAccounts.length - 1 ? `1px solid ${C.divider}` : "none",
+                        display: "flex", alignItems: "center", gap: 12,
                       }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-                          <span style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{acc.id}</span>
-                          <span style={{ fontSize: 17, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
-                            {fmtFull(acc.balance)} <span style={{ fontSize: 13, color: C.muted }}>{acc.currency}</span>
-                          </span>
+                        <div style={{
+                          width: 38, height: 38, borderRadius: "50%",
+                          backgroundColor: C.faint,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 18, flexShrink: 0,
+                        }}>{cm.flag}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{acc.name}</div>
+                          <div style={{ fontSize: 12, color: C.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>
+                            {acc.currency} · ••{ibanTail}
+                          </div>
                         </div>
-                        <span style={{ fontSize: 12, color: C.muted }}>{acc.type}</span>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                          {fmtFull(acc.balance)} <span style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}>{cm.symbol}</span>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
-              </div>
-            ))}
+              )}
+            </div>
+
+            {/* Loans */}
+            <div style={{ marginBottom: 28 }}>
+              <SectionHeader title="Денежные займы" onAdd={() => {}} C={C} />
+              {activeLoans.length === 0 ? (
+                <div data-press style={{
+                  backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+                  padding: "18px 16px", cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: 12,
+                }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 8,
+                    backgroundColor: C.faint,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <Plus size={16} color={C.text} strokeWidth={1.8} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Дать в долг</div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Учитывайте долги друзей</div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{
+                  backgroundColor: C.card, borderRadius: 12,
+                  border: `1px solid ${C.border}`, overflow: "hidden",
+                }}>
+                  {activeLoans.map((loan, i) => {
+                    const cm = CURRENCY_META[loan.currency] || { symbol: loan.currency };
+                    return (
+                      <div key={loan.id} data-press style={{
+                        padding: "14px 16px", cursor: "pointer",
+                        borderBottom: i < activeLoans.length - 1 ? `1px solid ${C.divider}` : "none",
+                        display: "flex", alignItems: "center", gap: 12,
+                      }}>
+                        <div style={{
+                          width: 38, height: 38, borderRadius: "50%",
+                          backgroundColor: C.faint,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          flexShrink: 0,
+                        }}>
+                          <Wallet size={17} color={C.text} strokeWidth={1.8} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{loan.name}</div>
+                          <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Возврат {loan.returnDate} · {loan.rate}%</div>
+                        </div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                          {fmtFull(loan.balance)} <span style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}>{cm.symbol}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Credits */}
+            <div>
+              <SectionHeader title="Кредиты" onAdd={() => {}} C={C} />
+              {activeCredits.length === 0 ? (
+                <div data-press style={{
+                  backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+                  padding: "18px 16px", cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: 12,
+                }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 8,
+                    backgroundColor: C.faint,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <Plus size={16} color={C.text} strokeWidth={1.8} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Взять кредит</div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>До 30 млн ₸ от 12% годовых</div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{
+                  backgroundColor: C.card, borderRadius: 12,
+                  border: `1px solid ${C.border}`, overflow: "hidden",
+                }}>
+                  {activeCredits.map((cr, i) => {
+                    const cm = CURRENCY_META[cr.currency] || { symbol: cr.currency };
+                    return (
+                      <div key={cr.id} data-press style={{
+                        padding: "14px 16px", cursor: "pointer",
+                        borderBottom: i < activeCredits.length - 1 ? `1px solid ${C.divider}` : "none",
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <div style={{
+                            width: 38, height: 38, borderRadius: "50%",
+                            backgroundColor: C.faint,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            flexShrink: 0,
+                          }}>
+                            <CreditCard size={17} color={C.text} strokeWidth={1.8} />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{cr.name}</div>
+                            <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Погашение {cr.payoffDate} · {cr.rate}%</div>
+                          </div>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                            {fmtFull(cr.monthly)} <span style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}>{cm.symbol}</span>
+                          </div>
+                        </div>
+                        {/* Progress bar */}
+                        <div style={{ marginTop: 12, marginLeft: 50 }}>
+                          <div style={{
+                            height: 4, borderRadius: 2, overflow: "hidden",
+                            backgroundColor: C.divider,
+                          }}>
+                            <div style={{
+                              width: `${cr.paidPercent}%`, height: "100%",
+                              backgroundColor: C.accentDark, borderRadius: 2,
+                              transition: "width 0.3s ease",
+                            }} />
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
+                            <span style={{ fontSize: 11, color: C.muted }}>Выплачено</span>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: C.text, fontFeatureSettings: "'tnum'" }}>{cr.paidPercent}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
-        </div>)}
 
-        {/* News section */}
-        {blockVis.news && (
-        <div style={{ padding: "0 20px", order: blockOrder.indexOf("news") }}>
-          {(() => {
-            const featured = NEWS.find(n => n.featured);
-            const secondary = NEWS.filter(n => !n.featured);
-            return (
-              <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: "hidden" }}>
-                {featured && (
-                  <div data-press style={{ padding: "20px 20px 16px", cursor: "pointer", transition: "opacity 0.1s" }}>
-                    <div style={{ display: "inline-block", fontSize: 10, fontWeight: 700, color: "#E11D48", backgroundColor: "#E11D4818", borderRadius: 8, padding: "2px 8px", marginBottom: 12, letterSpacing: "0.04em", textTransform: "uppercase" }}>{featured.tag}</div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: C.text, lineHeight: 1.35 }}>{featured.title}</div>
-                    <div style={{ fontSize: 12, color: C.sub, marginTop: 6, lineHeight: 1.4 }}>{featured.subtitle}</div>
-                    <div style={{ fontSize: 11, color: C.muted, marginTop: 10 }}>{featured.time}</div>
-                  </div>
-                )}
-                {secondary.map(n => (
-                  <div key={n.id} data-press style={{ padding: "14px 20px", borderTop: `1px solid ${C.border}`, cursor: "pointer", transition: "opacity 0.1s" }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: C.sub, lineHeight: 1.35 }}>{n.title}</div>
-                    <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{n.time}</div>
-                  </div>
-                ))}
-                <div onClick={onAvatarClick} data-press style={{ textAlign: "center", padding: "14px 20px", cursor: "pointer", borderTop: `1px solid ${C.border}` }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: C.accent }}>Все новости →</span>
+        {/* ─── DEPOSITS TAB ─── */}
+        {productTab === "deposits" && (
+          <div>
+            {emptyState ? (
+              <div style={{
+                backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+                padding: "28px 20px", textAlign: "center",
+              }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 6 }}>Нет активных депозитов</div>
+                <div style={{ fontSize: 12, color: C.muted, marginBottom: 18 }}>Откройте депозит до 18% годовых</div>
+                <div data-press style={{
+                  display: "inline-block",
+                  backgroundColor: C.accentDark, borderRadius: 8, padding: "10px 20px",
+                  cursor: "pointer",
+                }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.accent }}>Открыть депозит</span>
                 </div>
               </div>
-            );
-          })()}
-        </div>
+            ) : (
+              <div style={{
+                backgroundColor: C.card, borderRadius: 12,
+                border: `1px solid ${C.border}`, overflow: "hidden",
+              }}>
+                {DEPOSITS.map((dep, i) => {
+                  const cm = CURRENCY_META[dep.currency] || { symbol: dep.currency };
+                  return (
+                    <div key={dep.id} data-press style={{
+                      padding: "14px 16px", cursor: "pointer",
+                      borderBottom: i < DEPOSITS.length - 1 ? `1px solid ${C.divider}` : "none",
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{dep.name}</span>
+                        <span style={{ fontSize: 15, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
+                          {fmtFull(dep.balance)} <span style={{ fontSize: 11, color: C.muted }}>{cm.symbol}</span>
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: 12, color: C.muted }}>до {dep.closingDate}</span>
+                        <span style={{ fontSize: 12, color: C.muted }}>{dep.rate}% годовых</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
 
-        {/* CTA Button */}
-        {blockVis.cta && (
-        <div style={{ padding: "0 20px", order: blockOrder.indexOf("cta") }}>
-          <div data-press style={{
-            backgroundColor: C.accent, borderRadius: 12, padding: "15px 0",
-            textAlign: "center", cursor: "pointer", transition: "opacity 0.1s",
-          }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: C.accentFg }}>Открыть новый продукт</span>
+        {/* ─── BROKER TAB ─── */}
+        {productTab === "broker" && (
+          <div>
+            {emptyState ? (
+              <div style={{
+                backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+                padding: "28px 20px", textAlign: "center",
+              }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 6 }}>Нет брокерских счетов</div>
+                <div style={{ fontSize: 12, color: C.muted, marginBottom: 18 }}>Инвестируйте от 1 ₸</div>
+                <div data-press style={{
+                  display: "inline-block",
+                  backgroundColor: C.accentDark, borderRadius: 8, padding: "10px 20px",
+                  cursor: "pointer",
+                }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.accent }}>Открыть счёт</span>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                {BROKER_ACCOUNTS.map((group, gi) => (
+                  <div key={gi}>
+                    <SectionHeader title={group.group} C={C} />
+                    <div style={{
+                      backgroundColor: C.card, borderRadius: 12,
+                      border: `1px solid ${C.border}`, overflow: "hidden",
+                    }}>
+                      {group.accounts.map((acc, i) => (
+                        <div key={acc.id} data-press style={{
+                          padding: "14px 16px", cursor: "pointer",
+                          borderBottom: i < group.accounts.length - 1 ? `1px solid ${C.divider}` : "none",
+                        }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+                            <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{acc.id}</span>
+                            <span style={{ fontSize: 15, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
+                              {fmtFull(acc.balance)} <span style={{ fontSize: 11, color: C.muted }}>{acc.currency}</span>
+                            </span>
+                          </div>
+                          <span style={{ fontSize: 12, color: C.muted }}>{acc.type}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
         )}
       </div>
-
-      {/* Sticky search bar — fixed overlay when scrolled past */}
-      {blockVis.search && searchStuck && (
-        <div style={{
-          position: "absolute", top: 0, left: 0, right: 0,
-          zIndex: 20, padding: "16px 20px", display: "flex", alignItems: "center", gap: 8,
-          backgroundColor: C.bg,
-        }}>
-          <div style={{
-            flex: 1, display: "flex", alignItems: "center", gap: 8,
-            backgroundColor: C.card, borderRadius: 12, padding: "0 14px",
-            height: 40, boxSizing: "border-box",
-            border: searchFocused ? `1px solid ${C.accent}` : `1px solid ${C.border}`,
-            transition: "border-color 0.15s",
-          }}>
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-              <circle cx="7" cy="7" r="4.5" stroke={C.muted} strokeWidth="1.5"/>
-              <path d="M10.5 10.5L14 14" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-            <input
-              value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)}
-              placeholder="Найти контакт, продукт..."
-              style={{ flex: 1, background: "none", border: "none", outline: "none", color: C.text, fontSize: 14, fontFamily: "inherit" }}
-            />
-          </div>
-          <div data-press style={{
-            width: 40, height: 40, borderRadius: 12,
-            background: `linear-gradient(135deg, ${C.accent}, #06B6D4)`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer", flexShrink: 0, transition: "opacity 0.1s",
-            boxShadow: `0 2px 8px ${C.accent}44`,
-          }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ animation: "sparkle-pulse 2s ease-in-out infinite" }}>
-              <path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" fill="#FFFFFF"/>
-            </svg>
-          </div>
-        </div>
       )}
 
-      {/* Bottom navigation */}
+      {/* ═══ CTA ═══ */}
+      {blockVis.cta && (
+      <div style={{ order: blockOrder.indexOf("cta"), padding: "0 20px 32px" }}>
+        <div data-press style={{
+          backgroundColor: C.accentDark, borderRadius: 12, padding: "14px 0",
+          textAlign: "center", cursor: "pointer",
+        }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: C.accent }}>Новая карта или продукт</span>
+        </div>
+      </div>
+      )}
+
+      {/* ═══ BOTTOM TAB BAR ═══ */}
       <div style={{
-        flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-around",
-        padding: "10px 16px 28px", backgroundColor: C.bg,
-        borderTop: `1px solid ${C.border}`,
+        position: "fixed", bottom: 0, left: 0, right: 0,
+        maxWidth: 430, margin: "0 auto",
+        backgroundColor: C.bg,
+        borderTop: `1px solid ${C.divider}`,
+        padding: "0 0 24px",
+        display: "flex", justifyContent: "space-around",
+        zIndex: 50,
       }}>
         {[
-          { label: "Главная", active: true, d: "M3 9.5L10 3l7 6.5V19a1 1 0 01-1 1h-4v-5a1 1 0 00-1-1H9a1 1 0 00-1 1v5H4a1 1 0 01-1-1V9.5z" },
-          { label: "Статистика", active: false, d: "M4 16V9M8 16V4M12 16V12M16 16V7" },
-          { label: "Переводы", active: false, d: "M4 12h12M12 4l4 4-4 4M16 8l-4 4 4 4" },
-          { label: "Контакты", active: false, d: "M12 12a4 4 0 100-8 4 4 0 000 8zm-7 8c0-3.3 3.1-6 7-6s7 2.7 7 6" },
+          { Icon: Wallet, label: "Продукты", active: true },
+          { Icon: BarChart3, label: "Статистика" },
+          { Icon: ArrowLeftRight, label: "Переводы" },
+          { Icon: MessageCircle, label: "Чаты" },
         ].map((tab, i) => (
           <div key={i} data-press style={{
             display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-            cursor: "pointer", padding: "4px 12px", transition: "opacity 0.1s",
+            cursor: "pointer", flex: 1, paddingTop: 10, paddingBottom: 6,
+            position: "relative",
           }}>
-            <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
-              {tab.label === "Главная" ? (
-                <path d={tab.d} fill={tab.active ? C.text : "none"} stroke={tab.active ? C.text : C.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              ) : (
-                <path d={tab.d} stroke={tab.active ? C.text : C.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-              )}
-            </svg>
-            <span style={{
-              fontSize: 10, fontWeight: tab.active ? 600 : 500,
-              color: tab.active ? C.text : C.muted,
-            }}>{tab.label}</span>
             {tab.active && (
-              <div style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: C.accent, marginTop: -2 }} />
+              <div style={{
+                position: "absolute", top: 0, left: "50%",
+                transform: "translateX(-50%)",
+                width: 28, height: 3, borderRadius: "0 0 3px 3px",
+                backgroundColor: C.accentDark,
+              }} />
             )}
+            <tab.Icon size={22} color={tab.active ? C.accentDark : C.muted} strokeWidth={tab.active ? 2.2 : 1.7} />
+            <span style={{
+              fontSize: 10, fontWeight: tab.active ? 700 : 500,
+              color: tab.active ? C.accentDark : C.muted,
+            }}>{tab.label}</span>
           </div>
         ))}
       </div>
@@ -1903,142 +1549,74 @@ function StripeThemeApp({ onAvatarClick, wallets, displayCurrency, setDisplayCur
   );
 }
 
-/* ═══════ MAIN ═══════ */
+/* ═══════════════════════════════════════════════
+   ROOT
+   ═══════════════════════════════════════════════ */
+
 export default function FreedomV6() {
-  const [openCurrency, setOpenCurrency] = useState(null);
-  const [searchFocused, setSearchFocused] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchStuck, setSearchStuck] = useState(false);
   const [displayCurrency, setDisplayCurrency] = useState("EUR");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [productTab, setProductTab] = useState("bank");
   const [theme, setTheme] = useState("stripe");
   const [debugOpen, setDebugOpen] = useState(false);
-  const [fcExpanded, setFcExpanded] = useState(false);
+  const [emptyState, setEmptyState] = useState(false);
   const [blockVis, setBlockVis] = useState(
     BLOCK_LABELS.reduce((acc, b) => ({ ...acc, [b.key]: true }), {})
   );
   const [blockOrder, setBlockOrder] = useState(BLOCK_LABELS.map(b => b.key));
-  const [subVis, setSubVis] = useState({ expenses: true, transactions: true });
-  const [emptyState, setEmptyState] = useState(false);
 
-  const scrollRef = useRef(null);
-  const sentinelRef = useRef(null);
-
-  const activeAccounts = emptyState ? EMPTY_RAW_ACCOUNTS : RAW_ACCOUNTS;
-  const activeCards = emptyState ? EMPTY_CARDS : CARDS;
-
-  const wallets = useMemo(() => {
-    const map = {};
-    activeAccounts.forEach(acc => {
-      if (!map[acc.currency]) map[acc.currency] = { total: 0, accounts: [] };
-      map[acc.currency].total += acc.balance;
-      map[acc.currency].accounts.push(acc);
-    });
-    Object.values(map).forEach(w => {
-      w.accounts.sort((a, b) => b.balance - a.balance);
-    });
-    return Object.entries(map).sort((a, b) => b[1].total - a[1].total).map(([code, data]) => ({ code, ...data }));
-  }, [activeAccounts]);
-
-  const availableCurrencies = useMemo(() => Object.keys(CURRENCY_META).filter(c => c !== "FREEDOM"), []);
+  const activeCardProducts = emptyState ? EMPTY_CARD_PRODUCTS : CARD_PRODUCTS;
+  const activeAccounts = emptyState ? [] : ACCOUNTS_LIST;
+  const activeLoans = emptyState ? [] : LOANS;
+  const activeCredits = emptyState ? [] : CREDITS;
+  const activePromos = emptyState ? PROMOS_EMPTY : PROMOS;
+  const activeNews = emptyState ? FEATURED_NEWS_EMPTY : FEATURED_NEWS;
+  const activeRequests = emptyState ? [] : PENDING_REQUESTS;
 
   const totalInKZT = useMemo(() => {
+    if (emptyState) return 0;
     let sum = 0;
-    activeAccounts.forEach(acc => {
-      const rate = RATES_TO_KZT[acc.currency] || 1;
-      sum += acc.balance * rate;
+    CARD_PRODUCTS.forEach(group => {
+      group.cards.forEach(c => { sum += convertToKZT(c.primaryBalance, c.primaryCurrency); });
     });
+    ACCOUNTS_LIST.forEach(a => { sum += convertToKZT(a.balance, a.currency); });
     return sum;
-  }, [activeAccounts]);
+  }, [emptyState]);
 
-  const totalDisplay = convertTo(totalInKZT, displayCurrency);
-  const displayMeta = CURRENCY_META[displayCurrency] || { symbol: displayCurrency, flag: "💰" };
+  const C = theme === "dark" ? DARK_COLORS : LIGHT_COLORS;
 
   useEffect(() => {
-    const scrollEl = scrollRef.current;
-    const sentinelEl = sentinelRef.current;
-    if (!scrollEl || !sentinelEl) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => { setSearchStuck(!entry.isIntersecting); },
-      { root: scrollEl, threshold: 0 }
-    );
-    observer.observe(sentinelEl);
-    return () => observer.disconnect();
-  }, []);
-
-  // Sync body bg with theme
-  useEffect(() => {
-    document.body.style.backgroundColor = (theme === "stripe" ? LIGHT_COLORS : DARK_COLORS).bg;
+    document.body.style.backgroundColor = C.bg;
   }, [theme]);
-
-  // Stripe theme — completely different UI
-  if (theme === "stripe") {
-    return (
-      <>
-        {debugOpen && <BottomSheet theme={theme} setTheme={setTheme} onClose={() => setDebugOpen(false)} blockVis={blockVis} setBlockVis={setBlockVis} blockOrder={blockOrder} setBlockOrder={setBlockOrder} subVis={subVis} setSubVis={setSubVis} emptyState={emptyState} setEmptyState={setEmptyState} colors={theme === "stripe" ? LIGHT_COLORS : DARK_COLORS} />}
-        <StripeThemeApp
-          onAvatarClick={() => setDebugOpen(true)}
-          wallets={wallets}
-          displayCurrency={displayCurrency}
-          setDisplayCurrency={setDisplayCurrency}
-          pickerOpen={pickerOpen}
-          setPickerOpen={setPickerOpen}
-          totalInKZT={totalInKZT}
-          productTab={productTab}
-          setProductTab={setProductTab}
-          openCurrency={openCurrency}
-          setOpenCurrency={setOpenCurrency}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          searchFocused={searchFocused}
-          setSearchFocused={setSearchFocused}
-          fcExpanded={fcExpanded}
-          setFcExpanded={setFcExpanded}
-          blockVis={blockVis}
-          blockOrder={blockOrder}
-          subVis={subVis}
-          colors={LIGHT_COLORS}
-          scrollRef={scrollRef}
-          sentinelRef={sentinelRef}
-          searchStuck={searchStuck}
-          emptyState={emptyState}
-          activeCards={activeCards}
-        />
-      </>
-    );
-  }
 
   return (
     <>
-      {debugOpen && <BottomSheet theme={theme} setTheme={setTheme} onClose={() => setDebugOpen(false)} blockVis={blockVis} setBlockVis={setBlockVis} blockOrder={blockOrder} setBlockOrder={setBlockOrder} subVis={subVis} setSubVis={setSubVis} emptyState={emptyState} setEmptyState={setEmptyState} colors={theme === "stripe" ? LIGHT_COLORS : DARK_COLORS} />}
-      <StripeThemeApp
+      {debugOpen && (
+        <BottomSheet
+          theme={theme} setTheme={setTheme}
+          onClose={() => setDebugOpen(false)}
+          blockVis={blockVis} setBlockVis={setBlockVis}
+          blockOrder={blockOrder} setBlockOrder={setBlockOrder}
+          emptyState={emptyState} setEmptyState={setEmptyState}
+          C={C}
+        />
+      )}
+      <MainScreen
         onAvatarClick={() => setDebugOpen(true)}
-        wallets={wallets}
-        displayCurrency={displayCurrency}
-        setDisplayCurrency={setDisplayCurrency}
-        pickerOpen={pickerOpen}
-        setPickerOpen={setPickerOpen}
+        displayCurrency={displayCurrency} setDisplayCurrency={setDisplayCurrency}
+        pickerOpen={pickerOpen} setPickerOpen={setPickerOpen}
         totalInKZT={totalInKZT}
-        productTab={productTab}
-        setProductTab={setProductTab}
-        openCurrency={openCurrency}
-        setOpenCurrency={setOpenCurrency}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        searchFocused={searchFocused}
-        setSearchFocused={setSearchFocused}
-        fcExpanded={fcExpanded}
-        setFcExpanded={setFcExpanded}
-        blockVis={blockVis}
-        blockOrder={blockOrder}
-        subVis={subVis}
-        colors={DARK_COLORS}
-        scrollRef={scrollRef}
-        sentinelRef={sentinelRef}
-        searchStuck={searchStuck}
+        productTab={productTab} setProductTab={setProductTab}
+        blockVis={blockVis} blockOrder={blockOrder}
         emptyState={emptyState}
-        activeCards={activeCards}
+        activeCardProducts={activeCardProducts}
+        activeAccounts={activeAccounts}
+        activeLoans={activeLoans}
+        activeCredits={activeCredits}
+        activePromos={activePromos}
+        activeNews={activeNews}
+        activeRequests={activeRequests}
+        C={C} theme={theme}
       />
     </>
   );

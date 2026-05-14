@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Search, Bell, Plus, ChevronRight, ChevronDown, X, ArrowLeftRight, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard } from "lucide-react";
+import { Search, Bell, Plus, ChevronRight, ChevronDown, X, ArrowLeftRight, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid } from "lucide-react";
 
 /* ═══════════════════════════════════════════════
    DATA
@@ -53,17 +53,18 @@ const CARD_PRODUCTS = [
           { currency: "KZT", amount: 35251706.16 },
           { currency: "USD", amount: 113324.68 },
           { currency: "KRW", amount: 30268.06 },
-        ], color: "#84CC16",
+        ], color: "#84CC16", visual: "pickle", fcBalance: 409.18,
       },
       { id: "invest-prestige", name: "Invest Prestige Card", sub: "D75003 — Freedom24", last4: "0011",
         primaryBalance: 122683.74, primaryCurrency: "USD", breakdown: [], color: "#1E1B4B",
+        visual: "prestige", fcBalance: 87.42,
       },
       { id: "harvey-queen", name: "Supercard Harvey Queen", last4: "0088", primaryBalance: 1069.42, primaryCurrency: "USD",
         breakdown: [
           { currency: "USD", amount: 251709.36 },
           { currency: "KZT", amount: 528.06 },
           { currency: "TRY", amount: 420.23 },
-        ], color: "#F472B6",
+        ], color: "#F472B6", visual: "harvey", fcBalance: 287.42,
       },
     ],
   },
@@ -74,7 +75,7 @@ const CARD_PRODUCTS = [
         breakdown: [
           { currency: "KZT", amount: 1577523.88 },
           { currency: "USD", amount: 29258.06 },
-        ], color: "#0D9488",
+        ], color: "#0D9488", visual: "ru-threads", fcBalance: 156.78,
       },
     ],
   },
@@ -94,8 +95,8 @@ const LOANS = [
 ];
 
 const CREDITS = [
-  { id: "c1", name: "Кредит на дом мечты", payoffDate: "31.10.2025", monthly: 12089.09, currency: "KZT", rate: 4.97 },
-  { id: "c2", name: "Машина", payoffDate: "01.02.2027", monthly: 223940.00, currency: "KZT", rate: 14.03 },
+  { id: "c1", name: "Кредит на дом мечты", payoffDate: "31.10.2025", monthly: 12089.09, currency: "KZT", rate: 4.97, paidPercent: 62 },
+  { id: "c2", name: "Машина", payoffDate: "01.02.2027", monthly: 223940.00, currency: "KZT", rate: 14.03, paidPercent: 35 },
 ];
 
 const DEPOSITS = [
@@ -117,7 +118,7 @@ const BROKER_ACCOUNTS = [
 ];
 
 const EMPTY_CARD_PRODUCTS = [
-  { bank: "Freedom KZ", cards: [{ id: "first-card", name: "DepositCard", last4: "4521", primaryBalance: 0, primaryCurrency: "KZT", breakdown: [], color: "#22C55E" }] },
+  { bank: "Freedom KZ", cards: [{ id: "first-card", name: "DepositCard", last4: "4521", primaryBalance: 0, primaryCurrency: "KZT", breakdown: [], color: "#22C55E", visual: "fresh", fcBalance: 0 }] },
 ];
 
 /* ═══════════════════════════════════════════════
@@ -207,6 +208,205 @@ const BLOCK_LABELS = [
 /* ═══════════════════════════════════════════════
    CARD ART — flat, simple
    ═══════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════
+   CARD HERO — large image-rich horizontal card
+   ═══════════════════════════════════════════════ */
+
+function CardArtwork({ visual }) {
+  const artworks = {
+    pickle: (
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `
+          radial-gradient(circle at 15% 25%, rgba(190,242,100,0.5) 0%, transparent 35%),
+          radial-gradient(circle at 85% 80%, rgba(22,101,52,0.7) 0%, transparent 45%),
+          radial-gradient(circle at 65% 35%, rgba(74,222,128,0.35) 0%, transparent 30%),
+          linear-gradient(135deg, #3F6212 0%, #65A30D 50%, #84CC16 100%)
+        `,
+      }}>
+        <div style={{
+          position: "absolute", top: "52%", left: "62%",
+          transform: "translate(-50%, -50%) rotate(-15deg)",
+          fontSize: 130, opacity: 0.18, lineHeight: 1, filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.2))",
+        }}>🥒</div>
+      </div>
+    ),
+    prestige: (
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `
+          radial-gradient(circle at 80% 15%, rgba(129,140,248,0.3) 0%, transparent 50%),
+          radial-gradient(circle at 15% 85%, rgba(244,114,182,0.2) 0%, transparent 45%),
+          linear-gradient(135deg, #020617 0%, #1E1B4B 50%, #312E81 100%)
+        `,
+      }}>
+        {/* Gold accent lines */}
+        <div style={{ position: "absolute", top: "30%", right: "5%", width: 120, height: 1, backgroundColor: "rgba(252,211,77,0.35)", transform: "rotate(-30deg)" }} />
+        <div style={{ position: "absolute", bottom: "35%", left: "5%", width: 80, height: 1, backgroundColor: "rgba(252,211,77,0.25)", transform: "rotate(-30deg)" }} />
+        <div style={{
+          position: "absolute", top: "55%", left: "58%",
+          transform: "translate(-50%, -50%)",
+          fontSize: 110, opacity: 0.12, lineHeight: 1,
+        }}>🎩</div>
+      </div>
+    ),
+    harvey: (
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `
+          radial-gradient(ellipse at 28% 35%, rgba(255,255,255,0.35) 0%, transparent 28%),
+          radial-gradient(circle at 75% 25%, rgba(96,165,250,0.5) 0%, transparent 35%),
+          radial-gradient(circle at 70% 80%, rgba(0,0,0,0.4) 0%, transparent 40%),
+          linear-gradient(135deg, #9D174D 0%, #BE185D 45%, #EC4899 100%)
+        `,
+      }}>
+        <div style={{ position: "absolute", top: "20%", left: "18%", width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.18)" }} />
+        <div style={{ position: "absolute", bottom: "22%", right: "22%", width: 34, height: 34, borderRadius: "50%", background: "rgba(59,130,246,0.35)" }} />
+        <div style={{ position: "absolute", top: "60%", left: "30%", width: 20, height: 20, borderRadius: "50%", background: "rgba(255,255,255,0.12)" }} />
+        <div style={{
+          position: "absolute", top: "50%", left: "55%",
+          transform: "translate(-50%, -50%) rotate(18deg)",
+          fontSize: 110, opacity: 0.2, lineHeight: 1,
+        }}>🃏</div>
+      </div>
+    ),
+    "ru-threads": (
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `
+          repeating-linear-gradient(60deg, transparent 0, transparent 16px, rgba(255,255,255,0.07) 16px, rgba(255,255,255,0.07) 17px),
+          repeating-linear-gradient(120deg, transparent 0, transparent 20px, rgba(0,0,0,0.12) 20px, rgba(0,0,0,0.12) 21px),
+          linear-gradient(135deg, #042F2E 0%, #0F766E 45%, #14B8A6 100%)
+        `,
+      }}>
+        <div style={{
+          position: "absolute", top: "50%", left: "55%",
+          transform: "translate(-50%, -50%)",
+          fontSize: 105, opacity: 0.18, lineHeight: 1,
+        }}>🪆</div>
+      </div>
+    ),
+    fresh: (
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `
+          radial-gradient(circle at 20% 30%, rgba(159,232,112,0.4) 0%, transparent 40%),
+          radial-gradient(circle at 80% 70%, rgba(22,101,52,0.5) 0%, transparent 45%),
+          linear-gradient(135deg, #14532D 0%, #166534 50%, #22C55E 100%)
+        `,
+      }}>
+        <div style={{
+          position: "absolute", top: "50%", left: "55%",
+          transform: "translate(-50%, -50%)",
+          fontSize: 100, opacity: 0.18, lineHeight: 1,
+        }}>✨</div>
+      </div>
+    ),
+  };
+  return artworks[visual] || artworks.fresh;
+}
+
+function CardHero({ card, bank, C }) {
+  const cm = CURRENCY_META[card.primaryCurrency] || { symbol: card.primaryCurrency };
+  const allCurrencies = [card.primaryCurrency, ...card.breakdown.map(b => b.currency)];
+  const uniqueCurrencies = [...new Set(allCurrencies)];
+  const subtitle = card.sub
+    || (uniqueCurrencies.length > 1
+      ? uniqueCurrencies.join(" · ")
+      : "Активна");
+
+  return (
+    <div data-press style={{
+      flexShrink: 0,
+      width: 178, height: 138,
+      borderRadius: 14,
+      backgroundColor: C.card,
+      border: `1px solid ${C.border}`,
+      scrollSnapAlign: "start",
+      cursor: "pointer",
+      position: "relative",
+      padding: "58px 18px 14px",
+    }}>
+      {/* Card image — same as list view */}
+      <div style={{
+        position: "absolute",
+        top: -14, left: 18,
+        filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.18))",
+      }}>
+        <CardArt color={card.color} last4={card.last4} />
+      </div>
+
+      {/* Text content */}
+      <div>
+        <div style={{
+          fontSize: 12, fontWeight: 600, color: C.text,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>{card.name}</div>
+        <div style={{
+          fontSize: 17, fontWeight: 800, color: C.text,
+          fontFeatureSettings: "'tnum'", letterSpacing: -0.3, lineHeight: 1.1,
+          marginTop: 6,
+        }}>
+          {fmtFull(card.primaryBalance)} <span style={{ fontSize: 11, fontWeight: 600, color: C.muted }}>{cm.symbol}</span>
+        </div>
+        <div style={{
+          fontSize: 11, color: C.muted, marginTop: 8,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>{subtitle}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   ACCOUNT HERO — clean minimal card in carousel
+   ═══════════════════════════════════════════════ */
+
+function AccountHero({ account, C }) {
+  const cm = CURRENCY_META[account.currency] || { symbol: account.currency, flag: "💰" };
+  const ibanTail = account.number.replace(/\s/g, '').slice(-6);
+
+  return (
+    <div data-press style={{
+      flexShrink: 0,
+      width: 200, height: 124,
+      borderRadius: 14,
+      backgroundColor: C.card,
+      border: `1px solid ${C.border}`,
+      scrollSnapAlign: "start",
+      cursor: "pointer",
+      padding: "14px 16px",
+      display: "flex", flexDirection: "column", justifyContent: "space-between",
+    }}>
+      <div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+          <span style={{ fontSize: 15 }}>{cm.flag}</span>
+          <span style={{
+            fontSize: 11, fontWeight: 700, color: C.muted,
+            letterSpacing: 0.4, textTransform: "uppercase",
+          }}>{account.currency}</span>
+        </div>
+        <div style={{
+          fontSize: 13, fontWeight: 600, color: C.text,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>{account.name}</div>
+      </div>
+      <div>
+        <div style={{
+          fontSize: 18, fontWeight: 700, color: C.text,
+          fontFeatureSettings: "'tnum'", letterSpacing: -0.3, lineHeight: 1.1,
+        }}>
+          {fmtFull(account.balance)} <span style={{ fontSize: 12, fontWeight: 600, color: C.muted }}>{cm.symbol}</span>
+        </div>
+        <div style={{
+          fontSize: 10, color: C.muted, marginTop: 4,
+          fontFeatureSettings: "'tnum'",
+        }}>••{ibanTail}</div>
+      </div>
+    </div>
+  );
+}
 
 function CardArt({ color, last4 }) {
   return (
@@ -483,24 +683,39 @@ function StatusBar({ C }) {
    SECTION HEADER
    ═══════════════════════════════════════════════ */
 
-function SectionHeader({ title, action, onAdd, C }) {
+function SectionHeader({ title, action, onAdd, onToggleView, viewMode, C }) {
   return (
     <div style={{
       display: "flex", justifyContent: "space-between", alignItems: "center",
       marginBottom: 12,
     }}>
       <span style={{ fontSize: 15, fontWeight: 700, color: C.text, letterSpacing: -0.2 }}>{title}</span>
-      {action && <span data-press style={{ fontSize: 13, color: C.text, fontWeight: 500, cursor: "pointer", opacity: 0.7 }}>{action}</span>}
-      {onAdd && (
-        <div data-press onClick={onAdd} style={{
-          width: 24, height: 24, borderRadius: 6,
-          border: `1px solid ${C.border}`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          cursor: "pointer",
-        }}>
-          <Plus size={13} color={C.text} strokeWidth={2} />
-        </div>
-      )}
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        {action && <span data-press style={{ fontSize: 13, color: C.text, fontWeight: 500, cursor: "pointer", opacity: 0.7, marginRight: 4 }}>{action}</span>}
+        {onToggleView && (
+          <div data-press onClick={onToggleView} style={{
+            width: 24, height: 24, borderRadius: 6,
+            border: `1px solid ${C.border}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer",
+          }}>
+            {viewMode === "carousel"
+              ? <LayoutList size={13} color={C.text} strokeWidth={2} />
+              : <LayoutGrid size={13} color={C.text} strokeWidth={2} />
+            }
+          </div>
+        )}
+        {onAdd && (
+          <div data-press onClick={onAdd} style={{
+            width: 24, height: 24, borderRadius: 6,
+            border: `1px solid ${C.border}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer",
+          }}>
+            <Plus size={13} color={C.text} strokeWidth={2} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -523,6 +738,22 @@ function MainScreen({
 
   const [promoIndex, setPromoIndex] = useState(0);
   const [requestIndex, setRequestIndex] = useState(0);
+  const [cardsView, setCardsView] = useState("carousel");
+  const [accountsView, setAccountsView] = useState("carousel");
+
+  // Dark palette for the hero area (creates contrast against light products area below)
+  const topC = {
+    ...C,
+    bg: "#0F1115",
+    card: "#1A1D24",
+    text: "#FAFAF7",
+    sub: "rgba(250,250,247,0.7)",
+    muted: "rgba(250,250,247,0.45)",
+    faint: "rgba(250,250,247,0.05)",
+    border: "rgba(250,250,247,0.08)",
+    borderStrong: "rgba(250,250,247,0.16)",
+    divider: "rgba(250,250,247,0.06)",
+  };
 
   return (
     <div style={{
@@ -537,6 +768,12 @@ function MainScreen({
           onSelect={setDisplayCurrency} onClose={() => setPickerOpen(false)} C={C} />
       )}
 
+      {/* ═════════════ DARK HERO AREA ═════════════ */}
+      <div style={{ backgroundColor: topC.bg, color: topC.text, position: "relative" }}>
+      {(() => {
+        const C = topC; // shadow: all blocks below use dark palette
+        return (
+      <>
       <StatusBar C={C} />
 
       {/* Header */}
@@ -719,107 +956,229 @@ function MainScreen({
       <div style={{ order: blockOrder.indexOf("news"), padding: "0 20px 24px" }}>
         <div data-press style={{
           backgroundColor: C.card, borderRadius: 12,
-          border: `1px solid ${C.border}`, padding: "16px 18px",
+          border: `1px solid ${C.border}`, padding: "12px 14px",
           cursor: "pointer",
+          display: "flex", alignItems: "center", gap: 12,
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            <span style={{
-              fontSize: 10, fontWeight: 700, color: "#DC2626",
-              padding: "3px 8px", borderRadius: 4,
-              backgroundColor: "rgba(220,38,38,0.08)",
-              textTransform: "uppercase", letterSpacing: 0.4,
-            }}>{activeNews.tag}</span>
-            <span style={{ fontSize: 11, color: C.muted }}>{activeNews.time}</span>
+          <div style={{
+            width: 38, height: 38, borderRadius: 10,
+            backgroundColor: "rgba(220,38,38,0.08)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0,
+          }}>
+            <Newspaper size={17} color="#DC2626" strokeWidth={1.8} />
           </div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: C.text, lineHeight: 1.35, marginBottom: 6 }}>
-            {activeNews.title}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+              <span style={{
+                fontSize: 10, fontWeight: 700, color: "#DC2626",
+                textTransform: "uppercase", letterSpacing: 0.4,
+              }}>{activeNews.tag}</span>
+              <span style={{ fontSize: 11, color: C.muted }}>· {activeNews.time}</span>
+            </div>
+            <div style={{
+              fontSize: 13, fontWeight: 600, color: C.text, lineHeight: 1.3,
+              overflow: "hidden", textOverflow: "ellipsis",
+              display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+            }}>{activeNews.title}</div>
           </div>
-          {activeNews.subtitle && (
-            <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.4 }}>{activeNews.subtitle}</div>
-          )}
+          <ChevronRight size={16} color={C.muted} strokeWidth={1.8} />
         </div>
       </div>
       )}
 
-      {/* ═══ PRODUCTS ═══ */}
+      </>
+      ); })()}
+      </div>
+      {/* ═════════════ END DARK HERO AREA ═════════════ */}
+
+      {/* ═════════════ FOLDER TABS — bridge dark→light ═════════════ */}
       {blockVis.products && (
-      <div style={{ order: blockOrder.indexOf("products"), padding: "0 20px 24px" }}>
-        {/* Tab bar */}
-        <div style={{
-          display: "flex", gap: 24, marginBottom: 24,
-          borderBottom: `1px solid ${C.divider}`,
-        }}>
-          {[
-            { key: "bank", label: "Банк" },
-            { key: "deposits", label: "Депозиты" },
-            { key: "broker", label: "Брокер" },
-          ].map(tab => {
-            const active = productTab === tab.key;
-            return (
-              <div key={tab.key} onClick={() => setProductTab(tab.key)} style={{
-                padding: "10px 0", cursor: "pointer",
-                fontSize: 14, fontWeight: 600,
-                color: active ? C.text : C.muted,
-                borderBottom: active ? `2px solid ${C.text}` : "2px solid transparent",
-                marginBottom: -1,
-              }}>{tab.label}</div>
-            );
-          })}
+        <div style={{ backgroundColor: topC.bg, padding: "16px 12px 0" }}>
+          <div style={{ display: "flex", gap: 4, position: "relative" }}>
+            {(() => {
+              const bankCount = activeCardProducts.reduce((s, g) => s + g.cards.length, 0);
+              const depositCount = emptyState ? 0 : DEPOSITS.length;
+              const brokerCount = emptyState ? 0 : BROKER_ACCOUNTS.reduce((s, g) => s + g.accounts.length, 0);
+              const brokerNotif = emptyState ? 0 : 1;
+              const EAR = 10;
+              return [
+                { key: "bank", label: "Банк", count: bankCount },
+                { key: "deposits", label: "Депозиты", count: depositCount },
+                { key: "broker", label: "Брокер", count: brokerCount, notif: brokerNotif },
+              ].map(tab => {
+                const active = productTab === tab.key;
+                return (
+                  <div key={tab.key} onClick={() => setProductTab(tab.key)} style={{
+                    position: "relative",
+                    flex: 1,
+                    padding: "11px 10px 13px", cursor: "pointer",
+                    fontSize: 13, fontWeight: 700,
+                    color: active ? C.text : "rgba(250,250,247,0.7)",
+                    backgroundColor: active ? C.bg : "rgba(250,250,247,0.06)",
+                    borderRadius: active ? "14px 14px 0 0" : "12px 12px 10px 10px",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+                    transition: "background-color 0.18s, color 0.18s",
+                    zIndex: active ? 2 : 1,
+                  }}>
+                    {/* Folder-tab "ears" — concave curves at the bottom corners of the active tab */}
+                    {active && (
+                      <>
+                        <div style={{
+                          position: "absolute", left: -EAR, bottom: 0,
+                          width: EAR, height: EAR,
+                          backgroundImage: `radial-gradient(circle at top left, transparent ${EAR}px, ${C.bg} ${EAR}px)`,
+                          pointerEvents: "none",
+                        }} />
+                        <div style={{
+                          position: "absolute", right: -EAR, bottom: 0,
+                          width: EAR, height: EAR,
+                          backgroundImage: `radial-gradient(circle at top right, transparent ${EAR}px, ${C.bg} ${EAR}px)`,
+                          pointerEvents: "none",
+                        }} />
+                      </>
+                    )}
+                    <span>{tab.label}</span>
+                    {tab.count > 0 && (
+                      <span style={{
+                        fontSize: 11, fontWeight: 600,
+                        color: active ? C.muted : "rgba(250,250,247,0.45)",
+                      }}>· {tab.count}</span>
+                    )}
+                    {tab.notif > 0 && (
+                      <div style={{
+                        minWidth: 16, height: 16, padding: "0 4px", borderRadius: 8,
+                        backgroundColor: "#EF4444",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 9, fontWeight: 700, color: "#fff",
+                        fontFeatureSettings: "'tnum'", lineHeight: 1,
+                      }}>{tab.notif}</div>
+                    )}
+                  </div>
+                );
+              });
+            })()}
+          </div>
         </div>
+      )}
+
+      {/* ═════════════ LIGHT PRODUCTS AREA ═════════════ */}
+      {blockVis.products && (
+      <div style={{ order: blockOrder.indexOf("products"), padding: "24px 20px 24px", backgroundColor: C.bg }}>
 
         {/* ─── BANK TAB ─── */}
         {productTab === "bank" && (
           <div>
-            {/* Card groups */}
-            {activeCardProducts.map((group, gi) => (
-              <div key={gi} style={{ marginBottom: 28 }}>
-                <SectionHeader title={group.bank} onAdd={() => {}} C={C} />
-                <div style={{
-                  backgroundColor: C.card, borderRadius: 12,
-                  border: `1px solid ${C.border}`, overflow: "hidden",
-                }}>
-                  {group.cards.map((card, ci) => {
-                    const cm = CURRENCY_META[card.primaryCurrency] || { symbol: card.primaryCurrency };
-                    const subtitle = card.sub
-                      || (card.breakdown.length > 0
-                        ? `${card.breakdown.length + 1} валют${card.breakdown.length + 1 === 1 ? "а" : card.breakdown.length + 1 < 5 ? "ы" : ""}`
-                        : `•• ${card.last4}`);
-                    return (
-                      <div key={card.id} data-press style={{
-                        display: "flex", alignItems: "center", gap: 14,
-                        padding: "16px", cursor: "pointer",
-                        borderBottom: ci < group.cards.length - 1 ? `1px solid ${C.divider}` : "none",
-                      }}>
-                        <CardArt color={card.color} last4={card.last4} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{
-                            fontSize: 14, fontWeight: 600, color: C.text, lineHeight: 1.3,
-                            overflow: "hidden", textOverflow: "ellipsis",
-                            display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
-                          }}>{card.name}</div>
-                          <div style={{
-                            fontSize: 12, color: C.muted, marginTop: 3,
-                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                          }}>{subtitle}</div>
-                        </div>
-                        <div style={{ textAlign: "right", flexShrink: 0 }}>
-                          <div style={{ fontSize: 15, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", lineHeight: 1.3 }}>
-                            {fmtFull(card.primaryBalance)}
-                          </div>
-                          <div style={{ fontSize: 11, color: C.muted, marginTop: 3, fontWeight: 600 }}>
-                            {card.primaryCurrency}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-
-            {/* Accounts */}
+            {/* Cards — toggle between carousel and list */}
             <div style={{ marginBottom: 28 }}>
-              <SectionHeader title="Счета" onAdd={() => {}} C={C} />
+              <SectionHeader
+                title="Карты"
+                onAdd={() => {}}
+                onToggleView={() => setCardsView(v => v === "carousel" ? "list" : "carousel")}
+                viewMode={cardsView}
+                C={C}
+              />
+              {cardsView === "carousel" ? (
+                <div style={{
+                  display: "flex", gap: 10,
+                  overflowX: "auto", overflowY: "visible",
+                  scrollSnapType: "x mandatory",
+                  scrollbarWidth: "none",
+                  padding: "20px 0 12px",
+                }}>
+                  {activeCardProducts
+                    .flatMap(g => g.cards.map(c => ({ ...c, bank: g.bank })))
+                    .sort((a, b) => b.primaryBalance - a.primaryBalance)
+                    .map(card => (
+                      <CardHero key={card.id} card={card} bank={card.bank} C={C} />
+                    ))}
+                  <div data-press style={{
+                    flexShrink: 0,
+                    width: 76, height: 138,
+                    borderRadius: 14,
+                    border: `1.5px dashed ${C.borderStrong}`,
+                    backgroundColor: C.faint,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6,
+                    cursor: "pointer",
+                    scrollSnapAlign: "start",
+                  }}>
+                    <div style={{
+                      width: 30, height: 30, borderRadius: "50%",
+                      backgroundColor: C.card, border: `1px solid ${C.border}`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <Plus size={16} color={C.muted} strokeWidth={1.8} />
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 500, color: C.muted, textAlign: "center", padding: "0 6px" }}>Новая карта</span>
+                  </div>
+                </div>
+              ) : (
+                /* List view — grouped by bank */
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  {activeCardProducts.map((group, gi) => (
+                    <div key={gi}>
+                      <div style={{
+                        fontSize: 12, fontWeight: 700, color: C.muted,
+                        textTransform: "uppercase", letterSpacing: 0.4,
+                        marginBottom: 8, padding: "0 4px",
+                      }}>{group.bank}</div>
+                      <div style={{
+                        backgroundColor: C.card, borderRadius: 12,
+                        border: `1px solid ${C.border}`, overflow: "hidden",
+                      }}>
+                        {[...group.cards].sort((a, b) => b.primaryBalance - a.primaryBalance).map((card, ci, sortedCards) => {
+                          const cm = CURRENCY_META[card.primaryCurrency] || { symbol: card.primaryCurrency };
+                          const allCurrencies = [card.primaryCurrency, ...card.breakdown.map(b => b.currency)];
+                          const uniqueCurrencies = [...new Set(allCurrencies)];
+                          const subtitle = card.sub
+                            || (uniqueCurrencies.length > 1
+                              ? uniqueCurrencies.join(" · ")
+                              : "Активна");
+                          return (
+                            <div key={card.id} data-press style={{
+                              display: "flex", alignItems: "center", gap: 14,
+                              padding: "16px", cursor: "pointer",
+                              borderBottom: ci < sortedCards.length - 1 ? `1px solid ${C.divider}` : "none",
+                            }}>
+                              <CardArt color={card.color} last4={card.last4} />
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{
+                                  fontSize: 14, fontWeight: 600, color: C.text, lineHeight: 1.3,
+                                  overflow: "hidden", textOverflow: "ellipsis",
+                                  display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+                                }}>{card.name}</div>
+                                <div style={{
+                                  fontSize: 12, color: C.muted, marginTop: 3,
+                                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                }}>{subtitle}</div>
+                              </div>
+                              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                                <div style={{ fontSize: 15, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", lineHeight: 1.3 }}>
+                                  {fmtFull(card.primaryBalance)}
+                                </div>
+                                <div style={{ fontSize: 11, color: C.muted, marginTop: 3, fontWeight: 600 }}>
+                                  {card.primaryCurrency}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Accounts — toggle between carousel and list */}
+            <div style={{ marginBottom: 28 }}>
+              <SectionHeader
+                title="Счета"
+                onAdd={() => {}}
+                onToggleView={activeAccounts.length > 0 ? () => setAccountsView(v => v === "carousel" ? "list" : "carousel") : null}
+                viewMode={accountsView}
+                C={C}
+              />
               {activeAccounts.length === 0 ? (
                 <div data-press style={{
                   backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
@@ -838,13 +1197,45 @@ function MainScreen({
                     <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Мультивалютный — KZT, USD, EUR, RUB</div>
                   </div>
                 </div>
+              ) : accountsView === "carousel" ? (
+                <div style={{
+                  display: "flex", gap: 10,
+                  overflowX: "auto", overflowY: "visible",
+                  scrollSnapType: "x mandatory",
+                  scrollbarWidth: "none",
+                  padding: "4px 0 8px",
+                }}>
+                  {activeAccounts.map(acc => (
+                    <AccountHero key={acc.id} account={acc} C={C} />
+                  ))}
+                  <div data-press style={{
+                    flexShrink: 0,
+                    width: 80, height: 124,
+                    borderRadius: 14,
+                    border: `1.5px dashed ${C.borderStrong}`,
+                    backgroundColor: C.faint,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6,
+                    cursor: "pointer",
+                    scrollSnapAlign: "start",
+                  }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: "50%",
+                      backgroundColor: C.card, border: `1px solid ${C.border}`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <Plus size={16} color={C.muted} strokeWidth={1.8} />
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 500, color: C.muted, textAlign: "center", padding: "0 6px" }}>Новый счёт</span>
+                  </div>
+                </div>
               ) : (
+                /* List view */
                 <div style={{
                   backgroundColor: C.card, borderRadius: 12,
                   border: `1px solid ${C.border}`, overflow: "hidden",
                 }}>
                   {activeAccounts.map((acc, i) => {
-                    const cm = CURRENCY_META[acc.currency] || { symbol: acc.currency, flag: "💰", name: acc.currency };
+                    const cm = CURRENCY_META[acc.currency] || { symbol: acc.currency, flag: "💰" };
                     const ibanTail = acc.number.replace(/\s/g, '').slice(-6);
                     return (
                       <div key={acc.id} data-press style={{
@@ -962,22 +1353,40 @@ function MainScreen({
                       <div key={cr.id} data-press style={{
                         padding: "14px 16px", cursor: "pointer",
                         borderBottom: i < activeCredits.length - 1 ? `1px solid ${C.divider}` : "none",
-                        display: "flex", alignItems: "center", gap: 12,
                       }}>
-                        <div style={{
-                          width: 38, height: 38, borderRadius: "50%",
-                          backgroundColor: C.faint,
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          flexShrink: 0,
-                        }}>
-                          <CreditCard size={17} color={C.text} strokeWidth={1.8} />
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <div style={{
+                            width: 38, height: 38, borderRadius: "50%",
+                            backgroundColor: C.faint,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            flexShrink: 0,
+                          }}>
+                            <CreditCard size={17} color={C.text} strokeWidth={1.8} />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{cr.name}</div>
+                            <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Погашение {cr.payoffDate} · {cr.rate}%</div>
+                          </div>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                            {fmtFull(cr.monthly)} <span style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}>{cm.symbol}</span>
+                          </div>
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{cr.name}</div>
-                          <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Погашение {cr.payoffDate} · {cr.rate}%</div>
-                        </div>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
-                          {fmtFull(cr.monthly)} <span style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}>{cm.symbol}</span>
+                        {/* Progress bar */}
+                        <div style={{ marginTop: 12, marginLeft: 50 }}>
+                          <div style={{
+                            height: 4, borderRadius: 2, overflow: "hidden",
+                            backgroundColor: C.divider,
+                          }}>
+                            <div style={{
+                              width: `${cr.paidPercent}%`, height: "100%",
+                              backgroundColor: C.accentDark, borderRadius: 2,
+                              transition: "width 0.3s ease",
+                            }} />
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
+                            <span style={{ fontSize: 11, color: C.muted }}>Выплачено</span>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: C.text, fontFeatureSettings: "'tnum'" }}>{cr.paidPercent}%</span>
+                          </div>
                         </div>
                       </div>
                     );
@@ -1105,7 +1514,7 @@ function MainScreen({
         maxWidth: 430, margin: "0 auto",
         backgroundColor: C.bg,
         borderTop: `1px solid ${C.divider}`,
-        padding: "10px 0 24px",
+        padding: "0 0 24px",
         display: "flex", justifyContent: "space-around",
         zIndex: 50,
       }}>
@@ -1117,12 +1526,21 @@ function MainScreen({
         ].map((tab, i) => (
           <div key={i} data-press style={{
             display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-            cursor: "pointer", flex: 1,
+            cursor: "pointer", flex: 1, paddingTop: 10, paddingBottom: 6,
+            position: "relative",
           }}>
-            <tab.Icon size={22} color={tab.active ? C.text : C.muted} strokeWidth={tab.active ? 2.2 : 1.7} />
+            {tab.active && (
+              <div style={{
+                position: "absolute", top: 0, left: "50%",
+                transform: "translateX(-50%)",
+                width: 28, height: 3, borderRadius: "0 0 3px 3px",
+                backgroundColor: C.accentDark,
+              }} />
+            )}
+            <tab.Icon size={22} color={tab.active ? C.accentDark : C.muted} strokeWidth={tab.active ? 2.2 : 1.7} />
             <span style={{
-              fontSize: 10, fontWeight: tab.active ? 600 : 500,
-              color: tab.active ? C.text : C.muted,
+              fontSize: 10, fontWeight: tab.active ? 700 : 500,
+              color: tab.active ? C.accentDark : C.muted,
             }}>{tab.label}</span>
           </div>
         ))}

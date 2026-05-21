@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Search, Bell, Plus, ChevronRight, ChevronDown, X, ArrowLeftRight, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid } from "lucide-react";
+import { Search, Bell, Plus, ChevronRight, ChevronDown, X, ArrowLeftRight, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid, Smartphone, Plane, Sofa, Zap } from "lucide-react";
 
 /* ═══════════════════════════════════════════════
    DATA
@@ -201,6 +201,7 @@ const BLOCK_LABELS = [
   { key: "promo", label: "Промо" },
   { key: "transfers", label: "Последние переводы" },
   { key: "news", label: "Новости" },
+  { key: "services", label: "Travel-сервисы" },
   { key: "products", label: "Продукты" },
   { key: "cta", label: "CTA" },
 ];
@@ -760,7 +761,7 @@ function MainScreen({
       maxWidth: 430, margin: "0 auto", minHeight: "100dvh",
       backgroundColor: C.bg,
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', system-ui, sans-serif",
-      overflowX: "hidden", position: "relative",
+      overflowX: "clip", position: "relative",
       paddingBottom: 80,
     }}>
       {pickerOpen && (
@@ -987,6 +988,73 @@ function MainScreen({
       </div>
       )}
 
+      {/* ═══ TRAVEL SERVICES ═══ */}
+      {blockVis.services && (
+      <div style={{ padding: "0 20px 24px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {[
+            { id: "esim", title: "eSIM", subtitle: "Интернет в поездках", Icon: Smartphone, color: "#22C55E" },
+            { id: "travel", title: "Авиабилеты", subtitle: "Поиск и покупка", Icon: Plane, color: "#3B82F6" },
+            { id: "lounge", title: "Lounge", subtitle: "Залы в аэропортах", Icon: Sofa, color: "#A78BFA", soon: true },
+            { id: "fasttrack", title: "Fast Track", subtitle: "Без очереди", Icon: Zap, color: "#F59E0B", soon: true },
+          ].map(s => (
+            <div key={s.id} data-press style={{
+              backgroundColor: C.card, borderRadius: 14,
+              padding: s.soon ? "14px 14px" : "16px 14px",
+              border: `1px solid ${C.border}`, cursor: "pointer",
+              position: "relative",
+              display: "flex", flexDirection: "column",
+              justifyContent: s.soon ? "center" : "space-between",
+              gap: s.soon ? 0 : 14,
+              opacity: s.soon ? 0.55 : 1,
+              transition: "opacity 0.15s",
+            }}>
+              {s.soon && (
+                <div style={{
+                  position: "absolute", top: 12, right: 12,
+                  padding: "3px 9px", borderRadius: 8,
+                  backgroundColor: "rgba(0,0,0,0.45)",
+                  fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.85)",
+                  letterSpacing: 0.3,
+                }}>скоро</div>
+              )}
+              {s.id === "esim" && (
+                <div style={{
+                  position: "absolute", top: 10, right: 10,
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  padding: "5px 11px 5px 5px", borderRadius: 16,
+                  backgroundColor: "rgba(0,0,0,0.55)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                }}>
+                  <span style={{
+                    fontSize: 18, lineHeight: 1,
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  }}>🇫🇷</span>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.95)",
+                    letterSpacing: 0.2,
+                  }}>+110 других</span>
+                </div>
+              )}
+              {!s.soon && (
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  backgroundColor: `${s.color}1f`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <s.Icon size={20} color={s.color} strokeWidth={2} />
+                </div>
+              )}
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{s.title}</div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 3, lineHeight: 1.3 }}>{s.subtitle}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      )}
+
       </>
       ); })()}
       </div>
@@ -994,7 +1062,10 @@ function MainScreen({
 
       {/* ═════════════ FOLDER TABS — bridge dark→light ═════════════ */}
       {blockVis.products && (
-        <div style={{ backgroundColor: topC.bg, padding: "16px 12px 0" }}>
+        <div style={{
+          backgroundColor: topC.bg, padding: "16px 12px 0",
+          position: "sticky", top: 0, zIndex: 20,
+        }}>
           <div style={{ display: "flex", gap: 4, position: "relative" }}>
             {(() => {
               const bankCount = activeCardProducts.reduce((s, g) => s + g.cards.length, 0);

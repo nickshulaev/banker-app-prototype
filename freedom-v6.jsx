@@ -831,7 +831,7 @@ function MainScreen({
   totalInKZT, productTab, setProductTab,
   blockVis, blockOrder, emptyState, activeCardProducts, activeAccounts,
   activeLoans, activeCredits, activePromos, activeNews, activeRequests,
-  featureFlags, onOpenCard, onOpenTotal, onOpenRequest, onOpenProfile,
+  featureFlags, onOpenCard, onOpenTotal, onOpenRequest, onOpenProfile, onOpenDeposit,
   C, theme,
 }) {
   const isDark = C.bg === '#0E0F0C';
@@ -1671,6 +1671,18 @@ function MainScreen({
                 })}
               </div>
             )}
+            {/* Открыть депозит — gated by real openDeposit flag */}
+            {!emptyState && featureFlags.openDeposit && (
+              <div data-press onClick={() => onOpenDeposit?.()} style={{
+                marginTop: 12,
+                backgroundColor: C.card, borderRadius: 12, border: `1.5px dashed ${C.borderStrong}`,
+                padding: "15px 16px", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              }}>
+                <Plus size={16} color={C.text} strokeWidth={2} />
+                <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Открыть депозит</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -1728,7 +1740,7 @@ function MainScreen({
       {/* ═══ CTA ═══ (hidden when all open* flags are off, real gating) */}
       {blockVis.cta && (featureFlags.openCard || featureFlags.openDeposit || featureFlags.openCredit) && (
       <div style={{ order: blockOrder.indexOf("cta"), padding: "0 20px 32px" }}>
-        <div data-press style={{
+        <div data-press onClick={() => featureFlags.openDeposit && onOpenDeposit?.()} style={{
           backgroundColor: C.accentDark, borderRadius: 12, padding: "14px 0",
           textAlign: "center", cursor: "pointer",
         }}>
@@ -3269,6 +3281,241 @@ function SettingsScreen({ C, onBack }) {
 }
 
 /* ═══════════════════════════════════════════════
+   DEPOSIT OPENING — real DepositCalc → OpenDeposit flow
+   (texts from productsFlow.depositCalc.*)
+   ═══════════════════════════════════════════════ */
+
+/* Mock rate matrix: term months → annual %, +0.3 п.п. при выплате в конце */
+const DEPOSIT_RATES = {
+  KZT: { 3: 12.5, 6: 13.8, 12: 14.5, 24: 15.2 },
+  USD: { 3: 0.8, 6: 1.2, 12: 2.0, 24: 3.0 },
+  EUR: { 3: 0.4, 6: 0.6, 12: 0.8, 24: 1.2 },
+};
+/* Доступно на счетах по валютам (для «Недостаточно средств!») */
+const DEPOSIT_AVAILABLE = { KZT: 2132860.92, USD: 37345.67, EUR: 12386.01 };
+
+function DepositCalcScreen({ C, onBack, onNext }) {
+  const [currency, setCurrency] = useState("KZT");
+  const [amount, setAmount] = useState("500000");
+  const [term, setTerm] = useState(12);
+  const [period, setPeriod] = useState("monthly"); // monthly | end
+
+  const cm = CURRENCY_META[currency] || { symbol: currency };
+  const num = parseFloat(amount.replace(/\s/g, "").replace(",", ".")) || 0;
+  const available = DEPOSIT_AVAILABLE[currency];
+  const insufficient = num > available;
+  const valid = num > 0 && !insufficient;
+  const rate = (DEPOSIT_RATES[currency][term] || 0) + (period === "end" ? 0.3 : 0);
+  const income = num * (rate / 100) * (term / 12);
+  const terms = Object.keys(DEPOSIT_RATES[currency]).map(Number);
+
+  const Chip = ({ active, label, onClick }) => (
+    <div data-press onClick={onClick} style={{
+      padding: "8px 14px", borderRadius: 18, cursor: "pointer",
+      fontSize: 13, fontWeight: 600,
+      backgroundColor: active ? C.accentDark : C.faint,
+      color: active ? C.accent : C.sub,
+      transition: "all 0.15s", whiteSpace: "nowrap",
+    }}>{label}</div>
+  );
+
+  return (
+    <ScreenShell C={C} title="Открыть депозит" onBack={onBack}>
+      <div style={{ padding: "4px 20px 110px" }}>
+        {/* Валюта (real currencyTitle) */}
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8 }}>Валюта</div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          {["KZT", "USD", "EUR"].map(c => (
+            <Chip key={c} active={currency === c} label={`${CURRENCY_META[c].flag} ${c}`} onClick={() => setCurrency(c)} />
+          ))}
+        </div>
+
+        {/* Сумма депозита (real depositAmountTitle) */}
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>Сумма депозита</div>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1.5px solid ${insufficient ? "#EF4444" : C.border}`,
+          padding: "16px", display: "flex", alignItems: "center", gap: 8,
+        }}>
+          <input
+            value={amount}
+            onChange={e => setAmount(e.target.value.replace(/[^0-9.,\s]/g, ""))}
+            inputMode="decimal"
+            placeholder="0"
+            style={{
+              flex: 1, border: "none", outline: "none", background: "transparent",
+              fontSize: 26, fontWeight: 800, color: C.text,
+              fontFamily: "inherit", fontFeatureSettings: "'tnum'", minWidth: 0,
+            }}
+          />
+          <span style={{ fontSize: 20, fontWeight: 700, color: C.muted }}>{cm.symbol}</span>
+        </div>
+        {/* real insufficientBalanceTitle */}
+        {insufficient ? (
+          <div style={{ fontSize: 12, color: "#EF4444", marginTop: 6, marginBottom: 14 }}>
+            Недостаточно средств! Доступно {fmtFull(available)} {cm.symbol}
+          </div>
+        ) : (
+          <div style={{ fontSize: 12, color: C.muted, marginTop: 6, marginBottom: 14 }}>
+            Доступно {fmtFull(available)} {cm.symbol}
+          </div>
+        )}
+
+        {/* На срок (real monthAmountTitle + variant count) */}
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8 }}>
+          На срок <span style={{ fontWeight: 500 }}>· Доступно {terms.length} варианта</span>
+        </div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+          {terms.map(t => (
+            <Chip key={t} active={term === t} label={`${t} мес`} onClick={() => setTerm(t)} />
+          ))}
+        </div>
+
+        {/* Периодичность выплаты процентов (real periodTitle, monthly/onMonthEnd) */}
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8 }}>Периодичность выплаты процентов</div>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+          overflow: "hidden", marginBottom: 20,
+        }}>
+          {[
+            { key: "monthly", label: "Ежемесячно", sub: "Проценты на счёт каждый месяц" },
+            { key: "end", label: "В конце", sub: `Ставка выше на 0.3 п.п.` },
+          ].map((p, i) => (
+            <div key={p.key} data-press onClick={() => setPeriod(p.key)} style={{
+              display: "flex", alignItems: "center", gap: 12,
+              padding: "13px 16px", cursor: "pointer",
+              borderBottom: i === 0 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <div style={{
+                width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
+                border: period === p.key ? "none" : `2px solid ${C.borderStrong}`,
+                backgroundColor: period === p.key ? C.accentDark : "transparent",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {period === p.key && <Check size={12} color={C.accent} strokeWidth={3} />}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{p.label}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{p.sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Расчёт */}
+        <div style={{
+          backgroundColor: C.accentSoft, borderRadius: 12,
+          padding: "14px 16px", marginBottom: 16,
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+        }}>
+          <div>
+            <div style={{ fontSize: 12, color: C.sub }}>Ставка</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: C.text, fontFeatureSettings: "'tnum'", marginTop: 2 }}>
+              {rate.toFixed(1)}% <span style={{ fontSize: 12, fontWeight: 600, color: C.muted }}>годовых</span>
+            </div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 12, color: C.sub }}>Доход за {term} мес</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#16A34A", fontFeatureSettings: "'tnum'", marginTop: 2 }}>
+              +{fmtFull(income)} <span style={{ fontSize: 12 }}>{cm.symbol}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* real getDepositButtonText */}
+        <div data-press onClick={() => valid && onNext({ currency, amount: num, term, period, rate, income })} style={{
+          backgroundColor: valid ? C.accentDark : C.faint,
+          borderRadius: 12, padding: "15px 0", textAlign: "center",
+          cursor: valid ? "pointer" : "default", marginBottom: 16,
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: valid ? C.accent : C.muted }}>Оформить депозит</span>
+        </div>
+
+        {/* real infoDepositCell.aboutDeposit */}
+        <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.5 }}>
+          Расчеты являются ориентировочными. Пример расчета условий по депозиту носит исключительно
+          информационный характер и не является публичной офертой
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+function DepositReviewScreen({ C, payload, onBack, onConfirm }) {
+  const [agreed, setAgreed] = useState(false);
+  const { currency, amount, term, period, rate, income } = payload;
+  const cm = CURRENCY_META[currency] || { symbol: currency };
+  const rows = [
+    { label: "Валюта", value: currency },
+    { label: "Сумма депозита", value: `${fmtFull(amount)} ${cm.symbol}` },
+    { label: "На срок", value: `${term} мес` },
+    { label: "Ставка", value: `${rate.toFixed(1)}% годовых` },
+    { label: "Выплата процентов", value: period === "monthly" ? "Ежемесячно" : "В конце" },
+    { label: "Доход к концу срока", value: `+${fmtFull(income)} ${cm.symbol}` },
+    { label: "Счёт списания", value: `Счёт в ${currency}` },
+  ];
+  return (
+    <ScreenShell C={C} title="Подтверждение" onBack={onBack}>
+      <div style={{ padding: "4px 20px 110px" }}>
+        <div style={{ textAlign: "center", margin: "12px 0 28px" }}>
+          <div style={{ fontSize: 13, color: C.muted, fontWeight: 500, marginBottom: 8 }}>Депозит «КОПИЛКА»</div>
+          <div style={{ fontSize: 36, fontWeight: 800, color: C.text, letterSpacing: -1, fontFeatureSettings: "'tnum'" }}>
+            {fmtFull(amount)} <span style={{ fontSize: 20, color: C.muted }}>{cm.symbol}</span>
+          </div>
+        </div>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 20,
+        }}>
+          {rows.map((r, i) => (
+            <div key={i} style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              padding: "13px 16px", gap: 12,
+              borderBottom: i < rows.length - 1 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <span style={{ fontSize: 13, color: C.muted, flexShrink: 0 }}>{r.label}</span>
+              <span style={{
+                fontSize: 13, fontWeight: 600, textAlign: "right",
+                color: r.label.startsWith("Доход") ? "#16A34A" : C.text,
+              }}>{r.value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* real agreementText */}
+        <div data-press onClick={() => setAgreed(v => !v)} style={{
+          display: "flex", gap: 12, cursor: "pointer", marginBottom: 24,
+          padding: "13px 16px", backgroundColor: C.card,
+          borderRadius: 12, border: `1px solid ${agreed ? C.accentDark : C.border}`,
+        }}>
+          <div style={{
+            width: 22, height: 22, borderRadius: 6, flexShrink: 0, marginTop: 1,
+            border: agreed ? "none" : `2px solid ${C.borderStrong}`,
+            backgroundColor: agreed ? C.accentDark : "transparent",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            transition: "all 0.15s",
+          }}>
+            {agreed && <Check size={13} color={C.accent} strokeWidth={3} />}
+          </div>
+          <span style={{ fontSize: 12, color: C.sub, lineHeight: 1.5 }}>
+            Даю согласие на подписание Соглашения-заявления о предоставлении услуг по открытию депозита.
+            Подтверждаю, что со справкой ФГВФЛ ознакомлен.
+          </span>
+        </div>
+
+        <div data-press onClick={() => agreed && onConfirm()} style={{
+          backgroundColor: agreed ? C.accentDark : C.faint,
+          borderRadius: 12, padding: "15px 0", textAlign: "center",
+          cursor: agreed ? "pointer" : "default",
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: agreed ? C.accent : C.muted }}>Открыть депозит</span>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    ROOT
    ═══════════════════════════════════════════════ */
 
@@ -3356,6 +3603,7 @@ export default function FreedomV6() {
           onOpenTotal={() => pushScreen({ type: "total" })}
           onOpenRequest={(request) => pushScreen({ type: "requestInfo", request })}
           onOpenProfile={() => pushScreen({ type: "settings" })}
+          onOpenDeposit={() => pushScreen({ type: "depositCalc" })}
           C={C} theme={theme}
         />
       )}
@@ -3475,6 +3723,27 @@ export default function FreedomV6() {
         );
         if (s.type === "settings") return (
           <SettingsScreen key={i} C={C} onBack={popScreen} />
+        );
+        if (s.type === "depositCalc") return (
+          <DepositCalcScreen key={i} C={C}
+            onBack={popScreen}
+            onNext={(payload) => pushScreen({ type: "depositReview", payload })}
+          />
+        );
+        if (s.type === "depositReview") return (
+          <DepositReviewScreen key={i} C={C} payload={s.payload}
+            onBack={popScreen}
+            onConfirm={() => pushScreen({ type: "depositResult", payload: s.payload })}
+          />
+        );
+        if (s.type === "depositResult") return (
+          <SuccessScreen key={i} C={C}
+            title="Успешно"
+            message="Депозит открыт"
+            amountStr={`${fmtFull(s.payload.amount)} ${CURRENCY_META[s.payload.currency]?.symbol || s.payload.currency}`}
+            note={`${s.payload.rate.toFixed(1)}% годовых · ${s.payload.term} мес · ${s.payload.period === "monthly" ? "ежемесячно" : "в конце"}`}
+            onDone={() => setNavStack([])}
+          />
         );
         return null;
       })}

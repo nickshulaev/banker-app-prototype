@@ -23,11 +23,28 @@ const PROMOS_EMPTY = [
 ];
 
 const RECENT_TRANSFERS = [
-  { id: 1, name: "Константин", surname: "К.", initials: "К", color: "#22C55E" },
-  { id: 2, name: "Иван", surname: "В.", initials: "И", color: "#3B82F6" },
-  { id: 3, name: "Виктор", surname: "Д.", initials: "В", color: "#8B5CF6" },
-  { id: 4, name: "Умар", surname: "Д.", initials: "У", color: "#F59E0B" },
-  { id: 5, name: "Ирина", surname: "У.", initials: "И", color: "#EC4899" },
+  { id: 1, name: "Константин", surname: "К.", initials: "К", color: "#22C55E", photo: "🧑🏻‍💼", phone: "+7 701 234 56 78" },
+  { id: 2, name: "Иван", surname: "В.", initials: "И", color: "#3B82F6", photo: "👨🏻", phone: "+7 777 111 22 33" },
+  { id: 3, name: "Виктор", surname: "Д.", initials: "В", color: "#8B5CF6", photo: "🧔🏻", phone: "+7 705 987 65 43" },
+  { id: 4, name: "Умар", surname: "Д.", initials: "У", color: "#F59E0B", photo: "👨🏽", phone: "+7 747 555 44 33" },
+  { id: 5, name: "Ирина", surname: "У.", initials: "И", color: "#EC4899", photo: "👩🏼", phone: "+7 700 222 33 44" },
+];
+
+/* Устройства (real Devices module: «Это устройство», «В сети») */
+const DEVICES = [
+  { id: 1, name: "iPhone 15 Pro", note: "Алматы · Freedom Banker 6.0", current: true },
+  { id: 2, name: "MacBook Pro · Safari", note: "Алматы · веб-версия", online: true },
+  { id: 3, name: "iPad Air", note: "Астана · 3 дня назад" },
+];
+
+/* Языки (реальные lproj в репе: ru, kk, en, tg, uk, zh) */
+const LANGUAGES = [
+  { code: "ru", label: "Русский" },
+  { code: "kk", label: "Қазақша" },
+  { code: "en", label: "English" },
+  { code: "tg", label: "Тоҷикӣ" },
+  { code: "uk", label: "Українська" },
+  { code: "zh", label: "中文" },
 ];
 
 const FEATURED_NEWS = {
@@ -226,6 +243,9 @@ const FEATURE_FLAGS = [
   { key: "cardPanCVV", desc: "Показ номера карты в деталях", default: true },
   { key: "transferSwap", desc: "Кнопка «Поменять счета местами»", default: true },
   { key: "split", desc: "Сплит счёта — кнопка «Разделить»", default: true },
+  { key: "securitySessionBiometry", desc: "Биометрия для входа (Face ID)", default: true },
+  { key: "changephone", desc: "Смена номера телефона", default: true },
+  { key: "changeIdentityDocument", desc: "Изменение паспортных данных", default: true },
 ];
 
 /* Stories — shown when `kursiv` flag is OFF (real app behavior) */
@@ -1866,7 +1886,7 @@ function BottomTabBar({ active, onChange, C }) {
    Шаблоны → «Себе» → «Другим» → «Оплата услуг»
    ═══════════════════════════════════════════════ */
 
-function PaymentsScreen({ C, featureFlags, onOpenStub, onTransferOwn, onRequestMoney }) {
+function PaymentsScreen({ C, featureFlags, onOpenStub, onTransferOwn, onRequestMoney, onPhoneTransfer, onConversion }) {
   const Row = ({ Icon, color, title, subtitle, last, onClick }) => (
     <div data-press onClick={onClick || onOpenStub} style={{
       display: "flex", alignItems: "center", gap: 12,
@@ -1956,16 +1976,16 @@ function PaymentsScreen({ C, featureFlags, onOpenStub, onTransferOwn, onRequestM
           <Row Icon={Repeat} color="#22C55E" title="Между счетами" subtitle="Мгновенно и без комиссии" onClick={onTransferOwn} />
           <Row Icon={ArrowDownLeft} color="#3B82F6" title="С карты другого банка" subtitle="Пополнение Visa или Mastercard" />
           {featureFlags.conversionRates ? (
-            <Row Icon={ArrowLeftRight} color="#F59E0B" title="Конвертация валют" subtitle={`1$ = ${RATES_TO_KZT.USD}₸ · 1€ = ${RATES_TO_KZT.EUR}₸`} last />
+            <Row Icon={ArrowLeftRight} color="#F59E0B" title="Конвертация валют" subtitle={`1$ = ${RATES_TO_KZT.USD}₸ · 1€ = ${RATES_TO_KZT.EUR}₸`} onClick={onConversion} last />
           ) : (
-            <Row Icon={ArrowLeftRight} color="#F59E0B" title="Конвертация валют" last />
+            <Row Icon={ArrowLeftRight} color="#F59E0B" title="Конвертация валют" onClick={onConversion} last />
           )}
         </Section>
 
         {/* Другим (othersTransfersSection) */}
         <Section title="Другим">
           {featureFlags.toPhoneNumber && (
-            <Row Icon={Phone} color="#22C55E" title="По номеру телефона" subtitle="Внутри банка и за его пределами" />
+            <Row Icon={Phone} color="#22C55E" title="По номеру телефона" subtitle="Внутри банка и за его пределами" onClick={onPhoneTransfer} />
           )}
           <Row Icon={Landmark} color="#0D9488" title="Внутри Банка" subtitle="На карту или счет" />
           <Row Icon={CreditCard} color="#3B82F6" title="По номеру карты" subtitle="Visa или Mastercard" />
@@ -3223,7 +3243,7 @@ function RequestInfoScreen({ request, C, onBack, onAccept, onReject }) {
    (sections and texts from settingsFlow.settings.*)
    ═══════════════════════════════════════════════ */
 
-function SettingsScreen({ C, onBack, onOpenNotifications }) {
+function SettingsScreen({ C, onBack, onOpenNotifications, onOpenProfileInfo, onOpenSecurity, onOpenDevices, onOpenLanguage }) {
   const [hideAmount, setHideAmount] = useState(false);
   const isDark = C.bg === '#0E0F0C';
 
@@ -3300,10 +3320,10 @@ function SettingsScreen({ C, onBack, onOpenNotifications }) {
 
         {/* Аккаунт */}
         <Section>
-          <Row Icon={User} color="#22C55E" title="Профиль" subtitle="Телефон, почта, документы..." />
-          <Row Icon={Shield} color="#3B82F6" title="Безопасность" subtitle="Пароли, системные настройки" />
+          <Row Icon={User} color="#22C55E" title="Профиль" subtitle="Телефон, почта, документы..." onClick={onOpenProfileInfo} />
+          <Row Icon={Shield} color="#3B82F6" title="Безопасность" subtitle="Пароли, системные настройки" onClick={onOpenSecurity} />
           <Row Icon={Bell} color="#F59E0B" title="Центр уведомлений" subtitle="Push, SMS и настройки" onClick={onOpenNotifications} />
-          <Row Icon={Smartphone} color="#8B5CF6" title="Устройства" last />
+          <Row Icon={Smartphone} color="#8B5CF6" title="Устройства" onClick={onOpenDevices} last />
         </Section>
 
         {/* Сервисы */}
@@ -3317,7 +3337,7 @@ function SettingsScreen({ C, onBack, onOpenNotifications }) {
           <Row Icon={EyeOff} color="#64748B" title="Скрывать баланс" subtitle="При перевороте телефона"
             toggle toggleOn={hideAmount} onToggle={() => setHideAmount(v => !v)} />
           <Row Icon={Palette} color="#EC4899" title="Оформление" subtitle="Приветствие, звуки и вибрация" />
-          <Row Icon={Globe} color="#06B6D4" title="Язык" subtitle="Русский" last />
+          <Row Icon={Globe} color="#06B6D4" title="Язык" subtitle="Русский" onClick={onOpenLanguage} last />
         </Section>
 
         {/* Банк */}
@@ -3830,6 +3850,500 @@ function NewsDetailScreen({ news, C, onBack }) {
 }
 
 /* ═══════════════════════════════════════════════
+   PROFILE INFO — «Профиль» (Персональные данные / Документы / Контакты)
+   ═══════════════════════════════════════════════ */
+
+function ProfileInfoScreen({ C, featureFlags, onBack }) {
+  const Row = ({ label, value, badge, chevron }) => (
+    <div data-press={chevron ? true : undefined} style={{
+      display: "flex", alignItems: "center", gap: 12,
+      padding: "13px 16px",
+      borderBottom: `1px solid ${C.divider}`,
+      cursor: chevron ? "pointer" : "default",
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 12, color: C.muted }}>{label}</div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginTop: 3 }}>{value}</div>
+      </div>
+      {badge && (
+        <span style={{
+          fontSize: 10, fontWeight: 700, color: "#16A34A",
+          backgroundColor: "rgba(34,197,94,0.1)",
+          padding: "3px 8px", borderRadius: 8,
+        }}>{badge}</span>
+      )}
+      {chevron && <ChevronRight size={15} color={C.muted} strokeWidth={1.8} />}
+    </div>
+  );
+
+  const Section = ({ title, children }) => (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.4 }}>{title}</div>
+      <div style={{
+        backgroundColor: C.card, borderRadius: 12,
+        border: `1px solid ${C.border}`, overflow: "hidden",
+      }}>{children}</div>
+    </div>
+  );
+
+  return (
+    <ScreenShell C={C} title="Профиль" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        <Section title="Персональные данные">
+          <Row label="ФИО" value="Шулаев Никита Сергеевич" />
+          <Row label="ИИН" value="9106•••••••3" />
+          <Row label="Дата рождения" value="14 июня 1991" />
+        </Section>
+        <Section title="Документы">
+          {/* real flag changeIdentityDocument gates editing */}
+          <Row label="Удостоверение личности" value="№ 04••••1234 · до 02.2030"
+            chevron={featureFlags.changeIdentityDocument} />
+        </Section>
+        <Section title="Контакты">
+          {/* real flag changephone gates phone change */}
+          <Row label="Телефон" value="+7 777 ··· ·· 77" badge="подтверждён"
+            chevron={featureFlags.changephone} />
+          <Row label="Электронный адрес" value="n.shulaev@ff···.com" badge="подтверждён" />
+        </Section>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   SECURITY — real «Безопасность» (settingsFlow.security.*)
+   ═══════════════════════════════════════════════ */
+
+function SecurityScreen({ C, featureFlags, onBack }) {
+  const isDark = C.bg === '#0E0F0C';
+  const [faceId, setFaceId] = useState(true);
+  const [quickLogin, setQuickLogin] = useState(false);
+  const [incognito, setIncognito] = useState(false);
+  const [stats, setStats] = useState(true);
+
+  const Row = ({ title, subtitle, toggle, toggleOn, onToggle, chevron, action }) => (
+    <div data-press={chevron || action ? true : undefined} style={{
+      display: "flex", alignItems: "flex-start", gap: 12,
+      padding: "13px 16px",
+      borderBottom: `1px solid ${C.divider}`,
+      cursor: chevron || action ? "pointer" : "default",
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{title}</div>
+        {subtitle && <div style={{ fontSize: 12, color: C.muted, marginTop: 3, lineHeight: 1.45 }}>{subtitle}</div>}
+      </div>
+      {toggle && (
+        <div onClick={onToggle} style={{
+          width: 38, height: 22, borderRadius: 11, marginTop: 2,
+          backgroundColor: toggleOn ? C.accentDark : (isDark ? "rgba(255,255,255,0.15)" : "#D1D5DB"),
+          position: "relative", cursor: "pointer", flexShrink: 0,
+          transition: "background-color 0.15s",
+        }}>
+          <div style={{
+            width: 18, height: 18, borderRadius: 9, backgroundColor: "#fff",
+            position: "absolute", top: 2, left: toggleOn ? 18 : 2,
+            transition: "left 0.15s",
+          }} />
+        </div>
+      )}
+      {chevron && <ChevronRight size={15} color={C.muted} strokeWidth={1.8} style={{ marginTop: 3 }} />}
+      {action && <span style={{ fontSize: 13, fontWeight: 700, color: "#EF4444", flexShrink: 0 }}>{action}</span>}
+    </div>
+  );
+
+  return (
+    <ScreenShell C={C} title="Безопасность" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 16,
+        }}>
+          {/* real password / passwordSubtitle */}
+          <Row title="Короткий код" subtitle="Для входа в приложение" chevron />
+          {/* real faceIDSubtitle, gated by securitySessionBiometry */}
+          {featureFlags.securitySessionBiometry && (
+            <Row title="Face ID" subtitle="Входить в приложение через сканирование лица"
+              toggle toggleOn={faceId} onToggle={() => setFaceId(v => !v)} />
+          )}
+          {/* real loginConfirmation */}
+          <Row title="Подтверждение входа" subtitle="С кодом из SMS или пин-кодом" chevron />
+          {/* real quickLogin + subtitle */}
+          <Row title="Быстрый вход"
+            subtitle="Если телефон разблокирован менее 10 секунд назад, можно войти без повторной авторизации"
+            toggle toggleOn={quickLogin} onToggle={() => setQuickLogin(v => !v)} />
+        </div>
+
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1px solid ${C.border}`, overflow: "hidden",
+        }}>
+          {/* real incognito + subtitle */}
+          <Row title="Инкогнито"
+            subtitle="Режим анонимности не позволит другим клиентам увидеть логотип банка рядом с вашим именем в адресной книге"
+            toggle toggleOn={incognito} onToggle={() => setIncognito(v => !v)} />
+          {/* real collectStatistics */}
+          <Row title="Собирать статистику"
+            subtitle="Анонимная статистика для улучшения приложения. Данные карт и счетов не передаются третьим лицам"
+            toggle toggleOn={stats} onToggle={() => setStats(v => !v)} />
+          {/* real clearCache */}
+          <Row title="Кэш приложения" subtitle="Временные данные для работы с банкоматами и отделениями" action="Очистить" />
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   DEVICES — real «Устройства» («Это устройство», «В сети»)
+   ═══════════════════════════════════════════════ */
+
+function DevicesScreen({ C, onBack }) {
+  const [devices, setDevices] = useState(DEVICES);
+  return (
+    <ScreenShell C={C} title="Устройства" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1px solid ${C.border}`, overflow: "hidden",
+        }}>
+          {devices.map((d, i) => (
+            <div key={d.id} style={{
+              display: "flex", alignItems: "center", gap: 12,
+              padding: "13px 16px",
+              borderBottom: i < devices.length - 1 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: "50%",
+                backgroundColor: C.faint,
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}>
+                <Smartphone size={16} color={C.text} strokeWidth={1.8} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{d.name}</span>
+                  {d.current && (
+                    /* real devices.currentDevice */
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, color: "#16A34A",
+                      backgroundColor: "rgba(34,197,94,0.1)",
+                      padding: "2px 7px", borderRadius: 7,
+                    }}>Это устройство</span>
+                  )}
+                  {d.online && !d.current && (
+                    /* real devices.onlineDevice */
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, color: "#3B82F6",
+                      backgroundColor: "rgba(59,130,246,0.1)",
+                      padding: "2px 7px", borderRadius: 7,
+                    }}>В сети</span>
+                  )}
+                </div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{d.note}</div>
+              </div>
+              {!d.current && (
+                /* real devices.delete */
+                <span data-press onClick={() => setDevices(prev => prev.filter(x => x.id !== d.id))} style={{
+                  fontSize: 12, fontWeight: 700, color: "#EF4444",
+                  cursor: "pointer", flexShrink: 0,
+                }}>Выйти</span>
+              )}
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: 12, color: C.muted, marginTop: 12, lineHeight: 1.5, padding: "0 4px" }}>
+          Выход с устройства завершит на нём сессию — для входа потребуется повторная авторизация
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   LANGUAGE — «Язык» (реальные локали из репы)
+   ═══════════════════════════════════════════════ */
+
+function LanguageScreen({ C, onBack }) {
+  const [lang, setLang] = useState("ru");
+  return (
+    <ScreenShell C={C} title="Язык" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1px solid ${C.border}`, overflow: "hidden",
+        }}>
+          {LANGUAGES.map((l, i) => (
+            <div key={l.code} data-press onClick={() => setLang(l.code)} style={{
+              display: "flex", alignItems: "center", gap: 12,
+              padding: "14px 16px", cursor: "pointer",
+              borderBottom: i < LANGUAGES.length - 1 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.text }}>{l.label}</span>
+              {lang === l.code && <Check size={16} color={C.accentDark} strokeWidth={2.6} />}
+            </div>
+          ))}
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   PHONE TRANSFER — real «По номеру телефона»
+   («Введите номер телефона получателя»)
+   ═══════════════════════════════════════════════ */
+
+function PhoneTransferScreen({ C, onBack, onNext }) {
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState(null);
+  const [amount, setAmount] = useState("");
+  const selected = RECENT_TRANSFERS.find(c => c.id === selectedId);
+  const num = parseFloat(amount.replace(",", ".")) || 0;
+  const valid = selected && num > 0;
+
+  return (
+    <ScreenShell C={C} title="По номеру телефона" onBack={onBack}>
+      <div style={{ padding: "4px 20px 110px" }}>
+        {/* real phoneInput.hint */}
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1px solid ${C.border}`,
+          padding: "13px 16px", display: "flex", alignItems: "center", gap: 10, marginBottom: 16,
+        }}>
+          <Phone size={16} color={C.muted} strokeWidth={1.8} />
+          <input
+            value={selected ? selected.phone : query}
+            onChange={e => { setQuery(e.target.value); setSelectedId(null); }}
+            placeholder="Введите номер телефона получателя"
+            inputMode="tel"
+            style={{
+              flex: 1, border: "none", outline: "none", background: "transparent",
+              fontSize: 14, fontWeight: 600, color: C.text,
+              fontFamily: "inherit", fontFeatureSettings: "'tnum'", minWidth: 0,
+            }}
+          />
+        </div>
+
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8 }}>Недавние</div>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 20,
+        }}>
+          {RECENT_TRANSFERS.map((c, i) => (
+            <div key={c.id} data-press onClick={() => setSelectedId(c.id)} style={{
+              display: "flex", alignItems: "center", gap: 12,
+              padding: "12px 16px", cursor: "pointer",
+              borderBottom: i < RECENT_TRANSFERS.length - 1 ? `1px solid ${C.divider}` : "none",
+              backgroundColor: selectedId === c.id ? C.accentSoft : "transparent",
+            }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: "50%",
+                background: `linear-gradient(135deg, ${c.color}aa 0%, ${c.color} 100%)`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 17, flexShrink: 0,
+              }}>{c.photo}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{c.name} {c.surname}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>{c.phone}</div>
+              </div>
+              {selectedId === c.id && <Check size={16} color={C.accentDark} strokeWidth={2.6} />}
+            </div>
+          ))}
+        </div>
+
+        {selected && (
+          <>
+            {/* Found client */}
+            <div style={{
+              backgroundColor: C.accentSoft, borderRadius: 12,
+              padding: "11px 16px", marginBottom: 16,
+              display: "flex", alignItems: "center", gap: 8,
+            }}>
+              <Check size={14} color="#16A34A" strokeWidth={2.6} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
+                {selected.name} {selected.surname} · клиент Freedom Bank
+              </span>
+            </div>
+
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>Сумма</div>
+            <div style={{
+              backgroundColor: C.card, borderRadius: 12,
+              border: `1.5px solid ${C.border}`,
+              padding: "16px", display: "flex", alignItems: "center", gap: 8, marginBottom: 8,
+            }}>
+              <input
+                value={amount}
+                onChange={e => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
+                inputMode="decimal"
+                placeholder="0"
+                style={{
+                  flex: 1, border: "none", outline: "none", background: "transparent",
+                  fontSize: 26, fontWeight: 800, color: C.text,
+                  fontFamily: "inherit", fontFeatureSettings: "'tnum'", minWidth: 0,
+                }}
+              />
+              <span style={{ fontSize: 20, fontWeight: 700, color: C.muted }}>₸</span>
+            </div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 20 }}>Без комиссии внутри банка</div>
+
+            <div data-press onClick={() => valid && onNext({ contact: selected, amount: num })} style={{
+              backgroundColor: valid ? C.accentDark : C.faint,
+              borderRadius: 12, padding: "15px 0", textAlign: "center",
+              cursor: valid ? "pointer" : "default",
+            }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: valid ? C.accent : C.muted }}>Перевести</span>
+            </div>
+          </>
+        )}
+      </div>
+    </ScreenShell>
+  );
+}
+
+function PhoneConfirmScreen({ C, payload, onBack, onConfirm }) {
+  const { contact, amount } = payload;
+  const rows = [
+    { label: "Получатель", value: `${contact.name} ${contact.surname}` },
+    { label: "Телефон", value: contact.phone },
+    { label: "Банк получателя", value: "Freedom Bank" },
+    { label: "Списать с", value: "DepositCard ••4521" },
+    { label: "Комиссия", value: "Без комиссии" },
+  ];
+  return (
+    <ScreenShell C={C} title="Подтверждение" onBack={onBack}>
+      <div style={{ padding: "4px 20px 110px" }}>
+        <div style={{ textAlign: "center", margin: "12px 0 28px" }}>
+          <div style={{ fontSize: 13, color: C.muted, fontWeight: 500, marginBottom: 8 }}>Перевод по номеру телефона</div>
+          <div style={{ fontSize: 36, fontWeight: 800, color: C.text, letterSpacing: -1, fontFeatureSettings: "'tnum'" }}>
+            {fmtFull(amount)} <span style={{ fontSize: 20, color: C.muted }}>₸</span>
+          </div>
+        </div>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 24,
+        }}>
+          {rows.map((r, i) => (
+            <div key={i} style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              padding: "13px 16px", gap: 12,
+              borderBottom: i < rows.length - 1 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <span style={{ fontSize: 13, color: C.muted, flexShrink: 0 }}>{r.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.text, textAlign: "right" }}>{r.value}</span>
+            </div>
+          ))}
+        </div>
+        <div data-press onClick={onConfirm} style={{
+          backgroundColor: C.accentDark, borderRadius: 12, padding: "15px 0",
+          textAlign: "center", cursor: "pointer",
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>Подтвердить</span>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   CONVERSION — real «Конвертация валют»
+   («Продажа %S» / «Покупка %S», по курсу банка)
+   ═══════════════════════════════════════════════ */
+
+function ConversionScreen({ C, onBack, onNext }) {
+  const [from, setFrom] = useState("USD");
+  const [to, setTo] = useState("KZT");
+  const [amount, setAmount] = useState("100");
+  const num = parseFloat(amount.replace(",", ".")) || 0;
+  const rate = RATES_TO_KZT[from] / RATES_TO_KZT[to];
+  const result = num * rate;
+  const valid = num > 0 && from !== to;
+  const currencies = ["KZT", "USD", "EUR", "RUB"];
+
+  const CurrencyChips = ({ value, onChange, exclude }) => (
+    <div style={{ display: "flex", gap: 8 }}>
+      {currencies.map(c => (
+        <div key={c} data-press onClick={() => c !== exclude && onChange(c)} style={{
+          padding: "8px 14px", borderRadius: 18, cursor: c === exclude ? "default" : "pointer",
+          fontSize: 13, fontWeight: 600,
+          backgroundColor: value === c ? C.accentDark : C.faint,
+          color: value === c ? C.accent : (c === exclude ? C.muted : C.sub),
+          opacity: c === exclude ? 0.4 : 1,
+          transition: "all 0.15s",
+        }}>{CURRENCY_META[c].flag} {c}</div>
+      ))}
+    </div>
+  );
+
+  return (
+    <ScreenShell C={C} title="Конвертация валют" onBack={onBack}>
+      <div style={{ padding: "4px 20px 110px" }}>
+        {/* real sellCurrency */}
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8 }}>Продажа {from}</div>
+        <CurrencyChips value={from} onChange={setFrom} exclude={to} />
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1.5px solid ${C.border}`,
+          padding: "16px", display: "flex", alignItems: "center", gap: 8,
+          marginTop: 10, marginBottom: 16,
+        }}>
+          <input
+            value={amount}
+            onChange={e => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
+            inputMode="decimal"
+            placeholder="0"
+            style={{
+              flex: 1, border: "none", outline: "none", background: "transparent",
+              fontSize: 26, fontWeight: 800, color: C.text,
+              fontFamily: "inherit", fontFeatureSettings: "'tnum'", minWidth: 0,
+            }}
+          />
+          <span style={{ fontSize: 20, fontWeight: 700, color: C.muted }}>{CURRENCY_META[from].symbol}</span>
+        </div>
+
+        {/* real buyCurrency */}
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8 }}>Покупка {to}</div>
+        <CurrencyChips value={to} onChange={setTo} exclude={from} />
+        <div style={{
+          backgroundColor: C.faint, borderRadius: 12,
+          padding: "16px", display: "flex", alignItems: "center", justifyContent: "space-between",
+          marginTop: 10, marginBottom: 16,
+        }}>
+          <span style={{ fontSize: 26, fontWeight: 800, color: C.text, fontFeatureSettings: "'tnum'" }}>
+            {valid ? fmtFull(result) : "0"}
+          </span>
+          <span style={{ fontSize: 20, fontWeight: 700, color: C.muted }}>{CURRENCY_META[to].symbol}</span>
+        </div>
+
+        {/* real ratesSubtitle «Конвертация по курсу» */}
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+          padding: "11px 16px", marginBottom: 16,
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+        }}>
+          <span style={{ fontSize: 13, color: C.muted }}>Конвертация по курсу</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
+            1 {from} = {rate >= 1 ? rate.toFixed(2) : rate.toFixed(4)} {to}
+          </span>
+        </div>
+
+        <div data-press onClick={() => valid && onNext({ from, to, amountFrom: num, amountTo: result, rate })} style={{
+          backgroundColor: valid ? C.accentDark : C.faint,
+          borderRadius: 12, padding: "15px 0", textAlign: "center",
+          cursor: valid ? "pointer" : "default", marginBottom: 14,
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: valid ? C.accent : C.muted }}>Обменять</span>
+        </div>
+
+        {/* real sumToInfoText */}
+        <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.5 }}>
+          Сумма может измениться из-за разницы в курсах валют на момент фактического перечисления денег
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    ROOT
    ═══════════════════════════════════════════════ */
 
@@ -3929,6 +4443,8 @@ export default function FreedomV6() {
           onOpenStub={() => {}}
           onTransferOwn={() => pushScreen({ type: "transferOwn" })}
           onRequestMoney={() => pushScreen({ type: "requestCreate" })}
+          onPhoneTransfer={() => pushScreen({ type: "phoneTransfer" })}
+          onConversion={() => pushScreen({ type: "conversion" })}
         />
       )}
       {activeTab === "statistics" && (
@@ -4041,6 +4557,58 @@ export default function FreedomV6() {
         if (s.type === "settings") return (
           <SettingsScreen key={i} C={C} onBack={popScreen}
             onOpenNotifications={() => pushScreen({ type: "notifications" })}
+            onOpenProfileInfo={() => pushScreen({ type: "profileInfo" })}
+            onOpenSecurity={() => pushScreen({ type: "security" })}
+            onOpenDevices={() => pushScreen({ type: "devices" })}
+            onOpenLanguage={() => pushScreen({ type: "language" })}
+          />
+        );
+        if (s.type === "profileInfo") return (
+          <ProfileInfoScreen key={i} C={C} featureFlags={featureFlags} onBack={popScreen} />
+        );
+        if (s.type === "security") return (
+          <SecurityScreen key={i} C={C} featureFlags={featureFlags} onBack={popScreen} />
+        );
+        if (s.type === "devices") return (
+          <DevicesScreen key={i} C={C} onBack={popScreen} />
+        );
+        if (s.type === "language") return (
+          <LanguageScreen key={i} C={C} onBack={popScreen} />
+        );
+        if (s.type === "phoneTransfer") return (
+          <PhoneTransferScreen key={i} C={C}
+            onBack={popScreen}
+            onNext={(payload) => pushScreen({ type: "phoneConfirm", payload })}
+          />
+        );
+        if (s.type === "phoneConfirm") return (
+          <PhoneConfirmScreen key={i} C={C} payload={s.payload}
+            onBack={popScreen}
+            onConfirm={() => pushScreen({ type: "phoneResult", payload: s.payload })}
+          />
+        );
+        if (s.type === "phoneResult") return (
+          <SuccessScreen key={i} C={C}
+            title="Успешно"
+            message="Перевод выполнен"
+            amountStr={`${fmtFull(s.payload.amount)} ₸`}
+            note={`${s.payload.contact.name} ${s.payload.contact.surname} · ${s.payload.contact.phone}`}
+            onDone={() => setNavStack([])}
+          />
+        );
+        if (s.type === "conversion") return (
+          <ConversionScreen key={i} C={C}
+            onBack={popScreen}
+            onNext={(payload) => pushScreen({ type: "conversionResult", payload })}
+          />
+        );
+        if (s.type === "conversionResult") return (
+          <SuccessScreen key={i} C={C}
+            title="Успешно"
+            message="Обмен выполнен"
+            amountStr={`${fmtFull(s.payload.amountTo)} ${CURRENCY_META[s.payload.to]?.symbol || s.payload.to}`}
+            note={`Продажа ${fmtFull(s.payload.amountFrom)} ${s.payload.from} по курсу ${s.payload.rate >= 1 ? s.payload.rate.toFixed(2) : s.payload.rate.toFixed(4)}`}
+            onDone={() => setNavStack([])}
           />
         );
         if (s.type === "notifications") return (

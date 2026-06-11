@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Search, Bell, Plus, ChevronRight, ChevronDown, X, ArrowLeftRight, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid, Smartphone, Plane, Sofa, Zap } from "lucide-react";
+import { Search, Bell, Plus, ChevronRight, ChevronDown, X, ArrowLeftRight, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid, Smartphone, Plane, Sofa, Zap, Phone, Globe, QrCode, Repeat, Send, Landmark, Tv, Bus, GraduationCap, Eye, EyeOff, ArrowLeft, ArrowDownLeft, Snowflake, FileText, ShoppingCart, Utensils, Fuel, Wifi, Home, Ticket, Settings2 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════
    DATA
@@ -220,6 +220,10 @@ const FEATURE_FLAGS = [
   { key: "openDeposit", desc: "Открытие депозита", default: true },
   { key: "openCard", desc: "Открытие карты", default: true },
   { key: "openCredit", desc: "Открытие кредита", default: true },
+  { key: "toPhoneNumber", desc: "Перевод по номеру телефона", default: true },
+  { key: "paySwift", desc: "SWIFT-переводы", default: true },
+  { key: "conversionRates", desc: "Курсы валют на экране переводов", default: true },
+  { key: "cardPanCVV", desc: "Показ номера карты в деталях", default: true },
 ];
 
 /* Stories — shown when `kursiv` flag is OFF (real app behavior) */
@@ -230,6 +234,39 @@ const STORIES = [
   { id: 4, title: "Тарифы", emoji: "📊", bg: "linear-gradient(135deg, #3B82F6, #6366F1)", viewed: true },
   { id: 5, title: "Новости", emoji: "📰", bg: "linear-gradient(135deg, #EC4899, #F59E0B)", viewed: true },
   { id: 6, title: "Invest Card", emoji: "💳", bg: "linear-gradient(135deg, #6366F1, #A855F7)", viewed: true },
+];
+
+/* ═══════════════════════════════════════════════
+   PAYMENTS SCREEN DATA — real menu structure and texts
+   from PaymentsViewModel callbacks + ru.lproj/Localizable.strings
+   ═══════════════════════════════════════════════ */
+
+const PAYMENT_TEMPLATES = [
+  { id: 1, title: "Аренда", emoji: "🏠", color: "#6366F1" },
+  { id: 2, title: "Коммуналка", emoji: "💡", color: "#F59E0B" },
+  { id: 3, title: "Маме", emoji: "💸", color: "#22C55E" },
+  { id: 4, title: "Интернет", emoji: "🌐", color: "#3B82F6" },
+];
+
+/* Категории «Оплата услуг» — реальные тексты paymentsFlow.payments.* */
+const PAYMENT_CATEGORIES = [
+  { id: "mobile", title: "Мобильная связь", Icon: Smartphone, color: "#22C55E" },
+  { id: "house", title: "Коммунальные услуги", Icon: Home, color: "#F59E0B" },
+  { id: "internet", title: "Интернет", Icon: Wifi, color: "#3B82F6" },
+  { id: "tv", title: "Телевидение", Icon: Tv, color: "#8B5CF6" },
+  { id: "transport", title: "Транспорт", Icon: Bus, color: "#06B6D4" },
+  { id: "education", title: "Образование", Icon: GraduationCap, color: "#EC4899" },
+  { id: "taxes", title: "Налоги, платежи в бюджет", Icon: Landmark, color: "#64748B" },
+  { id: "tickets", title: "Электронные билеты", Icon: Ticket, color: "#EF4444" },
+];
+
+/* Транзакции для ProductDetails */
+const TRANSACTIONS = [
+  { id: 1, name: "Magnum Cash&Carry", category: "Продукты", amount: -15240.00, currency: "KZT", time: "Сегодня, 14:32", Icon: ShoppingCart, color: "#EF4444" },
+  { id: 2, name: "Перевод от Ивана В.", category: "Пополнение", amount: 50000.00, currency: "KZT", time: "Сегодня, 11:05", Icon: ArrowDownLeft, color: "#22C55E" },
+  { id: 3, name: "Del Papa", category: "Рестораны", amount: -8900.00, currency: "KZT", time: "Вчера, 20:14", Icon: Utensils, color: "#F59E0B" },
+  { id: 4, name: "Helios", category: "АЗС", amount: -12500.00, currency: "KZT", time: "Вчера, 09:41", Icon: Fuel, color: "#3B82F6" },
+  { id: 5, name: "Beeline", category: "Мобильная связь", amount: -3490.00, currency: "KZT", time: "10 июня, 16:20", Icon: Smartphone, color: "#8B5CF6" },
 ];
 
 /* ═══════════════════════════════════════════════
@@ -334,7 +371,7 @@ function CardArtwork({ visual }) {
   return artworks[visual] || artworks.fresh;
 }
 
-function CardHero({ card, bank, C }) {
+function CardHero({ card, bank, C, onOpen }) {
   const cm = CURRENCY_META[card.primaryCurrency] || { symbol: card.primaryCurrency };
   const allCurrencies = [card.primaryCurrency, ...card.breakdown.map(b => b.currency)];
   const uniqueCurrencies = [...new Set(allCurrencies)];
@@ -344,7 +381,7 @@ function CardHero({ card, bank, C }) {
       : "Активна");
 
   return (
-    <div data-press style={{
+    <div data-press onClick={() => onOpen?.(card)} style={{
       flexShrink: 0,
       width: 178, height: 138,
       borderRadius: 14,
@@ -792,7 +829,7 @@ function MainScreen({
   totalInKZT, productTab, setProductTab,
   blockVis, blockOrder, emptyState, activeCardProducts, activeAccounts,
   activeLoans, activeCredits, activePromos, activeNews, activeRequests,
-  featureFlags,
+  featureFlags, onOpenCard,
   C, theme,
 }) {
   const isDark = C.bg === '#0E0F0C';
@@ -1273,7 +1310,7 @@ function MainScreen({
                     .flatMap(g => g.cards.map(c => ({ ...c, bank: g.bank })))
                     .sort((a, b) => b.primaryBalance - a.primaryBalance)
                     .map(card => (
-                      <CardHero key={card.id} card={card} bank={card.bank} C={C} />
+                      <CardHero key={card.id} card={card} bank={card.bank} C={C} onOpen={onOpenCard} />
                     ))}
                   {featureFlags.openCard && (
                   <div data-press style={{
@@ -1320,7 +1357,7 @@ function MainScreen({
                               ? uniqueCurrencies.join(" · ")
                               : "Активна");
                           return (
-                            <div key={card.id} data-press style={{
+                            <div key={card.id} data-press onClick={() => onOpenCard?.(card)} style={{
                               display: "flex", alignItems: "center", gap: 14,
                               padding: "16px", cursor: "pointer",
                               borderBottom: ci < sortedCards.length - 1 ? `1px solid ${C.divider}` : "none",
@@ -1697,28 +1734,39 @@ function MainScreen({
       </div>
       )}
 
-      {/* ═══ BOTTOM TAB BAR ═══ */}
-      <div style={{
-        position: "fixed", bottom: 0, left: 0, right: 0,
-        maxWidth: 430, margin: "0 auto",
-        backgroundColor: C.bg,
-        borderTop: `1px solid ${C.divider}`,
-        padding: "0 0 24px",
-        display: "flex", justifyContent: "space-around",
-        zIndex: 50,
-      }}>
-        {[
-          { Icon: Wallet, label: "Продукты", active: true },
-          { Icon: BarChart3, label: "Статистика" },
-          { Icon: ArrowLeftRight, label: "Переводы" },
-          { Icon: MessageCircle, label: "Чаты" },
-        ].map((tab, i) => (
-          <div key={i} data-press style={{
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   BOTTOM TAB BAR — real HomeTab: products / statistics / payments / chat
+   ═══════════════════════════════════════════════ */
+
+function BottomTabBar({ active, onChange, C }) {
+  return (
+    <div style={{
+      position: "fixed", bottom: 0, left: 0, right: 0,
+      maxWidth: 430, margin: "0 auto",
+      backgroundColor: C.bg,
+      borderTop: `1px solid ${C.divider}`,
+      padding: "0 0 24px",
+      display: "flex", justifyContent: "space-around",
+      zIndex: 50,
+    }}>
+      {[
+        { key: "products", Icon: Wallet, label: "Продукты" },
+        { key: "statistics", Icon: BarChart3, label: "Статистика" },
+        { key: "payments", Icon: ArrowLeftRight, label: "Переводы" },
+        { key: "chats", Icon: MessageCircle, label: "Чаты" },
+      ].map(tab => {
+        const isActive = active === tab.key;
+        return (
+          <div key={tab.key} data-press onClick={() => onChange(tab.key)} style={{
             display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
             cursor: "pointer", flex: 1, paddingTop: 10, paddingBottom: 6,
             position: "relative",
           }}>
-            {tab.active && (
+            {isActive && (
               <div style={{
                 position: "absolute", top: 0, left: "50%",
                 transform: "translateX(-50%)",
@@ -1726,13 +1774,405 @@ function MainScreen({
                 backgroundColor: C.accentDark,
               }} />
             )}
-            <tab.Icon size={22} color={tab.active ? C.accentDark : C.muted} strokeWidth={tab.active ? 2.2 : 1.7} />
+            <tab.Icon size={22} color={isActive ? C.accentDark : C.muted} strokeWidth={isActive ? 2.2 : 1.7} />
             <span style={{
-              fontSize: 10, fontWeight: tab.active ? 700 : 500,
-              color: tab.active ? C.accentDark : C.muted,
+              fontSize: 10, fontWeight: isActive ? 700 : 500,
+              color: isActive ? C.accentDark : C.muted,
             }}>{tab.label}</span>
           </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   PAYMENTS SCREEN — real Переводы tab
+   Sections and texts from PaymentsViewModel + Localizable.strings:
+   Шаблоны → «Себе» → «Другим» → «Оплата услуг»
+   ═══════════════════════════════════════════════ */
+
+function PaymentsScreen({ C, featureFlags, onOpenStub }) {
+  const Row = ({ Icon, color, title, subtitle, last }) => (
+    <div data-press onClick={onOpenStub} style={{
+      display: "flex", alignItems: "center", gap: 12,
+      padding: "13px 16px", cursor: "pointer",
+      borderBottom: last ? "none" : `1px solid ${C.divider}`,
+    }}>
+      <div style={{
+        width: 38, height: 38, borderRadius: "50%",
+        backgroundColor: `${color}14`,
+        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+      }}>
+        <Icon size={17} color={color} strokeWidth={1.9} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{title}</div>
+        {subtitle && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{subtitle}</div>}
+      </div>
+      <ChevronRight size={15} color={C.muted} strokeWidth={1.8} />
+    </div>
+  );
+
+  const Section = ({ title, children }) => (
+    <div style={{ marginBottom: 24 }}>
+      <div style={{ fontSize: 15, fontWeight: 700, color: C.text, letterSpacing: -0.2, marginBottom: 12 }}>{title}</div>
+      <div style={{
+        backgroundColor: C.card, borderRadius: 12,
+        border: `1px solid ${C.border}`, overflow: "hidden",
+      }}>{children}</div>
+    </div>
+  );
+
+  return (
+    <div style={{
+      maxWidth: 430, margin: "0 auto", minHeight: "100dvh",
+      backgroundColor: C.bg,
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', system-ui, sans-serif",
+      overflowX: "clip", paddingBottom: 90,
+    }}>
+      <StatusBar C={C} />
+      <div style={{ padding: "8px 20px 0" }}>
+        <div style={{ fontSize: 24, fontWeight: 800, color: C.text, letterSpacing: -0.5, marginBottom: 14 }}>Переводы</div>
+        {/* Search */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8,
+          backgroundColor: C.card, border: `1px solid ${C.border}`,
+          borderRadius: 12, padding: "10px 14px", marginBottom: 20,
+        }}>
+          <Search size={16} color={C.muted} strokeWidth={1.8} />
+          <span style={{ fontSize: 14, color: C.muted }}>Поиск</span>
+        </div>
+
+        {/* Шаблоны и автопереводы (real `paymentTemplate`) */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: C.text, letterSpacing: -0.2, marginBottom: 12 }}>Шаблоны и автопереводы</div>
+          <div style={{ display: "flex", gap: 14, overflowX: "auto", scrollbarWidth: "none", paddingBottom: 4 }}>
+            {PAYMENT_TEMPLATES.map(t => (
+              <div key={t.id} data-press onClick={onOpenStub} style={{
+                flexShrink: 0, width: 56, display: "flex", flexDirection: "column",
+                alignItems: "center", gap: 6, cursor: "pointer",
+              }}>
+                <div style={{
+                  width: 50, height: 50, borderRadius: "50%",
+                  backgroundColor: `${t.color}18`,
+                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 21,
+                }}>{t.emoji}</div>
+                <span style={{ fontSize: 10, fontWeight: 500, color: C.sub, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 56 }}>{t.title}</span>
+              </div>
+            ))}
+            <div data-press onClick={onOpenStub} style={{
+              flexShrink: 0, width: 56, display: "flex", flexDirection: "column",
+              alignItems: "center", gap: 6, cursor: "pointer",
+            }}>
+              <div style={{
+                width: 50, height: 50, borderRadius: "50%",
+                backgroundColor: C.faint,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Plus size={18} color={C.sub} strokeWidth={1.8} />
+              </div>
+              <span style={{ fontSize: 10, color: C.muted }}>Новый</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Себе (ownTransfersSection) */}
+        <Section title="Себе">
+          <Row Icon={Repeat} color="#22C55E" title="Между счетами" subtitle="Мгновенно и без комиссии" />
+          <Row Icon={ArrowDownLeft} color="#3B82F6" title="С карты другого банка" subtitle="Пополнение Visa или Mastercard" />
+          {featureFlags.conversionRates ? (
+            <Row Icon={ArrowLeftRight} color="#F59E0B" title="Конвертация валют" subtitle={`1$ = ${RATES_TO_KZT.USD}₸ · 1€ = ${RATES_TO_KZT.EUR}₸`} last />
+          ) : (
+            <Row Icon={ArrowLeftRight} color="#F59E0B" title="Конвертация валют" last />
+          )}
+        </Section>
+
+        {/* Другим (othersTransfersSection) */}
+        <Section title="Другим">
+          {featureFlags.toPhoneNumber && (
+            <Row Icon={Phone} color="#22C55E" title="По номеру телефона" subtitle="Внутри банка и за его пределами" />
+          )}
+          <Row Icon={Landmark} color="#0D9488" title="Внутри Банка" subtitle="На карту или счет" />
+          <Row Icon={CreditCard} color="#3B82F6" title="По номеру карты" subtitle="Visa или Mastercard" />
+          <Row Icon={FileText} color="#8B5CF6" title="По номеру счета" subtitle="IBAN-перевод" />
+          {featureFlags.paySwift && (
+            <Row Icon={Globe} color="#06B6D4" title="Переводом SWIFT" subtitle="В любую страну" />
+          )}
+          {featureFlags.moneyRequest && (
+            <Row Icon={Send} color="#EC4899" title="Запросить" subtitle="У клиента банка" />
+          )}
+          <Row Icon={TrendingUp} color="#F59E0B" title="На брокерский счёт" subtitle="Freedom Broker" last />
+        </Section>
+
+        {/* Оплата услуг (paymentsSection) */}
+        <Section title="Оплата услуг">
+          <Row Icon={QrCode} color="#22C55E" title="Оплата по QR или штрихкоду" />
+          {PAYMENT_CATEGORIES.map((cat, i) => (
+            <Row key={cat.id} Icon={cat.Icon} color={cat.color} title={cat.title} last={i === PAYMENT_CATEGORIES.length - 1} />
+          ))}
+        </Section>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   PRODUCT DETAILS SCREEN — real ProductDetails module
+   Card visual + balance + actions + transactions
+   ═══════════════════════════════════════════════ */
+
+function ProductDetailsScreen({ card, C, featureFlags, onBack }) {
+  const [panVisible, setPanVisible] = useState(false);
+  const cm = CURRENCY_META[card.primaryCurrency] || { symbol: card.primaryCurrency };
+  const fullPan = `4400 4300 1234 ${card.last4}`;
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 80,
+      maxWidth: 430, margin: "0 auto",
+      backgroundColor: C.bg,
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', system-ui, sans-serif",
+      overflowY: "auto", overflowX: "clip",
+      animation: "screen-slide-in 0.25s ease-out",
+    }}>
+      <StatusBar C={C} />
+      {/* Header */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 8,
+        padding: "8px 12px 16px",
+      }}>
+        <div data-press onClick={onBack} style={{
+          width: 36, height: 36, borderRadius: "50%",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer",
+        }}>
+          <ArrowLeft size={20} color={C.text} strokeWidth={2} />
+        </div>
+        <div style={{ flex: 1, textAlign: "center", fontSize: 16, fontWeight: 700, color: C.text }}>
+          {card.name}
+        </div>
+        <div style={{ width: 36 }} />
+      </div>
+
+      {/* Big card visual */}
+      <div style={{ display: "flex", justifyContent: "center", padding: "4px 20px 20px" }}>
+        <div style={{
+          width: 240, height: 150, borderRadius: 16,
+          backgroundColor: card.color, position: "relative", overflow: "hidden",
+          boxShadow: "0 10px 28px rgba(0,0,0,0.22)",
+        }}>
+          <div style={{
+            position: "absolute", inset: 0,
+            background: `
+              radial-gradient(circle at 20% 30%, rgba(255,255,255,0.18) 0%, transparent 50%),
+              radial-gradient(circle at 80% 80%, rgba(0,0,0,0.2) 0%, transparent 50%)
+            `,
+          }} />
+          {/* Chip */}
+          <div style={{
+            position: "absolute", top: 18, left: 20,
+            width: 32, height: 24, borderRadius: 5,
+            background: "linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.15) 100%)",
+          }} />
+          {/* PAN — real `cardPanCVV` flag gates the number display */}
+          <div style={{
+            position: "absolute", bottom: 42, left: 20,
+            fontSize: 16, fontWeight: 700, color: "#fff",
+            fontFeatureSettings: "'tnum'", letterSpacing: 1.6,
+            textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+          }}>
+            {panVisible ? fullPan : `••••  ••••  ••••  ${card.last4}`}
+          </div>
+          <div style={{
+            position: "absolute", bottom: 16, right: 18,
+            fontSize: 15, fontWeight: 800, fontStyle: "italic",
+            color: "#fff", letterSpacing: 0.4,
+            textShadow: "0 1px 2px rgba(0,0,0,0.35)",
+          }}>VISA</div>
+          {featureFlags.cardPanCVV && (
+            <div data-press onClick={() => setPanVisible(v => !v)} style={{
+              position: "absolute", top: 14, right: 14,
+              width: 32, height: 32, borderRadius: "50%",
+              backgroundColor: "rgba(0,0,0,0.3)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer",
+            }}>
+              {panVisible
+                ? <EyeOff size={15} color="#fff" strokeWidth={1.9} />
+                : <Eye size={15} color="#fff" strokeWidth={1.9} />}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Balance */}
+      <div style={{ textAlign: "center", marginBottom: 20 }}>
+        <div style={{ fontSize: 13, color: C.muted, fontWeight: 500, marginBottom: 6 }}>Доступно</div>
+        <div style={{
+          fontSize: 32, fontWeight: 800, color: C.text,
+          letterSpacing: -1, fontFeatureSettings: "'tnum'", lineHeight: 1,
+        }}>
+          {fmtFull(card.primaryBalance)} <span style={{ fontSize: 18, fontWeight: 700, color: C.muted }}>{cm.symbol}</span>
+        </div>
+      </div>
+
+      {/* Actions — real ProductInfoAction set */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 22, marginBottom: 28 }}>
+        {[
+          { Icon: Plus, label: "Пополнить" },
+          { Icon: Send, label: "Перевести" },
+          { Icon: FileText, label: "Реквизиты" },
+          { Icon: Snowflake, label: "Заморозить" },
+        ].map((a, i) => (
+          <div key={i} data-press style={{
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 7,
+            cursor: "pointer", width: 64,
+          }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: "50%",
+              backgroundColor: C.accentDark,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <a.Icon size={19} color={C.accent} strokeWidth={2} />
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 500, color: C.sub }}>{a.label}</span>
+          </div>
         ))}
+      </div>
+
+      <div style={{ padding: "0 20px 110px" }}>
+        {/* Currency breakdown (multi-currency card) */}
+        {card.breakdown && card.breakdown.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 12 }}>Валютные счета</div>
+            <div style={{
+              backgroundColor: C.card, borderRadius: 12,
+              border: `1px solid ${C.border}`, overflow: "hidden",
+            }}>
+              {card.breakdown.map((b, i) => {
+                const bm = CURRENCY_META[b.currency] || { symbol: b.currency, flag: "💰" };
+                return (
+                  <div key={i} style={{
+                    display: "flex", alignItems: "center", gap: 12,
+                    padding: "13px 16px",
+                    borderBottom: i < card.breakdown.length - 1 ? `1px solid ${C.divider}` : "none",
+                  }}>
+                    <span style={{ fontSize: 18 }}>{bm.flag}</span>
+                    <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.text }}>{b.currency}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
+                      {fmtFull(b.amount)} <span style={{ fontSize: 11, color: C.muted }}>{bm.symbol}</span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Transactions — real "Транзакции под продуктом" */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: C.text }}>Транзакции</span>
+            <span data-press style={{ fontSize: 13, color: C.text, fontWeight: 500, cursor: "pointer", opacity: 0.7 }}>Все</span>
+          </div>
+          <div style={{
+            backgroundColor: C.card, borderRadius: 12,
+            border: `1px solid ${C.border}`, overflow: "hidden",
+          }}>
+            {TRANSACTIONS.map((t, i) => (
+              <div key={t.id} data-press style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "13px 16px", cursor: "pointer",
+                borderBottom: i < TRANSACTIONS.length - 1 ? `1px solid ${C.divider}` : "none",
+              }}>
+                <div style={{
+                  width: 38, height: 38, borderRadius: "50%",
+                  backgroundColor: `${t.color}14`,
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  <t.Icon size={16} color={t.color} strokeWidth={1.9} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{t.category} · {t.time}</div>
+                </div>
+                <span style={{
+                  fontSize: 14, fontWeight: 700, fontFeatureSettings: "'tnum'", flexShrink: 0,
+                  color: t.amount > 0 ? "#16A34A" : C.text,
+                }}>
+                  {t.amount > 0 ? "+" : ""}{fmtFull(t.amount)} ₸
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Управление — real modules CardLimits / SetCardPin / ProductRequisites */}
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 12 }}>Управление</div>
+          <div style={{
+            backgroundColor: C.card, borderRadius: 12,
+            border: `1px solid ${C.border}`, overflow: "hidden",
+          }}>
+            {[
+              { Icon: Settings2, title: "Лимиты по карте" },
+              { Icon: CreditCard, title: "Сменить ПИН-код" },
+              { Icon: FileText, title: "Реквизиты счёта" },
+            ].map((r, i, arr) => (
+              <div key={i} data-press style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "13px 16px", cursor: "pointer",
+                borderBottom: i < arr.length - 1 ? `1px solid ${C.divider}` : "none",
+              }}>
+                <div style={{
+                  width: 38, height: 38, borderRadius: "50%",
+                  backgroundColor: C.faint,
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  <r.Icon size={16} color={C.text} strokeWidth={1.8} />
+                </div>
+                <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.text }}>{r.title}</span>
+                <ChevronRight size={15} color={C.muted} strokeWidth={1.8} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   STUB SCREEN — for tabs not yet ported
+   ═══════════════════════════════════════════════ */
+
+function StubScreen({ C, title, note }) {
+  return (
+    <div style={{
+      maxWidth: 430, margin: "0 auto", minHeight: "100dvh",
+      backgroundColor: C.bg,
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', system-ui, sans-serif",
+      display: "flex", flexDirection: "column",
+    }}>
+      <StatusBar C={C} />
+      <div style={{ padding: "8px 20px 0" }}>
+        <div style={{ fontSize: 24, fontWeight: 800, color: C.text, letterSpacing: -0.5 }}>{title}</div>
+      </div>
+      <div style={{
+        flex: 1, display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center", gap: 12,
+        padding: "0 40px 120px", textAlign: "center",
+      }}>
+        <div style={{
+          width: 64, height: 64, borderRadius: 20,
+          backgroundColor: C.faint,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <Clock size={26} color={C.muted} strokeWidth={1.6} />
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: C.sub }}>Экран в очереди</div>
+        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5 }}>{note}</div>
       </div>
     </div>
   );
@@ -1756,6 +2196,11 @@ export default function FreedomV6() {
   const [featureFlags, setFeatureFlags] = useState(
     FEATURE_FLAGS.reduce((acc, f) => ({ ...acc, [f.key]: f.default }), {})
   );
+  // Mini-router: bottom tabs (real HomeTab) + pushed screens stack
+  const [activeTab, setActiveTab] = useState("products");
+  const [navStack, setNavStack] = useState([]);
+  const pushScreen = (s) => setNavStack(prev => [...prev, s]);
+  const popScreen = () => setNavStack(prev => prev.slice(0, -1));
 
   const activeCardProducts = emptyState ? EMPTY_CARD_PRODUCTS : CARD_PRODUCTS;
   const activeAccounts = emptyState ? [] : ACCOUNTS_LIST;
@@ -1783,6 +2228,12 @@ export default function FreedomV6() {
 
   return (
     <>
+      <style>{`
+        @keyframes screen-slide-in {
+          from { transform: translateX(100%); }
+          to   { transform: translateX(0); }
+        }
+      `}</style>
       {debugOpen && (
         <BottomSheet
           theme={theme} setTheme={setTheme}
@@ -1794,23 +2245,45 @@ export default function FreedomV6() {
           C={C}
         />
       )}
-      <MainScreen
-        onAvatarClick={() => setDebugOpen(true)}
-        displayCurrency={displayCurrency} setDisplayCurrency={setDisplayCurrency}
-        pickerOpen={pickerOpen} setPickerOpen={setPickerOpen}
-        totalInKZT={totalInKZT}
-        productTab={productTab} setProductTab={setProductTab}
-        blockVis={blockVis} blockOrder={blockOrder}
-        emptyState={emptyState}
-        featureFlags={featureFlags}
-        activeCardProducts={activeCardProducts}
-        activeAccounts={activeAccounts}
-        activeLoans={activeLoans}
-        activeCredits={activeCredits}
-        activePromos={activePromos}
-        activeNews={activeNews}
-        activeRequests={activeRequests}
-        C={C} theme={theme}
+      {activeTab === "products" && (
+        <MainScreen
+          onAvatarClick={() => setDebugOpen(true)}
+          displayCurrency={displayCurrency} setDisplayCurrency={setDisplayCurrency}
+          pickerOpen={pickerOpen} setPickerOpen={setPickerOpen}
+          totalInKZT={totalInKZT}
+          productTab={productTab} setProductTab={setProductTab}
+          blockVis={blockVis} blockOrder={blockOrder}
+          emptyState={emptyState}
+          featureFlags={featureFlags}
+          activeCardProducts={activeCardProducts}
+          activeAccounts={activeAccounts}
+          activeLoans={activeLoans}
+          activeCredits={activeCredits}
+          activePromos={activePromos}
+          activeNews={activeNews}
+          activeRequests={activeRequests}
+          onOpenCard={(card) => pushScreen({ type: "product", card })}
+          C={C} theme={theme}
+        />
+      )}
+      {activeTab === "payments" && (
+        <PaymentsScreen C={C} featureFlags={featureFlags} onOpenStub={() => {}} />
+      )}
+      {activeTab === "statistics" && (
+        <StubScreen C={C} title="Статистика"
+          note="В реальном приложении этот таб открывает флоу Transactions — расходы и история операций. Затащим следующей партией." />
+      )}
+      {activeTab === "chats" && (
+        <StubScreen C={C} title="Чаты"
+          note="Реальный таб управляется флагами chat / typiChat — чат с банком или контакты." />
+      )}
+      {navStack.map((s, i) => s.type === "product" && (
+        <ProductDetailsScreen key={i} card={s.card} C={C} featureFlags={featureFlags} onBack={popScreen} />
+      ))}
+      <BottomTabBar
+        active={activeTab}
+        onChange={(k) => { setActiveTab(k); setNavStack([]); }}
+        C={C}
       />
     </>
   );

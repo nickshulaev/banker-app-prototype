@@ -262,6 +262,65 @@ const PAYMENT_CATEGORIES = [
   { id: "tickets", title: "Электронные билеты", Icon: Ticket, color: "#EF4444" },
 ];
 
+/* Лента новостей (real News module: Kursiv list + detail с буллетами) */
+const NEWS_FEED = [
+  {
+    id: 1, tag: "Срочное",
+    title: "Freedom Bank запускает мультивалютные переводы без комиссии",
+    author: "Редакция", time: "2 часа назад", views: 1240,
+    bg: "linear-gradient(135deg, #14532D 0%, #166534 50%, #22C55E 100%)",
+    bullets: [
+      "Переводы в 12 валютах без комиссии для всех клиентов",
+      "Мгновенное зачисление внутри банка",
+      "Лимит — до 10 млн ₸ в месяц",
+    ],
+    body: "Freedom Bank объявил о запуске мультивалютных переводов без комиссии для всех розничных клиентов. Сервис охватывает переводы в 12 валютах, включая тенге, доллары, евро и рубли.\n\nПо словам банка, мгновенное зачисление работает для переводов внутри банка, а внешние переводы проходят в течение одного банковского дня.",
+  },
+  {
+    id: 2, tag: "Рынки",
+    title: "Трамп возобновил работу кабмина США, Nvidia вложит в OpenAI $20 млрд",
+    author: "Angelina Kleymenova", time: "4 часа назад", views: 3805,
+    bg: "linear-gradient(135deg, #1E293B 0%, #475569 50%, #64748B 100%)",
+    bullets: [
+      "Шатдаун в США завершён после 14 дней",
+      "Nvidia анонсировала стратегическое партнёрство с OpenAI",
+      "Индекс S&P 500 вырос на 1,2% на новостях",
+    ],
+    body: "Президент США подписал бюджетный пакет, завершив двухнедельную приостановку работы правительства. Рынки отреагировали ростом.\n\nПараллельно Nvidia объявила о намерении инвестировать до $20 млрд в OpenAI в рамках стратегического партнёрства по развитию инфраструктуры ИИ.",
+  },
+  {
+    id: 3, tag: "Банк",
+    title: "Изменение базовых ставок по депозитам с 1 июля",
+    author: "Freedom Bank", time: "Вчера", views: 982,
+    bg: "linear-gradient(135deg, #7C2D12 0%, #B45309 60%, #F59E0B 100%)",
+    bullets: [
+      "Ставка по тенговым депозитам — до 15,2% годовых",
+      "Валютные депозиты — без изменений",
+    ],
+    body: "С 1 июля Freedom Bank обновляет базовые ставки по депозитам в тенге. Максимальная ставка составит 15,2% годовых при размещении на 24 месяца с выплатой процентов в конце срока.",
+  },
+  {
+    id: 4, tag: "Технологии",
+    title: "Техническое обслуживание: плановые работы в ночь с 5 на 6 июля",
+    author: "Freedom Bank", time: "Вчера", views: 451,
+    bg: "linear-gradient(135deg, #1E1B4B 0%, #4338CA 60%, #6366F1 100%)",
+    bullets: [
+      "Сервис будет недоступен с 02:00 до 04:00",
+      "Карты продолжат работать в обычном режиме",
+    ],
+    body: "В ночь с 5 на 6 июля будет проводиться плановое обновление систем банка. Мобильное приложение будет недоступно с 02:00 до 04:00 по времени Астаны. Платежи по картам продолжат обрабатываться в штатном режиме.",
+  },
+];
+
+/* Центр уведомлений (real «Система уведомлений») */
+const NOTIFICATIONS = [
+  { id: 1, title: "Перевод зачислен", subtitle: "+50 000 ₸ от Ивана В.", time: "11:05", Icon: ArrowDownLeft, color: "#22C55E", unread: true },
+  { id: 2, title: "Запрос денег", subtitle: "Валентин Г. запрашивает 2 100 €", time: "09:41", Icon: Send, color: "#EC4899", unread: true },
+  { id: 3, title: "Кэшбэк начислен", subtitle: "+409 FC за покупки в июне", time: "Вчера", Icon: Star, color: "#F59E0B", unread: false },
+  { id: 4, title: "Новый ответ", subtitle: "Поддержка ответила на ваше обращение", time: "Вчера", Icon: MessageCircle, color: "#3B82F6", unread: false },
+  { id: 5, title: "Безопасность", subtitle: "Вход с нового устройства iPhone 15 Pro", time: "10 июня", Icon: Shield, color: "#64748B", unread: false },
+];
+
 /* Транзакции для ProductDetails */
 const TRANSACTIONS = [
   { id: 1, name: "Magnum Cash&Carry", category: "Продукты", amount: -15240.00, currency: "KZT", time: "Сегодня, 14:32", Icon: ShoppingCart, color: "#EF4444" },
@@ -831,7 +890,7 @@ function MainScreen({
   totalInKZT, productTab, setProductTab,
   blockVis, blockOrder, emptyState, activeCardProducts, activeAccounts,
   activeLoans, activeCredits, activePromos, activeNews, activeRequests,
-  featureFlags, onOpenCard, onOpenTotal, onOpenRequest, onOpenProfile, onOpenDeposit,
+  featureFlags, onOpenCard, onOpenTotal, onOpenRequest, onOpenProfile, onOpenDeposit, onOpenNews,
   C, theme,
 }) {
   const isDark = C.bg === '#0E0F0C';
@@ -1080,7 +1139,7 @@ function MainScreen({
           (ibank/Config/FeatureFlag.swift: "Если флага нет, показывать сторисы") */}
       {blockVis.news && featureFlags.kursiv && (
       <div style={{ order: blockOrder.indexOf("news"), padding: "0 20px 24px" }}>
-        <div data-press style={{
+        <div data-press onClick={() => onOpenNews?.()} style={{
           backgroundColor: C.card, borderRadius: 12,
           border: `1px solid ${C.border}`, padding: "12px 14px",
           cursor: "pointer",
@@ -3164,12 +3223,12 @@ function RequestInfoScreen({ request, C, onBack, onAccept, onReject }) {
    (sections and texts from settingsFlow.settings.*)
    ═══════════════════════════════════════════════ */
 
-function SettingsScreen({ C, onBack }) {
+function SettingsScreen({ C, onBack, onOpenNotifications }) {
   const [hideAmount, setHideAmount] = useState(false);
   const isDark = C.bg === '#0E0F0C';
 
-  const Row = ({ Icon, color, title, subtitle, last, danger, toggle, toggleOn, onToggle }) => (
-    <div data-press={!toggle ? true : undefined} onClick={!toggle ? () => {} : undefined} style={{
+  const Row = ({ Icon, color, title, subtitle, last, danger, toggle, toggleOn, onToggle, onClick }) => (
+    <div data-press={!toggle ? true : undefined} onClick={!toggle ? (onClick || (() => {})) : undefined} style={{
       display: "flex", alignItems: "center", gap: 12,
       padding: "13px 16px", cursor: toggle ? "default" : "pointer",
       borderBottom: last ? "none" : `1px solid ${C.divider}`,
@@ -3243,7 +3302,7 @@ function SettingsScreen({ C, onBack }) {
         <Section>
           <Row Icon={User} color="#22C55E" title="Профиль" subtitle="Телефон, почта, документы..." />
           <Row Icon={Shield} color="#3B82F6" title="Безопасность" subtitle="Пароли, системные настройки" />
-          <Row Icon={Bell} color="#F59E0B" title="Центр уведомлений" subtitle="Push, SMS и настройки" />
+          <Row Icon={Bell} color="#F59E0B" title="Центр уведомлений" subtitle="Push, SMS и настройки" onClick={onOpenNotifications} />
           <Row Icon={Smartphone} color="#8B5CF6" title="Устройства" last />
         </Section>
 
@@ -3516,6 +3575,261 @@ function DepositReviewScreen({ C, payload, onBack, onConfirm }) {
 }
 
 /* ═══════════════════════════════════════════════
+   LOCK SCREEN — real AuthPin
+   («Введите код для входа в приложение», «Выход»)
+   ═══════════════════════════════════════════════ */
+
+function LockScreen({ onUnlock }) {
+  const [pin, setPin] = useState("");
+  const PIN_LEN = 4;
+
+  const press = (d) => {
+    setPin(prev => {
+      if (prev.length >= PIN_LEN) return prev;
+      const next = prev + d;
+      if (next.length === PIN_LEN) setTimeout(onUnlock, 250); // any code unlocks the prototype
+      return next;
+    });
+  };
+  const backspace = () => setPin(p => p.slice(0, -1));
+
+  const Key = ({ children, onClick, ghost }) => (
+    <div data-press onClick={onClick} style={{
+      width: 72, height: 72, borderRadius: "50%",
+      backgroundColor: ghost ? "transparent" : "rgba(248,250,252,0.06)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: 26, fontWeight: 600, color: "#F8FAFC",
+      cursor: "pointer", userSelect: "none",
+      transition: "background-color 0.1s",
+    }}>{children}</div>
+  );
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 300,
+      maxWidth: 430, margin: "0 auto",
+      backgroundColor: "#0F172A",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', system-ui, sans-serif",
+      display: "flex", flexDirection: "column", alignItems: "center",
+      color: "#F8FAFC",
+    }}>
+      <div style={{ alignSelf: "stretch" }}>
+        <StatusBar C={{ text: "#F8FAFC" }} />
+      </div>
+      {/* Brand */}
+      <div style={{ marginTop: 36, display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+        <div style={{
+          width: 64, height: 64, borderRadius: 20,
+          background: "linear-gradient(135deg, #163300 0%, #1f4d00 100%)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: "0 8px 24px rgba(159,232,112,0.15)",
+        }}>
+          <span style={{ fontSize: 24, fontWeight: 800, color: "#9FE870" }}>F</span>
+        </div>
+        {/* real authPin.existingText */}
+        <div style={{ fontSize: 15, fontWeight: 600, color: "rgba(248,250,252,0.85)", textAlign: "center" }}>
+          Введите код для входа в приложение
+        </div>
+      </div>
+
+      {/* PIN dots */}
+      <div style={{ display: "flex", gap: 16, marginTop: 28, marginBottom: 12 }}>
+        {Array.from({ length: PIN_LEN }).map((_, i) => (
+          <div key={i} style={{
+            width: 14, height: 14, borderRadius: "50%",
+            backgroundColor: i < pin.length ? "#9FE870" : "rgba(248,250,252,0.15)",
+            transition: "background-color 0.15s",
+          }} />
+        ))}
+      </div>
+
+      {/* Numpad */}
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(3, 72px)", gap: "18px 28px",
+        marginTop: "auto", marginBottom: 24,
+      }}>
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
+          <Key key={n} onClick={() => press(String(n))}>{n}</Key>
+        ))}
+        {/* Face ID — instant unlock */}
+        <Key ghost onClick={onUnlock}>
+          <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+            <path d="M4 10V7a3 3 0 0 1 3-3h3M20 4h3a3 3 0 0 1 3 3v3M26 20v3a3 3 0 0 1-3 3h-3M10 26H7a3 3 0 0 1-3-3v-3"
+              stroke="#9FE870" strokeWidth="2" strokeLinecap="round"/>
+            <circle cx="10.5" cy="13" r="1.4" fill="#9FE870"/>
+            <circle cx="19.5" cy="13" r="1.4" fill="#9FE870"/>
+            <path d="M11 19.5c1.1 1 2.4 1.5 4 1.5s2.9-.5 4-1.5" stroke="#9FE870" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        </Key>
+        <Key onClick={() => press("0")}>0</Key>
+        <Key ghost onClick={backspace}>
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+            <path d="M9 6h11a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6-7 6-7z" stroke="rgba(248,250,252,0.7)" strokeWidth="1.8" strokeLinejoin="round"/>
+            <path d="M12.5 10.5l5 5M17.5 10.5l-5 5" stroke="rgba(248,250,252,0.7)" strokeWidth="1.8" strokeLinecap="round"/>
+          </svg>
+        </Key>
+      </div>
+
+      {/* real authPin.logout */}
+      <div data-press style={{
+        marginBottom: 44, fontSize: 14, fontWeight: 600,
+        color: "rgba(248,250,252,0.55)", cursor: "pointer",
+      }}>Выход</div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   NOTIFICATIONS — real «Система уведомлений»
+   ═══════════════════════════════════════════════ */
+
+function NotificationsScreen({ C, emptyState, onBack }) {
+  const items = emptyState ? [] : NOTIFICATIONS;
+  return (
+    <ScreenShell C={C} title="Система уведомлений" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        {items.length === 0 ? (
+          /* real notifications.emptyList */
+          <div style={{
+            display: "flex", flexDirection: "column", alignItems: "center",
+            padding: "80px 40px", textAlign: "center", gap: 12,
+          }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: 20, backgroundColor: C.faint,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <Bell size={26} color={C.muted} strokeWidth={1.6} />
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.sub }}>У вас пока нет уведомлений</div>
+          </div>
+        ) : (
+          <div style={{
+            backgroundColor: C.card, borderRadius: 12,
+            border: `1px solid ${C.border}`, overflow: "hidden",
+          }}>
+            {items.map((n, i) => (
+              <div key={n.id} data-press style={{
+                display: "flex", alignItems: "flex-start", gap: 12,
+                padding: "13px 16px", cursor: "pointer",
+                borderBottom: i < items.length - 1 ? `1px solid ${C.divider}` : "none",
+                backgroundColor: n.unread ? C.accentSoft : "transparent",
+              }}>
+                <div style={{
+                  width: 38, height: 38, borderRadius: "50%",
+                  backgroundColor: `${n.color}14`,
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  <n.Icon size={16} color={n.color} strokeWidth={1.9} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{n.title}</span>
+                    {n.unread && <div style={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: "#22C55E", flexShrink: 0 }} />}
+                  </div>
+                  <div style={{ fontSize: 12, color: C.sub, marginTop: 2, lineHeight: 1.4 }}>{n.subtitle}</div>
+                </div>
+                <span style={{ fontSize: 11, color: C.muted, flexShrink: 0, marginTop: 2 }}>{n.time}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   NEWS — real News module (Kursiv list → detail with bullets)
+   ═══════════════════════════════════════════════ */
+
+function NewsListScreen({ C, onBack, onOpenDetail }) {
+  return (
+    <ScreenShell C={C} title="Все новости" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px", display: "flex", flexDirection: "column", gap: 12 }}>
+        {NEWS_FEED.map(n => (
+          <div key={n.id} data-press onClick={() => onOpenDetail(n)} style={{
+            backgroundColor: C.card, borderRadius: 14,
+            border: `1px solid ${C.border}`, overflow: "hidden", cursor: "pointer",
+          }}>
+            {/* Image header */}
+            <div style={{ height: 110, background: n.bg, position: "relative" }}>
+              <div style={{
+                position: "absolute", top: 12, left: 12,
+                padding: "3px 9px", borderRadius: 7,
+                backgroundColor: "rgba(0,0,0,0.4)",
+                fontSize: 10, fontWeight: 700, color: "#fff",
+                textTransform: "uppercase", letterSpacing: 0.4,
+              }}>{n.tag}</div>
+            </div>
+            <div style={{ padding: "12px 14px 14px" }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.text, lineHeight: 1.35, marginBottom: 8 }}>
+                {n.title}
+              </div>
+              <div style={{ fontSize: 11, color: C.muted }}>
+                {n.author} · {n.time} · {n.views.toLocaleString("ru-RU")} 👁
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </ScreenShell>
+  );
+}
+
+function NewsDetailScreen({ news, C, onBack }) {
+  return (
+    <ScreenShell C={C} title="" onBack={onBack}>
+      <div style={{ padding: "0 0 110px" }}>
+        {/* Hero image */}
+        <div style={{ height: 180, background: news.bg, position: "relative", marginTop: -8 }}>
+          <div style={{
+            position: "absolute", top: 12, left: 20,
+            padding: "4px 10px", borderRadius: 8,
+            backgroundColor: "rgba(0,0,0,0.4)",
+            fontSize: 10, fontWeight: 700, color: "#fff",
+            textTransform: "uppercase", letterSpacing: 0.4,
+          }}>{news.tag}</div>
+        </div>
+        <div style={{ padding: "18px 20px 0" }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: C.text, lineHeight: 1.3, letterSpacing: -0.3, marginBottom: 10 }}>
+            {news.title}
+          </div>
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 18 }}>
+            {news.author} · {news.time} · {news.views.toLocaleString("ru-RU")} просмотров
+          </div>
+
+          {/* Bullets — real: native bullets above the article body */}
+          {news.bullets && news.bullets.length > 0 && (
+            <div style={{
+              backgroundColor: C.card, borderRadius: 12,
+              border: `1px solid ${C.border}`, padding: "14px 16px", marginBottom: 18,
+            }}>
+              {news.bullets.map((b, i) => (
+                <div key={i} style={{
+                  display: "flex", gap: 10,
+                  marginBottom: i < news.bullets.length - 1 ? 10 : 0,
+                }}>
+                  <div style={{
+                    width: 6, height: 6, borderRadius: "50%",
+                    backgroundColor: "#22C55E", flexShrink: 0, marginTop: 6,
+                  }} />
+                  <span style={{ fontSize: 13, fontWeight: 500, color: C.text, lineHeight: 1.45 }}>{b}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Body */}
+          {news.body.split("\n\n").map((p, i) => (
+            <p key={i} style={{ fontSize: 14, color: C.sub, lineHeight: 1.65, margin: "0 0 14px" }}>{p}</p>
+          ))}
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    ROOT
    ═══════════════════════════════════════════════ */
 
@@ -3538,6 +3852,8 @@ export default function FreedomV6() {
   const [navStack, setNavStack] = useState([]);
   const pushScreen = (s) => setNavStack(prev => [...prev, s]);
   const popScreen = () => setNavStack(prev => prev.slice(0, -1));
+  // Real app launches locked (AuthPin) — any 4-digit code unlocks the prototype
+  const [locked, setLocked] = useState(true);
 
   const activeCardProducts = emptyState ? EMPTY_CARD_PRODUCTS : CARD_PRODUCTS;
   const activeAccounts = emptyState ? [] : ACCOUNTS_LIST;
@@ -3604,6 +3920,7 @@ export default function FreedomV6() {
           onOpenRequest={(request) => pushScreen({ type: "requestInfo", request })}
           onOpenProfile={() => pushScreen({ type: "settings" })}
           onOpenDeposit={() => pushScreen({ type: "depositCalc" })}
+          onOpenNews={() => pushScreen({ type: "newsList" })}
           C={C} theme={theme}
         />
       )}
@@ -3722,7 +4039,20 @@ export default function FreedomV6() {
           />
         );
         if (s.type === "settings") return (
-          <SettingsScreen key={i} C={C} onBack={popScreen} />
+          <SettingsScreen key={i} C={C} onBack={popScreen}
+            onOpenNotifications={() => pushScreen({ type: "notifications" })}
+          />
+        );
+        if (s.type === "notifications") return (
+          <NotificationsScreen key={i} C={C} emptyState={emptyState} onBack={popScreen} />
+        );
+        if (s.type === "newsList") return (
+          <NewsListScreen key={i} C={C} onBack={popScreen}
+            onOpenDetail={(news) => pushScreen({ type: "newsDetail", news })}
+          />
+        );
+        if (s.type === "newsDetail") return (
+          <NewsDetailScreen key={i} news={s.news} C={C} onBack={popScreen} />
         );
         if (s.type === "depositCalc") return (
           <DepositCalcScreen key={i} C={C}
@@ -3752,6 +4082,8 @@ export default function FreedomV6() {
         onChange={(k) => { setActiveTab(k); setNavStack([]); }}
         C={C}
       />
+      {/* Real app behavior: AuthPin lock on launch */}
+      {locked && <LockScreen onUnlock={() => setLocked(false)} />}
     </>
   );
 }

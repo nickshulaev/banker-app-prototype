@@ -1072,12 +1072,14 @@ function MainScreen({
       {blockVis.balance && (
       <div style={{ order: blockOrder.indexOf("balance"), padding: "32px 20px 24px", textAlign: "center" }}>
         <div style={{ fontSize: 13, color: C.muted, fontWeight: 500, marginBottom: 10 }}>Общий баланс</div>
-        <div data-press onClick={() => onOpenTotal?.()} style={{
-          fontSize: 40, fontWeight: 700, color: C.text,
-          letterSpacing: -1.5, fontFeatureSettings: "'tnum'", lineHeight: 1,
-          cursor: "pointer", display: "inline-block",
-        }}>
-          {fmtInt(totalDisplay)}<span style={{ fontSize: 22, fontWeight: 600, color: C.muted, marginLeft: 6 }}>{displayMeta.symbol}</span>
+        <div>
+          <div data-press onClick={() => onOpenTotal?.()} style={{
+            fontSize: 40, fontWeight: 700, color: C.text,
+            letterSpacing: -1.5, fontFeatureSettings: "'tnum'", lineHeight: 1,
+            cursor: "pointer", display: "inline-block",
+          }}>
+            {fmtInt(totalDisplay)}<span style={{ fontSize: 22, fontWeight: 600, color: C.muted, marginLeft: 6 }}>{displayMeta.symbol}</span>
+          </div>
         </div>
         <div onClick={() => setPickerOpen(true)} data-press style={{
           display: "inline-flex", alignItems: "center", gap: 5,

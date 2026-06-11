@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Search, Bell, Plus, ChevronRight, ChevronDown, X, ArrowLeftRight, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid, Smartphone, Plane, Sofa, Zap, Phone, Globe, QrCode, Repeat, Send, Landmark, Tv, Bus, GraduationCap, Eye, EyeOff, ArrowLeft, ArrowDownLeft, Snowflake, FileText, ShoppingCart, Utensils, Fuel, Wifi, Home, Ticket, Settings2, Check } from "lucide-react";
+import { Search, Bell, Plus, ChevronRight, ChevronDown, X, ArrowLeftRight, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid, Smartphone, Plane, Sofa, Zap, Phone, Globe, QrCode, Repeat, Send, Landmark, Tv, Bus, GraduationCap, Eye, EyeOff, ArrowLeft, ArrowDownLeft, Snowflake, FileText, ShoppingCart, Utensils, Fuel, Wifi, Home, Ticket, Settings2, Check, User, Shield, LogOut, Palette } from "lucide-react";
 
 /* ═══════════════════════════════════════════════
    DATA
@@ -831,7 +831,7 @@ function MainScreen({
   totalInKZT, productTab, setProductTab,
   blockVis, blockOrder, emptyState, activeCardProducts, activeAccounts,
   activeLoans, activeCredits, activePromos, activeNews, activeRequests,
-  featureFlags, onOpenCard, onOpenTotal, onOpenRequest,
+  featureFlags, onOpenCard, onOpenTotal, onOpenRequest, onOpenProfile,
   C, theme,
 }) {
   const isDark = C.bg === '#0E0F0C';
@@ -899,16 +899,16 @@ function MainScreen({
       <>
       <StatusBar C={C} />
 
-      {/* Header */}
+      {/* Header — avatar opens Settings (real app), search opens debug constructor */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 20px 0" }}>
-        <div onClick={onAvatarClick} data-press style={{
+        <div onClick={() => onOpenProfile?.()} data-press style={{
           width: 36, height: 36, borderRadius: "50%",
           backgroundColor: C.accentDark,
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 12, fontWeight: 700, color: C.accent, cursor: "pointer",
         }}>НШ</div>
         <div style={{ display: "flex", gap: 8 }}>
-          <div data-press style={{
+          <div onClick={onAvatarClick} data-press style={{
             width: 36, height: 36, borderRadius: "50%",
             border: `1px solid ${C.border}`,
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -3148,6 +3148,127 @@ function RequestInfoScreen({ request, C, onBack, onAccept, onReject }) {
 }
 
 /* ═══════════════════════════════════════════════
+   SETTINGS SCREEN — real Settings module
+   (sections and texts from settingsFlow.settings.*)
+   ═══════════════════════════════════════════════ */
+
+function SettingsScreen({ C, onBack }) {
+  const [hideAmount, setHideAmount] = useState(false);
+  const isDark = C.bg === '#0E0F0C';
+
+  const Row = ({ Icon, color, title, subtitle, last, danger, toggle, toggleOn, onToggle }) => (
+    <div data-press={!toggle ? true : undefined} onClick={!toggle ? () => {} : undefined} style={{
+      display: "flex", alignItems: "center", gap: 12,
+      padding: "13px 16px", cursor: toggle ? "default" : "pointer",
+      borderBottom: last ? "none" : `1px solid ${C.divider}`,
+    }}>
+      <div style={{
+        width: 38, height: 38, borderRadius: "50%",
+        backgroundColor: danger ? "rgba(239,68,68,0.1)" : `${color}14`,
+        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+      }}>
+        <Icon size={17} color={danger ? "#EF4444" : color} strokeWidth={1.9} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: danger ? "#EF4444" : C.text }}>{title}</div>
+        {subtitle && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{subtitle}</div>}
+      </div>
+      {toggle ? (
+        <div onClick={onToggle} style={{
+          width: 38, height: 22, borderRadius: 11,
+          backgroundColor: toggleOn ? C.accentDark : (isDark ? "rgba(255,255,255,0.15)" : "#D1D5DB"),
+          position: "relative", cursor: "pointer", flexShrink: 0,
+          transition: "background-color 0.15s",
+        }}>
+          <div style={{
+            width: 18, height: 18, borderRadius: 9, backgroundColor: "#fff",
+            position: "absolute", top: 2, left: toggleOn ? 18 : 2,
+            transition: "left 0.15s",
+          }} />
+        </div>
+      ) : (
+        <ChevronRight size={15} color={C.muted} strokeWidth={1.8} />
+      )}
+    </div>
+  );
+
+  const Section = ({ children }) => (
+    <div style={{
+      backgroundColor: C.card, borderRadius: 12,
+      border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 16,
+    }}>{children}</div>
+  );
+
+  return (
+    <ScreenShell C={C} title="Настройки" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        {/* Profile header */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 14,
+          padding: "8px 0 24px",
+        }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: "50%",
+            backgroundColor: C.accentDark,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 20, fontWeight: 700, color: C.accent, flexShrink: 0,
+          }}>НШ</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: C.text, letterSpacing: -0.3 }}>Никита Шулаев</div>
+            <div style={{ fontSize: 13, color: C.muted, marginTop: 3, fontFeatureSettings: "'tnum'" }}>+7 777 ··· ·· 77</div>
+          </div>
+          <div data-press style={{
+            width: 40, height: 40, borderRadius: 12,
+            border: `1px solid ${C.border}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", flexShrink: 0,
+          }}>
+            <QrCode size={18} color={C.text} strokeWidth={1.8} />
+          </div>
+        </div>
+
+        {/* Аккаунт */}
+        <Section>
+          <Row Icon={User} color="#22C55E" title="Профиль" subtitle="Телефон, почта, документы..." />
+          <Row Icon={Shield} color="#3B82F6" title="Безопасность" subtitle="Пароли, системные настройки" />
+          <Row Icon={Bell} color="#F59E0B" title="Центр уведомлений" subtitle="Push, SMS и настройки" />
+          <Row Icon={Smartphone} color="#8B5CF6" title="Устройства" last />
+        </Section>
+
+        {/* Сервисы */}
+        <Section>
+          <Row Icon={FileText} color="#0D9488" title="Заказ справок" subtitle="Для оформления визы и в налоговую" />
+          <Row Icon={Plane} color="#3B82F6" title="Путешествия" subtitle="Авиабилеты, горящие туры, пассажиры" last />
+        </Section>
+
+        {/* Оформление */}
+        <Section>
+          <Row Icon={EyeOff} color="#64748B" title="Скрывать баланс" subtitle="При перевороте телефона"
+            toggle toggleOn={hideAmount} onToggle={() => setHideAmount(v => !v)} />
+          <Row Icon={Palette} color="#EC4899" title="Оформление" subtitle="Приветствие, звуки и вибрация" />
+          <Row Icon={Globe} color="#06B6D4" title="Язык" subtitle="Русский" last />
+        </Section>
+
+        {/* Банк */}
+        <Section>
+          <Row Icon={Landmark} color="#64748B" title="О Банке" subtitle="Адреса, телефоны, отделения..." />
+          <Row Icon={Phone} color="#22C55E" title="Связаться с Банком" subtitle="В чате или по телефону" last />
+        </Section>
+
+        {/* Logout */}
+        <Section>
+          <Row Icon={LogOut} color="#EF4444" title="Сменить пользователя" danger last />
+        </Section>
+
+        <div style={{ textAlign: "center", fontSize: 12, color: C.muted, marginTop: 8 }}>
+          Freedom Banker · прототип на реальных флоу
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    ROOT
    ═══════════════════════════════════════════════ */
 
@@ -3234,6 +3355,7 @@ export default function FreedomV6() {
           onOpenCard={(card) => pushScreen({ type: "product", card })}
           onOpenTotal={() => pushScreen({ type: "total" })}
           onOpenRequest={(request) => pushScreen({ type: "requestInfo", request })}
+          onOpenProfile={() => pushScreen({ type: "settings" })}
           C={C} theme={theme}
         />
       )}
@@ -3350,6 +3472,9 @@ export default function FreedomV6() {
             note={`${s.payload.from} · по запросу`}
             onDone={() => setNavStack([])}
           />
+        );
+        if (s.type === "settings") return (
+          <SettingsScreen key={i} C={C} onBack={popScreen} />
         );
         return null;
       })}

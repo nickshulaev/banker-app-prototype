@@ -246,6 +246,8 @@ const FEATURE_FLAGS = [
   { key: "securitySessionBiometry", desc: "Биометрия для входа (Face ID)", default: true },
   { key: "changephone", desc: "Смена номера телефона", default: true },
   { key: "changeIdentityDocument", desc: "Изменение паспортных данных", default: true },
+  { key: "certificateOfAccounts", desc: "Справки по счетам", default: true },
+  { key: "cardSetPin", desc: "Смена ПИН-кода карты", default: true },
 ];
 
 /* Stories — shown when `kursiv` flag is OFF (real app behavior) */
@@ -1886,7 +1888,7 @@ function BottomTabBar({ active, onChange, C }) {
    Шаблоны → «Себе» → «Другим» → «Оплата услуг»
    ═══════════════════════════════════════════════ */
 
-function PaymentsScreen({ C, featureFlags, onOpenStub, onTransferOwn, onRequestMoney, onPhoneTransfer, onConversion }) {
+function PaymentsScreen({ C, featureFlags, onOpenStub, onTransferOwn, onRequestMoney, onPhoneTransfer, onConversion, onQrScan }) {
   const Row = ({ Icon, color, title, subtitle, last, onClick }) => (
     <div data-press onClick={onClick || onOpenStub} style={{
       display: "flex", alignItems: "center", gap: 12,
@@ -2001,7 +2003,7 @@ function PaymentsScreen({ C, featureFlags, onOpenStub, onTransferOwn, onRequestM
 
         {/* Оплата услуг (paymentsSection) */}
         <Section title="Оплата услуг">
-          <Row Icon={QrCode} color="#22C55E" title="Оплата по QR или штрихкоду" />
+          <Row Icon={QrCode} color="#22C55E" title="Оплата по QR или штрихкоду" onClick={onQrScan} />
           {PAYMENT_CATEGORIES.map((cat, i) => (
             <Row key={cat.id} Icon={cat.Icon} color={cat.color} title={cat.title} last={i === PAYMENT_CATEGORIES.length - 1} />
           ))}
@@ -2016,7 +2018,7 @@ function PaymentsScreen({ C, featureFlags, onOpenStub, onTransferOwn, onRequestM
    Card visual + balance + actions + transactions
    ═══════════════════════════════════════════════ */
 
-function ProductDetailsScreen({ card, C, featureFlags, onBack, onTransfer, onOpenTransaction }) {
+function ProductDetailsScreen({ card, C, featureFlags, onBack, onTransfer, onOpenTransaction, onOpenLimits, onOpenPinChange, onOpenRequisites }) {
   const [panVisible, setPanVisible] = useState(false);
   const cm = CURRENCY_META[card.primaryCurrency] || { symbol: card.primaryCurrency };
   const fullPan = `4400 4300 1234 ${card.last4}`;
@@ -2116,7 +2118,7 @@ function ProductDetailsScreen({ card, C, featureFlags, onBack, onTransfer, onOpe
         {[
           { Icon: Plus, label: "Пополнить" },
           { Icon: Send, label: "Перевести", onClick: onTransfer },
-          { Icon: FileText, label: "Реквизиты" },
+          { Icon: FileText, label: "Реквизиты", onClick: onOpenRequisites },
           { Icon: Snowflake, label: "Заморозить" },
         ].map((a, i) => (
           <div key={i} data-press onClick={a.onClick} style={{
@@ -2210,11 +2212,12 @@ function ProductDetailsScreen({ card, C, featureFlags, onBack, onTransfer, onOpe
             border: `1px solid ${C.border}`, overflow: "hidden",
           }}>
             {[
-              { Icon: Settings2, title: "Лимиты по карте" },
-              { Icon: CreditCard, title: "Сменить ПИН-код" },
-              { Icon: FileText, title: "Реквизиты счёта" },
+              { Icon: Settings2, title: "Лимиты по карте", onClick: onOpenLimits },
+              /* real cardSetPin flag */
+              ...(featureFlags.cardSetPin ? [{ Icon: CreditCard, title: "Сменить ПИН-код", onClick: onOpenPinChange }] : []),
+              { Icon: FileText, title: "Реквизиты счёта", onClick: onOpenRequisites },
             ].map((r, i, arr) => (
-              <div key={i} data-press style={{
+              <div key={i} data-press onClick={r.onClick} style={{
                 display: "flex", alignItems: "center", gap: 12,
                 padding: "13px 16px", cursor: "pointer",
                 borderBottom: i < arr.length - 1 ? `1px solid ${C.divider}` : "none",
@@ -3243,7 +3246,7 @@ function RequestInfoScreen({ request, C, onBack, onAccept, onReject }) {
    (sections and texts from settingsFlow.settings.*)
    ═══════════════════════════════════════════════ */
 
-function SettingsScreen({ C, onBack, onOpenNotifications, onOpenProfileInfo, onOpenSecurity, onOpenDevices, onOpenLanguage }) {
+function SettingsScreen({ C, onBack, onOpenNotifications, onOpenProfileInfo, onOpenSecurity, onOpenDevices, onOpenLanguage, onOpenCertificates, onOpenHelp }) {
   const [hideAmount, setHideAmount] = useState(false);
   const isDark = C.bg === '#0E0F0C';
 
@@ -3328,7 +3331,7 @@ function SettingsScreen({ C, onBack, onOpenNotifications, onOpenProfileInfo, onO
 
         {/* Сервисы */}
         <Section>
-          <Row Icon={FileText} color="#0D9488" title="Заказ справок" subtitle="Для оформления визы и в налоговую" />
+          <Row Icon={FileText} color="#0D9488" title="Заказ справок" subtitle="Для оформления визы и в налоговую" onClick={onOpenCertificates} />
           <Row Icon={Plane} color="#3B82F6" title="Путешествия" subtitle="Авиабилеты, горящие туры, пассажиры" last />
         </Section>
 
@@ -3343,7 +3346,7 @@ function SettingsScreen({ C, onBack, onOpenNotifications, onOpenProfileInfo, onO
         {/* Банк */}
         <Section>
           <Row Icon={Landmark} color="#64748B" title="О Банке" subtitle="Адреса, телефоны, отделения..." />
-          <Row Icon={Phone} color="#22C55E" title="Связаться с Банком" subtitle="В чате или по телефону" last />
+          <Row Icon={Phone} color="#22C55E" title="Связаться с Банком" subtitle="В чате или по телефону" onClick={onOpenHelp} last />
         </Section>
 
         {/* Logout */}
@@ -4344,6 +4347,470 @@ function ConversionScreen({ C, onBack, onNext }) {
 }
 
 /* ═══════════════════════════════════════════════
+   CARD LIMITS — real «Лимиты расходов» (cpsFlow.setCardLimit)
+   ═══════════════════════════════════════════════ */
+
+function CardLimitsScreen({ C, card, onBack }) {
+  const isDark = C.bg === '#0E0F0C';
+  const [internetOn, setInternetOn] = useState(true);
+  const [abroadOn, setAbroadOn] = useState(false);
+
+  const limits = [
+    { label: "Снятие наличных", used: 120000, total: 500000 },
+    { label: "Покупки и платежи", used: 840000, total: 2000000 },
+  ];
+
+  const Toggle = ({ on, onToggle }) => (
+    <div onClick={onToggle} style={{
+      width: 38, height: 22, borderRadius: 11,
+      backgroundColor: on ? C.accentDark : (isDark ? "rgba(255,255,255,0.15)" : "#D1D5DB"),
+      position: "relative", cursor: "pointer", flexShrink: 0,
+      transition: "background-color 0.15s",
+    }}>
+      <div style={{
+        width: 18, height: 18, borderRadius: 9, backgroundColor: "#fff",
+        position: "absolute", top: 2, left: on ? 18 : 2,
+        transition: "left 0.15s",
+      }} />
+    </div>
+  );
+
+  return (
+    <ScreenShell C={C} title="Лимиты расходов" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        {/* real setCardLimit.subtitle */}
+        <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.5, marginBottom: 16 }}>
+          Лимит – это сумма, которую можно оплатить или снять в банкомате в течение месяца
+          с карты {card?.name || "DepositCard"} ••{card?.last4 || "4521"}
+        </div>
+
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 16,
+        }}>
+          {limits.map((l, i) => {
+            const pct = Math.round((l.used / l.total) * 100);
+            return (
+              <div key={i} style={{
+                padding: "14px 16px",
+                borderBottom: i < limits.length - 1 ? `1px solid ${C.divider}` : "none",
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{l.label}</span>
+                  <span data-press style={{ fontSize: 12, fontWeight: 600, color: C.text, opacity: 0.7, cursor: "pointer" }}>Изменить</span>
+                </div>
+                <div style={{
+                  height: 5, borderRadius: 3, backgroundColor: C.divider,
+                  overflow: "hidden", marginBottom: 7,
+                }}>
+                  <div style={{
+                    width: `${pct}%`, height: "100%",
+                    backgroundColor: pct > 80 ? "#EF4444" : C.accentDark,
+                    borderRadius: 3,
+                  }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 12, color: C.muted, fontFeatureSettings: "'tnum'" }}>
+                    Потрачено {fmtCompact(l.used)} ₸
+                  </span>
+                  <span style={{ fontSize: 12, color: C.muted, fontFeatureSettings: "'tnum'" }}>
+                    из {fmtCompact(l.total)} ₸
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1px solid ${C.border}`, overflow: "hidden",
+        }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 12,
+            padding: "13px 16px", borderBottom: `1px solid ${C.divider}`,
+          }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Интернет-платежи</div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Оплата в онлайн-магазинах</div>
+            </div>
+            <Toggle on={internetOn} onToggle={() => setInternetOn(v => !v)} />
+          </div>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 12,
+            padding: "13px 16px",
+          }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Операции за рубежом</div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Платежи и снятие вне Казахстана</div>
+            </div>
+            <Toggle on={abroadOn} onToggle={() => setAbroadOn(v => !v)} />
+          </div>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   REQUISITES — real «Реквизиты» (productsFlow.productRequisites.*)
+   ═══════════════════════════════════════════════ */
+
+function RequisitesScreen({ C, card, onBack }) {
+  const [copied, setCopied] = useState(false);
+  const rows = [
+    { label: "Получатель", value: "Шулаев Никита Сергеевич" },
+    { label: "Номер счёта", value: "KZ81 ALM3 X562 0014 5USD" },
+    { label: "Банк получателя", value: "АО «Банк Фридом Финанс Казахстан»" },
+    { label: "БИК", value: "KSNVKZKA" },
+    { label: "SWIFT код", value: "KSNVKZKA" },
+    { label: "КБе", value: "19" },
+  ];
+  return (
+    <ScreenShell C={C} title="Реквизиты" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        {/* real tableTitle */}
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.4 }}>
+          Информация о счёте
+        </div>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 20,
+        }}>
+          {rows.map((r, i) => (
+            <div key={i} style={{
+              padding: "12px 16px",
+              borderBottom: i < rows.length - 1 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <div style={{ fontSize: 12, color: C.muted }}>{r.label}</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginTop: 3, fontFeatureSettings: "'tnum'" }}>{r.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* real copy/copied + send */}
+        <div style={{ display: "flex", gap: 10 }}>
+          <div data-press onClick={() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }} style={{
+            flex: 1, backgroundColor: C.accentDark, borderRadius: 12, padding: "14px 0",
+            textAlign: "center", cursor: "pointer",
+          }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: C.accent }}>
+              {copied ? "Скопировано" : "Скопировать"}
+            </span>
+          </div>
+          <div data-press style={{
+            flex: 1, backgroundColor: C.faint, borderRadius: 12, padding: "14px 0",
+            textAlign: "center", cursor: "pointer",
+          }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Отправить</span>
+          </div>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   PIN CHANGE — real SetCardPin (authPin: «Придумайте новый код»)
+   ═══════════════════════════════════════════════ */
+
+function PinChangeScreen({ C, onBack, onDone }) {
+  const [step, setStep] = useState(0); // 0 = new, 1 = confirm
+  const [first, setFirst] = useState("");
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState(false);
+  const PIN_LEN = 4;
+
+  const press = (d) => {
+    setError(false);
+    setPin(prev => {
+      if (prev.length >= PIN_LEN) return prev;
+      const next = prev + d;
+      if (next.length === PIN_LEN) {
+        setTimeout(() => {
+          if (step === 0) {
+            setFirst(next); setPin(""); setStep(1);
+          } else if (next === first) {
+            onDone();
+          } else {
+            setError(true); setPin("");
+          }
+        }, 200);
+      }
+      return next;
+    });
+  };
+
+  const Key = ({ children, onClick, ghost }) => (
+    <div data-press onClick={onClick} style={{
+      width: 68, height: 68, borderRadius: "50%",
+      backgroundColor: ghost ? "transparent" : C.faint,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: 24, fontWeight: 600, color: C.text,
+      cursor: "pointer", userSelect: "none",
+    }}>{children}</div>
+  );
+
+  return (
+    <ScreenShell C={C} title="Сменить ПИН-код" onBack={onBack}>
+      <div style={{
+        display: "flex", flexDirection: "column", alignItems: "center",
+        padding: "24px 20px 110px",
+      }}>
+        {/* real authPin.newPin / checkNewText */}
+        <div style={{ fontSize: 15, fontWeight: 600, color: C.sub, marginBottom: 6 }}>
+          {step === 0 ? "Придумайте новый код" : "Подтвердите новый код"}
+        </div>
+        {error && (
+          <div style={{ fontSize: 12, color: "#EF4444", marginBottom: 4 }}>Коды не совпадают, попробуйте снова</div>
+        )}
+        <div style={{ display: "flex", gap: 14, margin: "18px 0 36px" }}>
+          {Array.from({ length: PIN_LEN }).map((_, i) => (
+            <div key={i} style={{
+              width: 13, height: 13, borderRadius: "50%",
+              backgroundColor: i < pin.length ? C.accentDark : C.divider,
+              transition: "background-color 0.15s",
+            }} />
+          ))}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 68px)", gap: "16px 26px" }}>
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
+            <Key key={n} onClick={() => press(String(n))}>{n}</Key>
+          ))}
+          <div />
+          <Key onClick={() => press("0")}>0</Key>
+          <Key ghost onClick={() => setPin(p => p.slice(0, -1))}>
+            <svg width="24" height="24" viewBox="0 0 26 26" fill="none">
+              <path d="M9 6h11a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6-7 6-7z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" style={{ color: C.muted }}/>
+              <path d="M12.5 10.5l5 5M17.5 10.5l-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ color: C.muted }}/>
+            </svg>
+          </Key>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   CERTIFICATES — real «Заказ справок»
+   («Справка о наличии счёта», «Сформировать справку», «Язык справки»)
+   ═══════════════════════════════════════════════ */
+
+function CertificatesScreen({ C, featureFlags, onBack, onDone }) {
+  const [type, setType] = useState(0);
+  const [lang, setLang] = useState("ru");
+  const types = [
+    ...(featureFlags.certificateOfAccounts ? [{ title: "Справка о наличии счёта", sub: "Для оформления визы и в налоговую" }] : []),
+    { title: "Справка о доступном остатке", sub: "Актуальный остаток на счетах" },
+    { title: "Выписка по счёту", sub: "Операции за выбранный период" },
+  ];
+  return (
+    <ScreenShell C={C} title="Заказ справок" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 20,
+        }}>
+          {types.map((t, i) => (
+            <div key={i} data-press onClick={() => setType(i)} style={{
+              display: "flex", alignItems: "center", gap: 12,
+              padding: "13px 16px", cursor: "pointer",
+              borderBottom: i < types.length - 1 ? `1px solid ${C.divider}` : "none",
+              backgroundColor: type === i ? C.accentSoft : "transparent",
+            }}>
+              <div style={{
+                width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
+                border: type === i ? "none" : `2px solid ${C.borderStrong}`,
+                backgroundColor: type === i ? C.accentDark : "transparent",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {type === i && <Check size={12} color={C.accent} strokeWidth={3} />}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{t.title}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{t.sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* real certificateLanguage + subtitle */}
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 4 }}>Язык справки</div>
+        <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Выберите язык документа</div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+          {[
+            { code: "ru", label: "Русский" },
+            { code: "kk", label: "Қазақша" },
+            { code: "en", label: "English" },
+          ].map(l => (
+            <div key={l.code} data-press onClick={() => setLang(l.code)} style={{
+              padding: "8px 14px", borderRadius: 18, cursor: "pointer",
+              fontSize: 13, fontWeight: 600,
+              backgroundColor: lang === l.code ? C.accentDark : C.faint,
+              color: lang === l.code ? C.accent : C.sub,
+              transition: "all 0.15s",
+            }}>{l.label}</div>
+          ))}
+        </div>
+
+        {/* real generateCertificateButton */}
+        <div data-press onClick={onDone} style={{
+          backgroundColor: C.accentDark, borderRadius: 12, padding: "15px 0",
+          textAlign: "center", cursor: "pointer", marginBottom: 14,
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>Сформировать справку</span>
+        </div>
+        <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.5 }}>
+          Готовая справка с печатью банка придёт на ваш email и появится в разделе «Документы»
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   HELP — real «Связаться с Банком» (helpFlow.helpMain.*)
+   ═══════════════════════════════════════════════ */
+
+function HelpScreen({ C, onBack }) {
+  return (
+    <ScreenShell C={C} title="Связаться с Банком" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        {/* Big phone */}
+        <div style={{
+          backgroundColor: C.accentDark, borderRadius: 14,
+          padding: "20px", textAlign: "center", marginBottom: 16,
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(159,232,112,0.7)", marginBottom: 6 }}>
+            Бесплатно с мобильного в Казахстане
+          </div>
+          <div style={{ fontSize: 32, fontWeight: 800, color: C.accent, letterSpacing: 1, fontFeatureSettings: "'tnum'" }}>
+            7711
+          </div>
+        </div>
+
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1px solid ${C.border}`, overflow: "hidden",
+        }}>
+          {/* real chatWithBank + subtitle */}
+          {[
+            { Icon: MessageCircle, color: "#22C55E", title: "Чат с Банком", sub: "Задать вопрос в чате" },
+            { Icon: Phone, color: "#3B82F6", title: "Звонок в банк", sub: "По телефону или через интернет" },
+            { Icon: FileText, color: "#8B5CF6", title: "Выписки и справки", sub: "Заказ документов" },
+          ].map((r, i, arr) => (
+            <div key={i} data-press style={{
+              display: "flex", alignItems: "center", gap: 12,
+              padding: "13px 16px", cursor: "pointer",
+              borderBottom: i < arr.length - 1 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: "50%",
+                backgroundColor: `${r.color}14`,
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}>
+                <r.Icon size={16} color={r.color} strokeWidth={1.9} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{r.title}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{r.sub}</div>
+              </div>
+              <ChevronRight size={15} color={C.muted} strokeWidth={1.8} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   QR SCANNER — «Оплата по QR или штрихкоду» (mock camera)
+   ═══════════════════════════════════════════════ */
+
+function QrScannerScreen({ onBack }) {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 80,
+      maxWidth: 430, margin: "0 auto",
+      backgroundColor: "#0A0E14",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', system-ui, sans-serif",
+      animation: "screen-slide-in 0.25s ease-out",
+      display: "flex", flexDirection: "column",
+    }}>
+      <div style={{ alignSelf: "stretch" }}>
+        <StatusBar C={{ text: "#F8FAFC" }} />
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px 16px" }}>
+        <div data-press onClick={onBack} style={{
+          width: 36, height: 36, borderRadius: "50%",
+          display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+        }}>
+          <ArrowLeft size={20} color="#F8FAFC" strokeWidth={2} />
+        </div>
+        <div style={{ flex: 1, textAlign: "center", fontSize: 16, fontWeight: 700, color: "#F8FAFC" }}>
+          Оплата по QR
+        </div>
+        <div style={{ width: 36 }} />
+      </div>
+
+      {/* Camera viewport mock */}
+      <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "radial-gradient(circle at 50% 40%, rgba(34,197,94,0.06) 0%, transparent 55%)",
+        }} />
+        {/* Scan frame */}
+        <div style={{ width: 240, height: 240, position: "relative" }}>
+          {[
+            { top: 0, left: 0, borderTop: "3px solid #9FE870", borderLeft: "3px solid #9FE870", borderRadius: "14px 0 0 0" },
+            { top: 0, right: 0, borderTop: "3px solid #9FE870", borderRight: "3px solid #9FE870", borderRadius: "0 14px 0 0" },
+            { bottom: 0, left: 0, borderBottom: "3px solid #9FE870", borderLeft: "3px solid #9FE870", borderRadius: "0 0 0 14px" },
+            { bottom: 0, right: 0, borderBottom: "3px solid #9FE870", borderRight: "3px solid #9FE870", borderRadius: "0 0 14px 0" },
+          ].map((s, i) => (
+            <div key={i} style={{ position: "absolute", width: 46, height: 46, ...s }} />
+          ))}
+          <div style={{
+            position: "absolute", left: 10, right: 10, top: "48%", height: 2,
+            background: "linear-gradient(90deg, transparent, #9FE870, transparent)",
+            opacity: 0.8,
+          }} />
+        </div>
+        <div style={{
+          position: "absolute", bottom: 36, left: 0, right: 0,
+          textAlign: "center", fontSize: 14, fontWeight: 500,
+          color: "rgba(248,250,252,0.8)",
+        }}>
+          Наведите камеру на QR-код или штрихкод
+        </div>
+      </div>
+
+      {/* Bottom controls */}
+      <div style={{
+        display: "flex", justifyContent: "center", gap: 48,
+        padding: "20px 0 44px",
+      }}>
+        {[
+          { label: "Фонарик", icon: <Zap size={20} color="#F8FAFC" strokeWidth={1.8} /> },
+          { label: "Из галереи", icon: <LayoutGrid size={20} color="#F8FAFC" strokeWidth={1.8} /> },
+        ].map((b, i) => (
+          <div key={i} data-press style={{
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 8, cursor: "pointer",
+          }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: "50%",
+              backgroundColor: "rgba(248,250,252,0.08)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>{b.icon}</div>
+            <span style={{ fontSize: 11, color: "rgba(248,250,252,0.65)" }}>{b.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    ROOT
    ═══════════════════════════════════════════════ */
 
@@ -4445,6 +4912,7 @@ export default function FreedomV6() {
           onRequestMoney={() => pushScreen({ type: "requestCreate" })}
           onPhoneTransfer={() => pushScreen({ type: "phoneTransfer" })}
           onConversion={() => pushScreen({ type: "conversion" })}
+          onQrScan={() => pushScreen({ type: "qrScanner" })}
         />
       )}
       {activeTab === "statistics" && (
@@ -4462,7 +4930,48 @@ export default function FreedomV6() {
             onBack={popScreen}
             onTransfer={() => pushScreen({ type: "transferOwn" })}
             onOpenTransaction={(tx) => pushScreen({ type: "transaction", tx })}
+            onOpenLimits={() => pushScreen({ type: "cardLimits", card: s.card })}
+            onOpenPinChange={() => pushScreen({ type: "pinChange" })}
+            onOpenRequisites={() => pushScreen({ type: "requisites", card: s.card })}
           />
+        );
+        if (s.type === "cardLimits") return (
+          <CardLimitsScreen key={i} C={C} card={s.card} onBack={popScreen} />
+        );
+        if (s.type === "requisites") return (
+          <RequisitesScreen key={i} C={C} card={s.card} onBack={popScreen} />
+        );
+        if (s.type === "pinChange") return (
+          <PinChangeScreen key={i} C={C}
+            onBack={popScreen}
+            onDone={() => pushScreen({ type: "pinChangeResult" })}
+          />
+        );
+        if (s.type === "pinChangeResult") return (
+          <SuccessScreen key={i} C={C}
+            title="Успешно"
+            message="ПИН-код карты изменён"
+            onDone={() => setNavStack([])}
+          />
+        );
+        if (s.type === "certificates") return (
+          <CertificatesScreen key={i} C={C} featureFlags={featureFlags}
+            onBack={popScreen}
+            onDone={() => pushScreen({ type: "certificatesResult" })}
+          />
+        );
+        if (s.type === "certificatesResult") return (
+          <SuccessScreen key={i} C={C}
+            title="Справка сформирована"
+            message="Документ с печатью банка отправлен на n.shulaev@ff···.com"
+            onDone={() => setNavStack([])}
+          />
+        );
+        if (s.type === "help") return (
+          <HelpScreen key={i} C={C} onBack={popScreen} />
+        );
+        if (s.type === "qrScanner") return (
+          <QrScannerScreen key={i} onBack={popScreen} />
         );
         if (s.type === "transferOwn") return (
           <TransferOwnScreen key={i} C={C} featureFlags={featureFlags}
@@ -4561,6 +5070,8 @@ export default function FreedomV6() {
             onOpenSecurity={() => pushScreen({ type: "security" })}
             onOpenDevices={() => pushScreen({ type: "devices" })}
             onOpenLanguage={() => pushScreen({ type: "language" })}
+            onOpenCertificates={() => pushScreen({ type: "certificates" })}
+            onOpenHelp={() => pushScreen({ type: "help" })}
           />
         );
         if (s.type === "profileInfo") return (

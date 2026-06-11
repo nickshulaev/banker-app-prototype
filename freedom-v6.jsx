@@ -225,6 +225,7 @@ const FEATURE_FLAGS = [
   { key: "conversionRates", desc: "Курсы валют на экране переводов", default: true },
   { key: "cardPanCVV", desc: "Показ номера карты в деталях", default: true },
   { key: "transferSwap", desc: "Кнопка «Поменять счета местами»", default: true },
+  { key: "split", desc: "Сплит счёта — кнопка «Разделить»", default: true },
 ];
 
 /* Stories — shown when `kursiv` flag is OFF (real app behavior) */
@@ -830,7 +831,7 @@ function MainScreen({
   totalInKZT, productTab, setProductTab,
   blockVis, blockOrder, emptyState, activeCardProducts, activeAccounts,
   activeLoans, activeCredits, activePromos, activeNews, activeRequests,
-  featureFlags, onOpenCard, onOpenTotal,
+  featureFlags, onOpenCard, onOpenTotal, onOpenRequest,
   C, theme,
 }) {
   const isDark = C.bg === '#0E0F0C';
@@ -944,7 +945,7 @@ function MainScreen({
       {/* ═══ REQUESTS ═══ (gated by real flag `moneyRequest`) */}
       {blockVis.requests && featureFlags.moneyRequest && activeRequests.length > 0 && (
       <div style={{ order: blockOrder.indexOf("requests"), padding: "0 20px 16px" }}>
-        <div data-press style={{
+        <div data-press onClick={() => onOpenRequest?.(activeRequests[requestIndex])} style={{
           backgroundColor: C.card, borderRadius: 12, padding: "14px 16px",
           border: `1px solid ${C.border}`, cursor: "pointer",
           display: "flex", alignItems: "center", gap: 12,
@@ -1794,7 +1795,7 @@ function BottomTabBar({ active, onChange, C }) {
    Шаблоны → «Себе» → «Другим» → «Оплата услуг»
    ═══════════════════════════════════════════════ */
 
-function PaymentsScreen({ C, featureFlags, onOpenStub, onTransferOwn }) {
+function PaymentsScreen({ C, featureFlags, onOpenStub, onTransferOwn, onRequestMoney }) {
   const Row = ({ Icon, color, title, subtitle, last, onClick }) => (
     <div data-press onClick={onClick || onOpenStub} style={{
       display: "flex", alignItems: "center", gap: 12,
@@ -1902,7 +1903,7 @@ function PaymentsScreen({ C, featureFlags, onOpenStub, onTransferOwn }) {
             <Row Icon={Globe} color="#06B6D4" title="Переводом SWIFT" subtitle="В любую страну" />
           )}
           {featureFlags.moneyRequest && (
-            <Row Icon={Send} color="#EC4899" title="Запросить" subtitle="У клиента банка" />
+            <Row Icon={Send} color="#EC4899" title="Запросить" subtitle="У клиента банка" onClick={onRequestMoney} />
           )}
           <Row Icon={TrendingUp} color="#F59E0B" title="На брокерский счёт" subtitle="Freedom Broker" last />
         </Section>
@@ -1924,7 +1925,7 @@ function PaymentsScreen({ C, featureFlags, onOpenStub, onTransferOwn }) {
    Card visual + balance + actions + transactions
    ═══════════════════════════════════════════════ */
 
-function ProductDetailsScreen({ card, C, featureFlags, onBack, onTransfer }) {
+function ProductDetailsScreen({ card, C, featureFlags, onBack, onTransfer, onOpenTransaction }) {
   const [panVisible, setPanVisible] = useState(false);
   const cm = CURRENCY_META[card.primaryCurrency] || { symbol: card.primaryCurrency };
   const fullPan = `4400 4300 1234 ${card.last4}`;
@@ -2083,7 +2084,7 @@ function ProductDetailsScreen({ card, C, featureFlags, onBack, onTransfer }) {
             border: `1px solid ${C.border}`, overflow: "hidden",
           }}>
             {TRANSACTIONS.map((t, i) => (
-              <div key={t.id} data-press style={{
+              <div key={t.id} data-press onClick={() => onOpenTransaction?.(t)} style={{
                 display: "flex", alignItems: "center", gap: 12,
                 padding: "13px 16px", cursor: "pointer",
                 borderBottom: i < TRANSACTIONS.length - 1 ? `1px solid ${C.divider}` : "none",
@@ -2185,7 +2186,7 @@ function StubScreen({ C, title, note }) {
    («Статистика», «Движение средств», «Категории расходов»)
    ═══════════════════════════════════════════════ */
 
-function StatisticsScreen({ C }) {
+function StatisticsScreen({ C, onOpenTransaction }) {
   const [period, setPeriod] = useState("month");
   const spent = TRANSACTIONS.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
   const income = TRANSACTIONS.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
@@ -2308,7 +2309,7 @@ function StatisticsScreen({ C }) {
             border: `1px solid ${C.border}`, overflow: "hidden",
           }}>
             {TRANSACTIONS.map((t, i) => (
-              <div key={t.id} data-press style={{
+              <div key={t.id} data-press onClick={() => onOpenTransaction?.(t)} style={{
                 display: "flex", alignItems: "center", gap: 12,
                 padding: "13px 16px", cursor: "pointer",
                 borderBottom: i < TRANSACTIONS.length - 1 ? `1px solid ${C.divider}` : "none",
@@ -2653,6 +2654,500 @@ function ProductsTotalScreen({ C, totalInKZT, displayCurrency, onBack }) {
 }
 
 /* ═══════════════════════════════════════════════
+   SUCCESS SCREEN — generic result (Запрос отправлен / Успешно)
+   ═══════════════════════════════════════════════ */
+
+function SuccessScreen({ C, title, message, amountStr, note, onDone }) {
+  return (
+    <ScreenShell C={C} title="">
+      <div style={{
+        display: "flex", flexDirection: "column", alignItems: "center",
+        padding: "48px 40px 110px", textAlign: "center",
+      }}>
+        <div style={{
+          width: 88, height: 88, borderRadius: "50%",
+          backgroundColor: "rgba(34,197,94,0.12)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          marginBottom: 24,
+        }}>
+          <div style={{
+            width: 60, height: 60, borderRadius: "50%",
+            backgroundColor: "#22C55E",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <Check size={30} color="#fff" strokeWidth={3} />
+          </div>
+        </div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: C.text, marginBottom: 8 }}>{title}</div>
+        {message && <div style={{ fontSize: 14, color: C.sub, lineHeight: 1.5 }}>{message}</div>}
+        {amountStr && (
+          <div style={{ fontSize: 28, fontWeight: 800, color: C.text, fontFeatureSettings: "'tnum'", margin: "12px 0 4px" }}>
+            {amountStr}
+          </div>
+        )}
+        {note && <div style={{ fontSize: 13, color: C.muted, marginBottom: 40 }}>{note}</div>}
+        {!note && <div style={{ marginBottom: 40 }} />}
+        <div data-press onClick={onDone} style={{
+          backgroundColor: C.accentDark, borderRadius: 12, padding: "15px 0",
+          textAlign: "center", cursor: "pointer", alignSelf: "stretch",
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>Готово</span>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   TRANSACTION DETAILS — real TransacitonDetails
+   («Транзакция», Карта списания, «В шаблоны», «Разделить»)
+   ═══════════════════════════════════════════════ */
+
+function TransactionDetailsScreen({ tx, C, featureFlags, onBack, onSplit }) {
+  const isExpense = tx.amount < 0;
+  return (
+    <ScreenShell C={C} title="Транзакция" onBack={onBack}>
+      <div style={{ padding: "4px 20px 110px" }}>
+        {/* Header */}
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: "50%",
+            backgroundColor: `${tx.color}14`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            margin: "0 auto 14px",
+          }}>
+            <tx.Icon size={26} color={tx.color} strokeWidth={1.9} />
+          </div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 4 }}>{tx.name}</div>
+          <div style={{ fontSize: 13, color: C.muted, marginBottom: 14 }}>{tx.category}</div>
+          <div style={{
+            fontSize: 32, fontWeight: 800, fontFeatureSettings: "'tnum'", letterSpacing: -1,
+            color: tx.amount > 0 ? "#16A34A" : C.text,
+          }}>
+            {tx.amount > 0 ? "+" : ""}{fmtFull(tx.amount)} <span style={{ fontSize: 18, color: C.muted }}>₸</span>
+          </div>
+          {/* Status chip */}
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 5,
+            marginTop: 12, padding: "5px 12px", borderRadius: 14,
+            backgroundColor: "rgba(34,197,94,0.1)",
+          }}>
+            <Check size={12} color="#16A34A" strokeWidth={2.5} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#16A34A" }}>Успешно</span>
+          </div>
+        </div>
+
+        {/* Details rows — real transactionDetails labels */}
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 16,
+        }}>
+          {[
+            { label: isExpense ? "Карта списания" : "Карта зачисления", value: "DepositCard ••4521" },
+            { label: "Дата и время", value: tx.time },
+            { label: "Категория", value: tx.category },
+            { label: "Статус", value: "Проведена" },
+          ].map((r, i, arr) => (
+            <div key={i} style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              padding: "13px 16px", gap: 12,
+              borderBottom: i < arr.length - 1 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <span style={{ fontSize: 13, color: C.muted, flexShrink: 0 }}>{r.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.text, textAlign: "right" }}>{r.value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Actions: В шаблоны + Разделить (real `split` flag) */}
+        <div style={{ display: "flex", gap: 10 }}>
+          <div data-press style={{
+            flex: 1, backgroundColor: C.faint, borderRadius: 12, padding: "14px 0",
+            textAlign: "center", cursor: "pointer",
+          }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>В шаблоны</span>
+          </div>
+          {featureFlags.split && isExpense && (
+            <div data-press onClick={() => onSplit(tx)} style={{
+              flex: 1, backgroundColor: C.accentDark, borderRadius: 12, padding: "14px 0",
+              textAlign: "center", cursor: "pointer",
+            }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: C.accent }}>Разделить</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   SPLIT PAYMENT — real SplitPayment flow
+   («Разделить счет» → «Подтверждение» → «Запрос отправлен»)
+   ═══════════════════════════════════════════════ */
+
+function SplitMainScreen({ tx, C, onBack, onNext }) {
+  const [selected, setSelected] = useState([1, 2]); // ids from RECENT_TRANSFERS
+  const total = Math.abs(tx.amount);
+  const perPerson = total / (selected.length + 1); // + you
+  const toggle = (id) => setSelected(prev =>
+    prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+  );
+
+  return (
+    <ScreenShell C={C} title="Разделить счет" onBack={onBack}>
+      <div style={{ padding: "4px 20px 110px" }}>
+        {/* Вы заплатили (real youPaid) */}
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div style={{ fontSize: 13, color: C.muted, fontWeight: 500, marginBottom: 8 }}>Вы заплатили</div>
+          <div style={{ fontSize: 32, fontWeight: 800, color: C.text, fontFeatureSettings: "'tnum'", letterSpacing: -1 }}>
+            {fmtFull(total)} <span style={{ fontSize: 18, color: C.muted }}>₸</span>
+          </div>
+          <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>{tx.name}</div>
+        </div>
+
+        {/* Разделить между (real splitBetween) */}
+        <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 12 }}>Разделить между</div>
+        <div style={{ display: "flex", gap: 14, overflowX: "auto", scrollbarWidth: "none", paddingBottom: 8, marginBottom: 20 }}>
+          {/* Это вы (real its.you) */}
+          <div style={{
+            flexShrink: 0, width: 56, display: "flex", flexDirection: "column",
+            alignItems: "center", gap: 6, opacity: 0.6,
+          }}>
+            <div style={{
+              width: 50, height: 50, borderRadius: "50%",
+              backgroundColor: C.accentDark,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 13, fontWeight: 700, color: C.accent,
+            }}>НШ</div>
+            <span style={{ fontSize: 10, color: C.muted, whiteSpace: "nowrap" }}>Это вы</span>
+          </div>
+          {RECENT_TRANSFERS.map(c => {
+            const on = selected.includes(c.id);
+            return (
+              <div key={c.id} data-press onClick={() => toggle(c.id)} style={{
+                flexShrink: 0, width: 56, display: "flex", flexDirection: "column",
+                alignItems: "center", gap: 6, cursor: "pointer", position: "relative",
+              }}>
+                <div style={{
+                  width: 50, height: 50, borderRadius: "50%",
+                  background: `linear-gradient(135deg, ${c.color}aa 0%, ${c.color} 100%)`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 22, lineHeight: 1,
+                  border: on ? "2.5px solid #22C55E" : "2.5px solid transparent",
+                  opacity: on ? 1 : 0.55,
+                  transition: "all 0.15s",
+                }}>{c.photo}</div>
+                {on && (
+                  <div style={{
+                    position: "absolute", top: -2, right: 0,
+                    width: 18, height: 18, borderRadius: "50%",
+                    backgroundColor: "#22C55E", border: `2px solid ${C.bg}`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <Check size={10} color="#fff" strokeWidth={3} />
+                  </div>
+                )}
+                <span style={{
+                  fontSize: 10, fontWeight: 500, color: on ? C.sub : C.muted,
+                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 56,
+                }}>{c.name}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Как разделить (real splitTypeTitle / bySumTitle) */}
+        <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 12 }}>Как разделить</div>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12, border: `1.5px solid ${C.accentDark}`,
+          padding: "13px 16px", display: "flex", alignItems: "center", gap: 12, marginBottom: 20,
+        }}>
+          <div style={{
+            width: 20, height: 20, borderRadius: "50%",
+            backgroundColor: C.accentDark,
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          }}>
+            <Check size={12} color={C.accent} strokeWidth={3} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>По сумме</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Сумма делится на всех участников</div>
+          </div>
+        </div>
+
+        {/* Preview */}
+        {selected.length > 0 && (
+          <div style={{
+            backgroundColor: C.faint, borderRadius: 12, padding: "12px 16px",
+            fontSize: 13, color: C.sub, marginBottom: 20, lineHeight: 1.5,
+          }}>
+            Заплатит вам: <b style={{ color: C.text, fontFeatureSettings: "'tnum'" }}>{fmtFull(perPerson)} ₸</b> × {selected.length} {selected.length === 1 ? "участник" : selected.length < 5 ? "участника" : "участников"}
+          </div>
+        )}
+
+        <div data-press onClick={() => selected.length > 0 && onNext({ tx, contactIds: selected, perPerson })} style={{
+          backgroundColor: selected.length > 0 ? C.accentDark : C.faint,
+          borderRadius: 12, padding: "15px 0", textAlign: "center",
+          cursor: selected.length > 0 ? "pointer" : "default",
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: selected.length > 0 ? C.accent : C.muted }}>Продолжить</span>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+function SplitConfirmScreen({ C, payload, onBack, onConfirm }) {
+  const { tx, contactIds, perPerson } = payload;
+  const contacts = RECENT_TRANSFERS.filter(c => contactIds.includes(c.id));
+  return (
+    <ScreenShell C={C} title="Подтверждение" onBack={onBack}>
+      <div style={{ padding: "4px 20px 110px" }}>
+        <div style={{ textAlign: "center", margin: "12px 0 28px" }}>
+          <div style={{ fontSize: 13, color: C.muted, fontWeight: 500, marginBottom: 8 }}>Разделить счет · {tx.name}</div>
+          <div style={{ fontSize: 36, fontWeight: 800, color: C.text, letterSpacing: -1, fontFeatureSettings: "'tnum'" }}>
+            {fmtFull(Math.abs(tx.amount))} <span style={{ fontSize: 20, color: C.muted }}>₸</span>
+          </div>
+        </div>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 24,
+        }}>
+          {contacts.map((c, i) => (
+            <div key={c.id} style={{
+              display: "flex", alignItems: "center", gap: 12,
+              padding: "13px 16px",
+              borderBottom: `1px solid ${C.divider}`,
+            }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: "50%",
+                background: `linear-gradient(135deg, ${c.color}aa 0%, ${c.color} 100%)`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 17, flexShrink: 0,
+              }}>{c.photo}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{c.name} {c.surname}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Заплатит вам</div>
+              </div>
+              <span style={{ fontSize: 14, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
+                {fmtFull(perPerson)} <span style={{ fontSize: 11, color: C.muted }}>₸</span>
+              </span>
+            </div>
+          ))}
+          <div style={{
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            padding: "13px 16px", backgroundColor: C.faint,
+          }}>
+            <span style={{ fontSize: 13, color: C.muted }}>Итого вернётся</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: "#16A34A", fontFeatureSettings: "'tnum'" }}>
+              +{fmtFull(perPerson * contacts.length)} ₸
+            </span>
+          </div>
+        </div>
+        <div data-press onClick={onConfirm} style={{
+          backgroundColor: C.accentDark, borderRadius: 12, padding: "15px 0",
+          textAlign: "center", cursor: "pointer",
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>Разделить</span>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   TRANSFER REQUEST — real «Запрос денег», both sides
+   Create: form → «Подтверждение» (кнопка «Запросить») → «Запрос отправлен»
+   Incoming: «Запрос денег» with Отправить / Отклонить
+   ═══════════════════════════════════════════════ */
+
+function RequestCreateScreen({ C, onBack, onNext }) {
+  const [selectedId, setSelectedId] = useState(1);
+  const [amount, setAmount] = useState("5000");
+  const num = parseFloat(amount.replace(",", ".")) || 0;
+  const valid = num > 0;
+  const contact = RECENT_TRANSFERS.find(c => c.id === selectedId);
+
+  return (
+    <ScreenShell C={C} title="Запрос денег" onBack={onBack}>
+      <div style={{ padding: "4px 20px 110px" }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8 }}>У кого запросить</div>
+        <div style={{ display: "flex", gap: 14, overflowX: "auto", scrollbarWidth: "none", paddingBottom: 8, marginBottom: 16 }}>
+          {RECENT_TRANSFERS.map(c => {
+            const on = c.id === selectedId;
+            return (
+              <div key={c.id} data-press onClick={() => setSelectedId(c.id)} style={{
+                flexShrink: 0, width: 56, display: "flex", flexDirection: "column",
+                alignItems: "center", gap: 6, cursor: "pointer",
+              }}>
+                <div style={{
+                  width: 50, height: 50, borderRadius: "50%",
+                  background: `linear-gradient(135deg, ${c.color}aa 0%, ${c.color} 100%)`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 22, lineHeight: 1,
+                  border: on ? "2.5px solid #22C55E" : "2.5px solid transparent",
+                  opacity: on ? 1 : 0.55,
+                  transition: "all 0.15s",
+                }}>{c.photo}</div>
+                <span style={{
+                  fontSize: 10, fontWeight: 500, color: on ? C.sub : C.muted,
+                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 56,
+                }}>{c.name}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>Сумма</div>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1.5px solid ${C.border}`,
+          padding: "16px", display: "flex", alignItems: "center", gap: 8, marginBottom: 12,
+        }}>
+          <input
+            value={amount}
+            onChange={e => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
+            inputMode="decimal"
+            placeholder="0"
+            style={{
+              flex: 1, border: "none", outline: "none", background: "transparent",
+              fontSize: 26, fontWeight: 800, color: C.text,
+              fontFamily: "inherit", fontFeatureSettings: "'tnum'", minWidth: 0,
+            }}
+          />
+          <span style={{ fontSize: 20, fontWeight: 700, color: C.muted }}>₸</span>
+        </div>
+
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>Зачислить на счёт</div>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+          padding: "13px 16px", display: "flex", alignItems: "center", gap: 12, marginBottom: 24,
+        }}>
+          <div style={{
+            width: 38, height: 38, borderRadius: "50%", backgroundColor: C.faint,
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0,
+          }}>🇰🇿</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>DepositCard</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>••4521</div>
+          </div>
+        </div>
+
+        <div data-press onClick={() => valid && onNext({ contact, amount: num })} style={{
+          backgroundColor: valid ? C.accentDark : C.faint,
+          borderRadius: 12, padding: "15px 0", textAlign: "center",
+          cursor: valid ? "pointer" : "default",
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: valid ? C.accent : C.muted }}>Запросить</span>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+function RequestConfirmScreen({ C, payload, onBack, onConfirm }) {
+  const { contact, amount } = payload;
+  const rows = [
+    { label: "У кого", value: `${contact.name} ${contact.surname}` },
+    { label: "Сумма", value: `${fmtFull(amount)} ₸` },
+    { label: "Зачислить на", value: "DepositCard ••4521" },
+    { label: "Срок действия", value: "7 дней" },
+  ];
+  return (
+    <ScreenShell C={C} title="Подтверждение" onBack={onBack}>
+      <div style={{ padding: "4px 20px 110px" }}>
+        <div style={{ textAlign: "center", margin: "12px 0 28px" }}>
+          <div style={{ fontSize: 13, color: C.muted, fontWeight: 500, marginBottom: 8 }}>Запрос денег</div>
+          <div style={{ fontSize: 36, fontWeight: 800, color: C.text, letterSpacing: -1, fontFeatureSettings: "'tnum'" }}>
+            {fmtFull(amount)} <span style={{ fontSize: 20, color: C.muted }}>₸</span>
+          </div>
+        </div>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 24,
+        }}>
+          {rows.map((r, i) => (
+            <div key={i} style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              padding: "13px 16px", gap: 12,
+              borderBottom: i < rows.length - 1 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <span style={{ fontSize: 13, color: C.muted, flexShrink: 0 }}>{r.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.text, textAlign: "right" }}>{r.value}</span>
+            </div>
+          ))}
+        </div>
+        <div data-press onClick={onConfirm} style={{
+          backgroundColor: C.accentDark, borderRadius: 12, padding: "15px 0",
+          textAlign: "center", cursor: "pointer",
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>Запросить</span>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+function RequestInfoScreen({ request, C, onBack, onAccept, onReject }) {
+  const cm = CURRENCY_META[request.currency] || { symbol: request.currency };
+  return (
+    <ScreenShell C={C} title="Запрос денег" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        {/* real navigationSubtitle.issueToday */}
+        <div style={{ textAlign: "center", fontSize: 12, color: C.muted, marginTop: -10, marginBottom: 24 }}>
+          Ожидается подтверждение, истекает сегодня
+        </div>
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: "50%",
+            backgroundColor: C.faint,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 20, fontWeight: 700, color: C.text,
+            margin: "0 auto 14px",
+          }}>{request.initials}</div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 12 }}>
+            {request.from} запрашивает у вас
+          </div>
+          <div style={{ fontSize: 36, fontWeight: 800, color: C.text, letterSpacing: -1, fontFeatureSettings: "'tnum'" }}>
+            {fmtFull(request.amount)} <span style={{ fontSize: 20, color: C.muted }}>{cm.symbol}</span>
+          </div>
+        </div>
+
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>Счёт списания</div>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+          padding: "13px 16px", display: "flex", alignItems: "center", gap: 12, marginBottom: 24,
+        }}>
+          <div style={{
+            width: 38, height: 38, borderRadius: "50%", backgroundColor: C.faint,
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0,
+          }}>🇺🇸</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Текущий счёт</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>••145USD · 12 345,67 $</div>
+          </div>
+        </div>
+
+        {/* real buttons: Отправить / Отклонить */}
+        <div data-press onClick={onAccept} style={{
+          backgroundColor: C.accentDark, borderRadius: 12, padding: "15px 0",
+          textAlign: "center", cursor: "pointer", marginBottom: 10,
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>Отправить</span>
+        </div>
+        <div data-press onClick={onReject} style={{
+          backgroundColor: C.faint, borderRadius: 12, padding: "15px 0",
+          textAlign: "center", cursor: "pointer",
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: "#EF4444" }}>Отклонить</span>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    ROOT
    ═══════════════════════════════════════════════ */
 
@@ -2738,6 +3233,7 @@ export default function FreedomV6() {
           activeRequests={activeRequests}
           onOpenCard={(card) => pushScreen({ type: "product", card })}
           onOpenTotal={() => pushScreen({ type: "total" })}
+          onOpenRequest={(request) => pushScreen({ type: "requestInfo", request })}
           C={C} theme={theme}
         />
       )}
@@ -2745,10 +3241,13 @@ export default function FreedomV6() {
         <PaymentsScreen C={C} featureFlags={featureFlags}
           onOpenStub={() => {}}
           onTransferOwn={() => pushScreen({ type: "transferOwn" })}
+          onRequestMoney={() => pushScreen({ type: "requestCreate" })}
         />
       )}
       {activeTab === "statistics" && (
-        <StatisticsScreen C={C} />
+        <StatisticsScreen C={C}
+          onOpenTransaction={(tx) => pushScreen({ type: "transaction", tx })}
+        />
       )}
       {activeTab === "chats" && (
         <StubScreen C={C} title="Чаты"
@@ -2759,6 +3258,7 @@ export default function FreedomV6() {
           <ProductDetailsScreen key={i} card={s.card} C={C} featureFlags={featureFlags}
             onBack={popScreen}
             onTransfer={() => pushScreen({ type: "transferOwn" })}
+            onOpenTransaction={(tx) => pushScreen({ type: "transaction", tx })}
           />
         );
         if (s.type === "transferOwn") return (
@@ -2782,6 +3282,73 @@ export default function FreedomV6() {
           <ProductsTotalScreen key={i} C={C}
             totalInKZT={totalInKZT} displayCurrency={displayCurrency}
             onBack={popScreen}
+          />
+        );
+        if (s.type === "transaction") return (
+          <TransactionDetailsScreen key={i} tx={s.tx} C={C} featureFlags={featureFlags}
+            onBack={popScreen}
+            onSplit={(tx) => pushScreen({ type: "splitMain", tx })}
+          />
+        );
+        if (s.type === "splitMain") return (
+          <SplitMainScreen key={i} tx={s.tx} C={C}
+            onBack={popScreen}
+            onNext={(payload) => pushScreen({ type: "splitConfirm", payload })}
+          />
+        );
+        if (s.type === "splitConfirm") return (
+          <SplitConfirmScreen key={i} C={C} payload={s.payload}
+            onBack={popScreen}
+            onConfirm={() => pushScreen({ type: "splitResult", payload: s.payload })}
+          />
+        );
+        if (s.type === "splitResult") return (
+          <SuccessScreen key={i} C={C}
+            title="Запрос отправлен"
+            message="Ожидается оплата, истекает через 7 дней"
+            amountStr={`+${fmtFull(s.payload.perPerson * s.payload.contactIds.length)} ₸`}
+            note={`${s.payload.contactIds.length} ${s.payload.contactIds.length === 1 ? "участник" : s.payload.contactIds.length < 5 ? "участника" : "участников"} · по ${fmtFull(s.payload.perPerson)} ₸`}
+            onDone={() => setNavStack([])}
+          />
+        );
+        if (s.type === "requestCreate") return (
+          <RequestCreateScreen key={i} C={C}
+            onBack={popScreen}
+            onNext={(payload) => pushScreen({ type: "requestConfirm", payload })}
+          />
+        );
+        if (s.type === "requestConfirm") return (
+          <RequestConfirmScreen key={i} C={C} payload={s.payload}
+            onBack={popScreen}
+            onConfirm={() => pushScreen({ type: "requestResult", payload: s.payload })}
+          />
+        );
+        if (s.type === "requestResult") return (
+          <SuccessScreen key={i} C={C}
+            title="Запрос отправлен"
+            message={`${s.payload.contact.name} ${s.payload.contact.surname} получит уведомление`}
+            amountStr={`${fmtFull(s.payload.amount)} ₸`}
+            note="Ожидается подтверждение, истекает через 7 дней"
+            onDone={() => setNavStack([])}
+          />
+        );
+        if (s.type === "requestInfo") return (
+          <RequestInfoScreen key={i} request={s.request} C={C}
+            onBack={popScreen}
+            onReject={popScreen}
+            onAccept={() => pushScreen({
+              type: "requestAccepted",
+              payload: s.request,
+            })}
+          />
+        );
+        if (s.type === "requestAccepted") return (
+          <SuccessScreen key={i} C={C}
+            title="Успешно"
+            message="Перевод выполнен"
+            amountStr={`${fmtFull(s.payload.amount)} ${CURRENCY_META[s.payload.currency]?.symbol || s.payload.currency}`}
+            note={`${s.payload.from} · по запросу`}
+            onDone={() => setNavStack([])}
           />
         );
         return null;

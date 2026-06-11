@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Search, Bell, Plus, ChevronRight, ChevronDown, X, ArrowLeftRight, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid, Smartphone, Plane, Sofa, Zap, Phone, Globe, QrCode, Repeat, Send, Landmark, Tv, Bus, GraduationCap, Eye, EyeOff, ArrowLeft, ArrowDownLeft, Snowflake, FileText, ShoppingCart, Utensils, Fuel, Wifi, Home, Ticket, Settings2 } from "lucide-react";
+import { Search, Bell, Plus, ChevronRight, ChevronDown, X, ArrowLeftRight, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid, Smartphone, Plane, Sofa, Zap, Phone, Globe, QrCode, Repeat, Send, Landmark, Tv, Bus, GraduationCap, Eye, EyeOff, ArrowLeft, ArrowDownLeft, Snowflake, FileText, ShoppingCart, Utensils, Fuel, Wifi, Home, Ticket, Settings2, Check } from "lucide-react";
 
 /* ═══════════════════════════════════════════════
    DATA
@@ -224,6 +224,7 @@ const FEATURE_FLAGS = [
   { key: "paySwift", desc: "SWIFT-переводы", default: true },
   { key: "conversionRates", desc: "Курсы валют на экране переводов", default: true },
   { key: "cardPanCVV", desc: "Показ номера карты в деталях", default: true },
+  { key: "transferSwap", desc: "Кнопка «Поменять счета местами»", default: true },
 ];
 
 /* Stories — shown when `kursiv` flag is OFF (real app behavior) */
@@ -829,7 +830,7 @@ function MainScreen({
   totalInKZT, productTab, setProductTab,
   blockVis, blockOrder, emptyState, activeCardProducts, activeAccounts,
   activeLoans, activeCredits, activePromos, activeNews, activeRequests,
-  featureFlags, onOpenCard,
+  featureFlags, onOpenCard, onOpenTotal,
   C, theme,
 }) {
   const isDark = C.bg === '#0E0F0C';
@@ -921,9 +922,10 @@ function MainScreen({
       {blockVis.balance && (
       <div style={{ order: blockOrder.indexOf("balance"), padding: "32px 20px 24px", textAlign: "center" }}>
         <div style={{ fontSize: 13, color: C.muted, fontWeight: 500, marginBottom: 10 }}>Общий баланс</div>
-        <div style={{
+        <div data-press onClick={() => onOpenTotal?.()} style={{
           fontSize: 40, fontWeight: 700, color: C.text,
           letterSpacing: -1.5, fontFeatureSettings: "'tnum'", lineHeight: 1,
+          cursor: "pointer", display: "inline-block",
         }}>
           {fmtInt(totalDisplay)}<span style={{ fontSize: 22, fontWeight: 600, color: C.muted, marginLeft: 6 }}>{displayMeta.symbol}</span>
         </div>
@@ -1792,9 +1794,9 @@ function BottomTabBar({ active, onChange, C }) {
    Шаблоны → «Себе» → «Другим» → «Оплата услуг»
    ═══════════════════════════════════════════════ */
 
-function PaymentsScreen({ C, featureFlags, onOpenStub }) {
-  const Row = ({ Icon, color, title, subtitle, last }) => (
-    <div data-press onClick={onOpenStub} style={{
+function PaymentsScreen({ C, featureFlags, onOpenStub, onTransferOwn }) {
+  const Row = ({ Icon, color, title, subtitle, last, onClick }) => (
+    <div data-press onClick={onClick || onOpenStub} style={{
       display: "flex", alignItems: "center", gap: 12,
       padding: "13px 16px", cursor: "pointer",
       borderBottom: last ? "none" : `1px solid ${C.divider}`,
@@ -1879,7 +1881,7 @@ function PaymentsScreen({ C, featureFlags, onOpenStub }) {
 
         {/* Себе (ownTransfersSection) */}
         <Section title="Себе">
-          <Row Icon={Repeat} color="#22C55E" title="Между счетами" subtitle="Мгновенно и без комиссии" />
+          <Row Icon={Repeat} color="#22C55E" title="Между счетами" subtitle="Мгновенно и без комиссии" onClick={onTransferOwn} />
           <Row Icon={ArrowDownLeft} color="#3B82F6" title="С карты другого банка" subtitle="Пополнение Visa или Mastercard" />
           {featureFlags.conversionRates ? (
             <Row Icon={ArrowLeftRight} color="#F59E0B" title="Конвертация валют" subtitle={`1$ = ${RATES_TO_KZT.USD}₸ · 1€ = ${RATES_TO_KZT.EUR}₸`} last />
@@ -1922,7 +1924,7 @@ function PaymentsScreen({ C, featureFlags, onOpenStub }) {
    Card visual + balance + actions + transactions
    ═══════════════════════════════════════════════ */
 
-function ProductDetailsScreen({ card, C, featureFlags, onBack }) {
+function ProductDetailsScreen({ card, C, featureFlags, onBack, onTransfer }) {
   const [panVisible, setPanVisible] = useState(false);
   const cm = CURRENCY_META[card.primaryCurrency] || { symbol: card.primaryCurrency };
   const fullPan = `4400 4300 1234 ${card.last4}`;
@@ -2021,11 +2023,11 @@ function ProductDetailsScreen({ card, C, featureFlags, onBack }) {
       <div style={{ display: "flex", justifyContent: "center", gap: 22, marginBottom: 28 }}>
         {[
           { Icon: Plus, label: "Пополнить" },
-          { Icon: Send, label: "Перевести" },
+          { Icon: Send, label: "Перевести", onClick: onTransfer },
           { Icon: FileText, label: "Реквизиты" },
           { Icon: Snowflake, label: "Заморозить" },
         ].map((a, i) => (
-          <div key={i} data-press style={{
+          <div key={i} data-press onClick={a.onClick} style={{
             display: "flex", flexDirection: "column", alignItems: "center", gap: 7,
             cursor: "pointer", width: 64,
           }}>
@@ -2179,6 +2181,478 @@ function StubScreen({ C, title, note }) {
 }
 
 /* ═══════════════════════════════════════════════
+   STATISTICS SCREEN — real Transactions flow
+   («Статистика», «Движение средств», «Категории расходов»)
+   ═══════════════════════════════════════════════ */
+
+function StatisticsScreen({ C }) {
+  const [period, setPeriod] = useState("month");
+  const spent = TRANSACTIONS.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
+  const income = TRANSACTIONS.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+
+  // Категории расходов (real totalTransactionsDetails)
+  const byCategory = {};
+  TRANSACTIONS.filter(t => t.amount < 0).forEach(t => {
+    if (!byCategory[t.category]) byCategory[t.category] = { sum: 0, Icon: t.Icon, color: t.color };
+    byCategory[t.category].sum += Math.abs(t.amount);
+  });
+  const categories = Object.entries(byCategory).sort((a, b) => b[1].sum - a[1].sum);
+  const maxCat = categories.length ? categories[0][1].sum : 1;
+
+  return (
+    <div style={{
+      maxWidth: 430, margin: "0 auto", minHeight: "100dvh",
+      backgroundColor: C.bg,
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', system-ui, sans-serif",
+      overflowX: "clip", paddingBottom: 90,
+    }}>
+      <StatusBar C={C} />
+      <div style={{ padding: "8px 20px 0" }}>
+        <div style={{ fontSize: 24, fontWeight: 800, color: C.text, letterSpacing: -0.5, marginBottom: 14 }}>Статистика</div>
+
+        {/* Период (real transactionFilters.periodSheet) */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          {[
+            { key: "month", label: "За месяц" },
+            { key: "year", label: "За год" },
+            { key: "range", label: "Период" },
+          ].map(p => (
+            <div key={p.key} data-press onClick={() => setPeriod(p.key)} style={{
+              padding: "7px 14px", borderRadius: 18, cursor: "pointer",
+              fontSize: 13, fontWeight: 600,
+              backgroundColor: period === p.key ? C.accentDark : C.faint,
+              color: period === p.key ? C.accent : C.sub,
+              transition: "all 0.15s",
+            }}>{p.label}</div>
+          ))}
+        </div>
+
+        {/* Движение средств (real navigationCashFlowTitle) */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 12 }}>Движение средств</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{
+              backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+              padding: "14px 16px",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                <ArrowDownLeft size={14} color="#16A34A" strokeWidth={2.2} />
+                <span style={{ fontSize: 12, color: C.muted, fontWeight: 500 }}>Поступления</span>
+              </div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: "#16A34A", fontFeatureSettings: "'tnum'" }}>
+                +{fmtFull(income)} <span style={{ fontSize: 12 }}>₸</span>
+              </div>
+            </div>
+            <div style={{
+              backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+              padding: "14px 16px",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                <TrendingUp size={14} color="#EF4444" strokeWidth={2.2} style={{ transform: "rotate(90deg)" }} />
+                <span style={{ fontSize: 12, color: C.muted, fontWeight: 500 }}>Траты</span>
+              </div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: C.text, fontFeatureSettings: "'tnum'" }}>
+                −{fmtFull(spent)} <span style={{ fontSize: 12, color: C.muted }}>₸</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Категории расходов (real totalTransactionsDetails.navigationTitle) */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: C.text }}>Категории расходов</span>
+            <span data-press style={{ fontSize: 13, color: C.text, fontWeight: 500, cursor: "pointer", opacity: 0.7 }}>Настроить</span>
+          </div>
+          <div style={{
+            backgroundColor: C.card, borderRadius: 12,
+            border: `1px solid ${C.border}`, overflow: "hidden",
+          }}>
+            {categories.map(([name, cat], i) => (
+              <div key={name} style={{
+                padding: "13px 16px",
+                borderBottom: i < categories.length - 1 ? `1px solid ${C.divider}` : "none",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{
+                    width: 34, height: 34, borderRadius: "50%",
+                    backgroundColor: `${cat.color}14`,
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>
+                    <cat.Icon size={15} color={cat.color} strokeWidth={1.9} />
+                  </div>
+                  <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.text }}>{name}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
+                    {fmtFull(cat.sum)} <span style={{ fontSize: 11, color: C.muted }}>₸</span>
+                  </span>
+                </div>
+                <div style={{
+                  marginTop: 8, marginLeft: 46, height: 4, borderRadius: 2,
+                  backgroundColor: C.divider, overflow: "hidden",
+                }}>
+                  <div style={{
+                    width: `${(cat.sum / maxCat) * 100}%`, height: "100%",
+                    backgroundColor: cat.color, borderRadius: 2,
+                  }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* История операций */}
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 12 }}>История операций</div>
+          <div style={{
+            backgroundColor: C.card, borderRadius: 12,
+            border: `1px solid ${C.border}`, overflow: "hidden",
+          }}>
+            {TRANSACTIONS.map((t, i) => (
+              <div key={t.id} data-press style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "13px 16px", cursor: "pointer",
+                borderBottom: i < TRANSACTIONS.length - 1 ? `1px solid ${C.divider}` : "none",
+              }}>
+                <div style={{
+                  width: 38, height: 38, borderRadius: "50%",
+                  backgroundColor: `${t.color}14`,
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  <t.Icon size={16} color={t.color} strokeWidth={1.9} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{t.category} · {t.time}</div>
+                </div>
+                <span style={{
+                  fontSize: 14, fontWeight: 700, fontFeatureSettings: "'tnum'", flexShrink: 0,
+                  color: t.amount > 0 ? "#16A34A" : C.text,
+                }}>
+                  {t.amount > 0 ? "+" : ""}{fmtFull(t.amount)} ₸
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   TRANSFER OWN FLOW — real «Между своими счетами»
+   TransferOwn → TransferConfirm → TransferResult
+   ═══════════════════════════════════════════════ */
+
+const TRANSFER_PRODUCTS = [
+  { id: "a1", name: "Текущий счёт", number: "••145USD", balance: 12345.67, currency: "USD" },
+  { id: "a5", name: "Мой счёт в USD", number: "••0907US", balance: 25000.00, currency: "USD" },
+];
+
+function ScreenShell({ C, title, onBack, children }) {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 80,
+      maxWidth: 430, margin: "0 auto",
+      backgroundColor: C.bg,
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', system-ui, sans-serif",
+      overflowY: "auto", overflowX: "clip",
+      animation: "screen-slide-in 0.25s ease-out",
+    }}>
+      <StatusBar C={C} />
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px 16px" }}>
+        {onBack ? (
+          <div data-press onClick={onBack} style={{
+            width: 36, height: 36, borderRadius: "50%",
+            display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+          }}>
+            <ArrowLeft size={20} color={C.text} strokeWidth={2} />
+          </div>
+        ) : <div style={{ width: 36 }} />}
+        <div style={{ flex: 1, textAlign: "center", fontSize: 16, fontWeight: 700, color: C.text }}>{title}</div>
+        <div style={{ width: 36 }} />
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function TransferOwnScreen({ C, featureFlags, onBack, onNext }) {
+  const [fromIdx, setFromIdx] = useState(0);
+  const [toIdx, setToIdx] = useState(1);
+  const [amount, setAmount] = useState("1000");
+  const from = TRANSFER_PRODUCTS[fromIdx];
+  const to = TRANSFER_PRODUCTS[toIdx];
+  const num = parseFloat(amount.replace(",", ".")) || 0;
+  const valid = num > 0 && num <= from.balance;
+  const cm = CURRENCY_META[from.currency] || { symbol: from.currency };
+
+  const ProductRow = ({ label, product }) => (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>{label}</div>
+      <div style={{
+        backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+        padding: "13px 16px", display: "flex", alignItems: "center", gap: 12,
+      }}>
+        <div style={{
+          width: 38, height: 38, borderRadius: "50%", backgroundColor: C.faint,
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0,
+        }}>🇺🇸</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{product.name}</div>
+          <div style={{ fontSize: 12, color: C.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>{product.number}</div>
+        </div>
+        <span style={{ fontSize: 14, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
+          {fmtFull(product.balance)} <span style={{ fontSize: 11, color: C.muted }}>$</span>
+        </span>
+      </div>
+    </div>
+  );
+
+  return (
+    <ScreenShell C={C} title="Между своими счетами" onBack={onBack}>
+      <div style={{ padding: "4px 20px 110px" }}>
+        <ProductRow label="Списать со счёта" product={from} />
+
+        {/* Swap — real `transferSwap` flag */}
+        {featureFlags.transferSwap && (
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+            <div data-press onClick={() => { setFromIdx(toIdx); setToIdx(fromIdx); }} style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "7px 14px", borderRadius: 18,
+              backgroundColor: C.faint, cursor: "pointer",
+            }}>
+              <Repeat size={13} color={C.sub} strokeWidth={2} style={{ transform: "rotate(90deg)" }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: C.sub }}>Поменять счета местами</span>
+            </div>
+          </div>
+        )}
+
+        <ProductRow label="Зачислить на счёт" product={to} />
+
+        {/* Сумма (real sumFieldTitle) */}
+        <div style={{ marginTop: 20, marginBottom: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>Сумма</div>
+          <div style={{
+            backgroundColor: C.card, borderRadius: 12,
+            border: `1.5px solid ${valid || !amount ? C.border : "#EF4444"}`,
+            padding: "16px", display: "flex", alignItems: "center", gap: 8,
+          }}>
+            <input
+              value={amount}
+              onChange={e => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
+              inputMode="decimal"
+              placeholder="0"
+              style={{
+                flex: 1, border: "none", outline: "none", background: "transparent",
+                fontSize: 26, fontWeight: 800, color: C.text,
+                fontFamily: "inherit", fontFeatureSettings: "'tnum'",
+                minWidth: 0,
+              }}
+            />
+            <span style={{ fontSize: 20, fontWeight: 700, color: C.muted }}>{cm.symbol}</span>
+          </div>
+          {!valid && amount && num > from.balance && (
+            <div style={{ fontSize: 12, color: "#EF4444", marginTop: 6 }}>
+              Перевод должен быть меньше {fmtFull(from.balance)} {cm.symbol}
+            </div>
+          )}
+          {!valid && amount && num <= 0 && (
+            <div style={{ fontSize: 12, color: "#EF4444", marginTop: 6 }}>
+              Перевод должен быть больше 0 {cm.symbol}
+            </div>
+          )}
+        </div>
+
+        <div style={{ fontSize: 12, color: C.muted, marginBottom: 24 }}>Без комиссии · мгновенно</div>
+
+        <div data-press onClick={() => valid && onNext({ from, to, amount: num })} style={{
+          backgroundColor: valid ? C.accentDark : C.faint,
+          borderRadius: 12, padding: "15px 0", textAlign: "center",
+          cursor: valid ? "pointer" : "default",
+          transition: "background-color 0.15s",
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: valid ? C.accent : C.muted }}>Перевести</span>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+function TransferConfirmScreen({ C, payload, onBack, onConfirm }) {
+  const { from, to, amount } = payload;
+  const rows = [
+    { label: "Списать со счёта", value: `${from.name} · ${from.number}` },
+    { label: "Зачислить на счёт", value: `${to.name} · ${to.number}` },
+    { label: "Сумма", value: `${fmtFull(amount)} $` },
+    { label: "Комиссия", value: "Без комиссии" },
+  ];
+  return (
+    <ScreenShell C={C} title="Подтверждение" onBack={onBack}>
+      <div style={{ padding: "4px 20px 110px" }}>
+        <div style={{ textAlign: "center", margin: "12px 0 28px" }}>
+          <div style={{ fontSize: 13, color: C.muted, fontWeight: 500, marginBottom: 8 }}>Перевод между счетами</div>
+          <div style={{ fontSize: 36, fontWeight: 800, color: C.text, letterSpacing: -1, fontFeatureSettings: "'tnum'" }}>
+            {fmtFull(amount)} <span style={{ fontSize: 20, color: C.muted }}>$</span>
+          </div>
+        </div>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 24,
+        }}>
+          {rows.map((r, i) => (
+            <div key={i} style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              padding: "13px 16px", gap: 12,
+              borderBottom: i < rows.length - 1 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <span style={{ fontSize: 13, color: C.muted, flexShrink: 0 }}>{r.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.text, textAlign: "right" }}>{r.value}</span>
+            </div>
+          ))}
+        </div>
+        <div data-press onClick={onConfirm} style={{
+          backgroundColor: C.accentDark, borderRadius: 12, padding: "15px 0",
+          textAlign: "center", cursor: "pointer",
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>Подтвердить</span>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+function TransferResultScreen({ C, payload, onDone }) {
+  const { to, amount } = payload;
+  return (
+    <ScreenShell C={C} title="">
+      <div style={{
+        display: "flex", flexDirection: "column", alignItems: "center",
+        padding: "48px 40px 110px", textAlign: "center",
+      }}>
+        <div style={{
+          width: 88, height: 88, borderRadius: "50%",
+          backgroundColor: "rgba(34,197,94,0.12)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          marginBottom: 24,
+        }}>
+          <div style={{
+            width: 60, height: 60, borderRadius: "50%",
+            backgroundColor: "#22C55E",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <Check size={30} color="#fff" strokeWidth={3} />
+          </div>
+        </div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: C.text, marginBottom: 8 }}>Успешно</div>
+        <div style={{ fontSize: 14, color: C.sub, lineHeight: 1.5, marginBottom: 4 }}>
+          Перевод выполнен
+        </div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: C.text, fontFeatureSettings: "'tnum'", margin: "12px 0 4px" }}>
+          {fmtFull(amount)} <span style={{ fontSize: 17, color: C.muted }}>$</span>
+        </div>
+        <div style={{ fontSize: 13, color: C.muted, marginBottom: 40 }}>
+          на {to.name} · {to.number}
+        </div>
+        <div data-press onClick={onDone} style={{
+          backgroundColor: C.accentDark, borderRadius: 12, padding: "15px 0",
+          textAlign: "center", cursor: "pointer", alignSelf: "stretch",
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>Готово</span>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   PRODUCTS TOTAL — real «Общий баланс» screen
+   («Банковские и инвестиционные счета», «Мои деньги»)
+   ═══════════════════════════════════════════════ */
+
+function ProductsTotalScreen({ C, totalInKZT, displayCurrency, onBack }) {
+  const displayMeta = CURRENCY_META[displayCurrency] || { symbol: displayCurrency };
+  const totalDisplay = convertTo(totalInKZT, displayCurrency);
+
+  // «Мои деньги» — per-currency totals from accounts + card primaries
+  const groups = {};
+  ACCOUNTS_LIST.forEach(a => {
+    if (!groups[a.currency]) groups[a.currency] = { total: 0, count: 0 };
+    groups[a.currency].total += a.balance;
+    groups[a.currency].count += 1;
+  });
+  CARD_PRODUCTS.forEach(g => g.cards.forEach(c => {
+    if (!groups[c.primaryCurrency]) groups[c.primaryCurrency] = { total: 0, count: 0 };
+    groups[c.primaryCurrency].total += c.primaryBalance;
+    groups[c.primaryCurrency].count += 1;
+  }));
+  const rows = Object.entries(groups)
+    .sort((a, b) => convertToKZT(b[1].total, b[0]) - convertToKZT(a[1].total, a[0]));
+
+  return (
+    <ScreenShell C={C} title="Общий баланс" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div style={{ fontSize: 13, color: C.muted, fontWeight: 500, marginBottom: 10 }}>
+            Банковские и инвестиционные счета
+          </div>
+          <div style={{
+            fontSize: 36, fontWeight: 800, color: C.text,
+            letterSpacing: -1.2, fontFeatureSettings: "'tnum'", lineHeight: 1,
+          }}>
+            {fmtInt(totalDisplay)} <span style={{ fontSize: 20, fontWeight: 700, color: C.muted }}>{displayCurrency}</span>
+          </div>
+        </div>
+
+        <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 12 }}>Мои деньги</div>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12,
+          border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 16,
+        }}>
+          {rows.map(([code, g], i) => {
+            const cm = CURRENCY_META[code] || { symbol: code, flag: "💰" };
+            const word = g.count === 1 ? "счёт" : g.count < 5 ? "счёта" : "счетов";
+            return (
+              <div key={code} style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "13px 16px",
+                borderBottom: i < rows.length - 1 ? `1px solid ${C.divider}` : "none",
+              }}>
+                <div style={{
+                  width: 38, height: 38, borderRadius: "50%", backgroundColor: C.faint,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 17, flexShrink: 0,
+                }}>{cm.flag}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{code}</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{g.count} {word}</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
+                    {fmtFull(g.total)} <span style={{ fontSize: 11, color: C.muted }}>{cm.symbol}</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>
+                    ≈ {fmtCompact(convertToKZT(g.total, code))} ₸
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Курс пересчёта */}
+        <div style={{
+          backgroundColor: C.faint, borderRadius: 12, padding: "12px 16px",
+          fontSize: 12, color: C.muted, lineHeight: 1.5,
+        }}>
+          Пересчёт в {displayCurrency} по курсу банка: 1$ = {RATES_TO_KZT.USD}₸ · 1€ = {RATES_TO_KZT.EUR}₸ · 1₽ = {RATES_TO_KZT.RUB}₸
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    ROOT
    ═══════════════════════════════════════════════ */
 
@@ -2263,23 +2737,55 @@ export default function FreedomV6() {
           activeNews={activeNews}
           activeRequests={activeRequests}
           onOpenCard={(card) => pushScreen({ type: "product", card })}
+          onOpenTotal={() => pushScreen({ type: "total" })}
           C={C} theme={theme}
         />
       )}
       {activeTab === "payments" && (
-        <PaymentsScreen C={C} featureFlags={featureFlags} onOpenStub={() => {}} />
+        <PaymentsScreen C={C} featureFlags={featureFlags}
+          onOpenStub={() => {}}
+          onTransferOwn={() => pushScreen({ type: "transferOwn" })}
+        />
       )}
       {activeTab === "statistics" && (
-        <StubScreen C={C} title="Статистика"
-          note="В реальном приложении этот таб открывает флоу Transactions — расходы и история операций. Затащим следующей партией." />
+        <StatisticsScreen C={C} />
       )}
       {activeTab === "chats" && (
         <StubScreen C={C} title="Чаты"
           note="Реальный таб управляется флагами chat / typiChat — чат с банком или контакты." />
       )}
-      {navStack.map((s, i) => s.type === "product" && (
-        <ProductDetailsScreen key={i} card={s.card} C={C} featureFlags={featureFlags} onBack={popScreen} />
-      ))}
+      {navStack.map((s, i) => {
+        if (s.type === "product") return (
+          <ProductDetailsScreen key={i} card={s.card} C={C} featureFlags={featureFlags}
+            onBack={popScreen}
+            onTransfer={() => pushScreen({ type: "transferOwn" })}
+          />
+        );
+        if (s.type === "transferOwn") return (
+          <TransferOwnScreen key={i} C={C} featureFlags={featureFlags}
+            onBack={popScreen}
+            onNext={(payload) => pushScreen({ type: "transferConfirm", payload })}
+          />
+        );
+        if (s.type === "transferConfirm") return (
+          <TransferConfirmScreen key={i} C={C} payload={s.payload}
+            onBack={popScreen}
+            onConfirm={() => pushScreen({ type: "transferResult", payload: s.payload })}
+          />
+        );
+        if (s.type === "transferResult") return (
+          <TransferResultScreen key={i} C={C} payload={s.payload}
+            onDone={() => setNavStack([])}
+          />
+        );
+        if (s.type === "total") return (
+          <ProductsTotalScreen key={i} C={C}
+            totalInKZT={totalInKZT} displayCurrency={displayCurrency}
+            onBack={popScreen}
+          />
+        );
+        return null;
+      })}
       <BottomTabBar
         active={activeTab}
         onChange={(k) => { setActiveTab(k); setNavStack([]); }}

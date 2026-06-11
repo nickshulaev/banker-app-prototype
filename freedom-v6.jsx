@@ -207,6 +207,32 @@ const BLOCK_LABELS = [
 ];
 
 /* ═══════════════════════════════════════════════
+   FEATURE FLAGS — real flags from ibank/Config/FeatureFlag.swift
+   Wired to prototype blocks the same way the real app gates them
+   ═══════════════════════════════════════════════ */
+
+const FEATURE_FLAGS = [
+  { key: "kursiv", desc: "Новости на главном экране (без флага — сторисы)", default: true },
+  { key: "moneyRequest", desc: "Запросы денег", default: true },
+  { key: "becomeClientBanner", desc: "Маркетинговые баннеры", default: true },
+  { key: "aviata", desc: "Покупка авиабилетов", default: true },
+  { key: "p2pLoan", desc: "P2P займы", default: true },
+  { key: "openDeposit", desc: "Открытие депозита", default: true },
+  { key: "openCard", desc: "Открытие карты", default: true },
+  { key: "openCredit", desc: "Открытие кредита", default: true },
+];
+
+/* Stories — shown when `kursiv` flag is OFF (real app behavior) */
+const STORIES = [
+  { id: 1, title: "FC кэшбэк", emoji: "⭐", bg: "linear-gradient(135deg, #F59E0B, #EF4444)", viewed: false },
+  { id: 2, title: "Депозиты", emoji: "📈", bg: "linear-gradient(135deg, #22C55E, #06B6D4)", viewed: false },
+  { id: 3, title: "Страхование", emoji: "🛡️", bg: "linear-gradient(135deg, #0AB321, #06B6D4)", viewed: true },
+  { id: 4, title: "Тарифы", emoji: "📊", bg: "linear-gradient(135deg, #3B82F6, #6366F1)", viewed: true },
+  { id: 5, title: "Новости", emoji: "📰", bg: "linear-gradient(135deg, #EC4899, #F59E0B)", viewed: true },
+  { id: 6, title: "Invest Card", emoji: "💳", bg: "linear-gradient(135deg, #6366F1, #A855F7)", viewed: true },
+];
+
+/* ═══════════════════════════════════════════════
    CARD ART — flat, simple
    ═══════════════════════════════════════════════ */
 
@@ -494,7 +520,7 @@ function CurrencyPicker({ current, currencies, onSelect, onClose, C }) {
    BOTTOM SHEET — Constructor
    ═══════════════════════════════════════════════ */
 
-function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrder, setBlockOrder, emptyState, setEmptyState, C }) {
+function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrder, setBlockOrder, emptyState, setEmptyState, featureFlags, setFeatureFlags, C }) {
   const isDark = C.bg === '#0E0F0C';
   const themes = [
     { key: "stripe", label: "Light", desc: "Светлая" },
@@ -640,6 +666,42 @@ function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrd
             );
           })}
         </div>
+
+        {/* Real feature flags from ibank/Config/FeatureFlag.swift */}
+        <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, margin: "24px 0 4px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+          Фичефлаги <span style={{ textTransform: "none", letterSpacing: 0 }}>· реальные, из iOS-репы</span>
+        </div>
+        <div>
+          {FEATURE_FLAGS.map(f => {
+            const on = featureFlags[f.key];
+            return (
+              <div key={f.key} style={{
+                display: "flex", alignItems: "center", gap: 10, padding: "11px 0",
+                borderBottom: `1px solid ${C.divider}`,
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: 13, fontWeight: 600, color: on ? C.text : C.muted,
+                    fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace",
+                  }}>{f.key}</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{f.desc}</div>
+                </div>
+                <div onClick={() => setFeatureFlags(prev => ({ ...prev, [f.key]: !prev[f.key] }))} style={{
+                  width: 38, height: 22, borderRadius: 11,
+                  backgroundColor: on ? C.accentDark : (isDark ? "rgba(255,255,255,0.15)" : "#D1D5DB"),
+                  position: "relative", cursor: "pointer", flexShrink: 0,
+                  transition: "background-color 0.15s",
+                }}>
+                  <div style={{
+                    width: 18, height: 18, borderRadius: 9, backgroundColor: "#fff",
+                    position: "absolute", top: 2, left: on ? 18 : 2,
+                    transition: "left 0.15s",
+                  }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </>
   );
@@ -730,6 +792,7 @@ function MainScreen({
   totalInKZT, productTab, setProductTab,
   blockVis, blockOrder, emptyState, activeCardProducts, activeAccounts,
   activeLoans, activeCredits, activePromos, activeNews, activeRequests,
+  featureFlags,
   C, theme,
 }) {
   const isDark = C.bg === '#0E0F0C';
@@ -741,6 +804,26 @@ function MainScreen({
   const [requestIndex, setRequestIndex] = useState(0);
   const [cardsView, setCardsView] = useState("carousel");
   const [accountsView, setAccountsView] = useState("carousel");
+
+  // Real tab logic from ProductsViewModel+ReceptionTabs.swift:
+  // a tab is hidden when empty (tabIsEmpty), the whole tabs row is hidden
+  // when only one tab remains (configureTabsSection returns nil)
+  const bankCount = activeCardProducts.reduce((s, g) => s + g.cards.length, 0);
+  const depositCount = emptyState ? 0 : DEPOSITS.length;
+  const brokerCount = emptyState ? 0 : BROKER_ACCOUNTS.reduce((s, g) => s + g.accounts.length, 0);
+  const allTabs = [
+    { key: "bank", label: "Банк", count: bankCount },
+    { key: "deposits", label: "Депозиты", count: depositCount },
+    { key: "broker", label: "Брокер", count: brokerCount, notif: emptyState ? 0 : 1 },
+  ].filter(t => t.count > 0);
+  const showTabsRow = allTabs.length > 1;
+
+  // currentTab reset when it disappears (real: currentTab = allTabs.first ?? .bank)
+  useEffect(() => {
+    if (!allTabs.some(t => t.key === productTab)) {
+      setProductTab(allTabs[0]?.key ?? "bank");
+    }
+  }, [emptyState]);
 
   // Dark palette for the hero area (creates contrast against light products area below)
   const topC = {
@@ -819,8 +902,8 @@ function MainScreen({
       </div>
       )}
 
-      {/* ═══ REQUESTS ═══ */}
-      {blockVis.requests && activeRequests.length > 0 && (
+      {/* ═══ REQUESTS ═══ (gated by real flag `moneyRequest`) */}
+      {blockVis.requests && featureFlags.moneyRequest && activeRequests.length > 0 && (
       <div style={{ order: blockOrder.indexOf("requests"), padding: "0 20px 16px" }}>
         <div data-press style={{
           backgroundColor: C.card, borderRadius: 12, padding: "14px 16px",
@@ -863,8 +946,8 @@ function MainScreen({
       </div>
       )}
 
-      {/* ═══ PROMO ═══ */}
-      {blockVis.promo && activePromos.length > 0 && (
+      {/* ═══ PROMO ═══ (gated by real flag `becomeClientBanner`) */}
+      {blockVis.promo && featureFlags.becomeClientBanner && activePromos.length > 0 && (
       <div style={{ order: blockOrder.indexOf("promo"), padding: "0 20px 24px" }}>
         <div data-press style={{
           borderRadius: 12, padding: "18px 20px", cursor: "pointer",
@@ -952,8 +1035,10 @@ function MainScreen({
       </div>
       )}
 
-      {/* ═══ NEWS ═══ */}
-      {blockVis.news && (
+      {/* ═══ NEWS / STORIES ═══
+          Real flag `kursiv` controls this: flag ON → news, flag OFF → stories
+          (ibank/Config/FeatureFlag.swift: "Если флага нет, показывать сторисы") */}
+      {blockVis.news && featureFlags.kursiv && (
       <div style={{ order: blockOrder.indexOf("news"), padding: "0 20px 24px" }}>
         <div data-press style={{
           backgroundColor: C.card, borderRadius: 12,
@@ -987,14 +1072,48 @@ function MainScreen({
         </div>
       </div>
       )}
+      {blockVis.news && !featureFlags.kursiv && (
+      <div style={{ order: blockOrder.indexOf("news"), padding: "0 0 24px" }}>
+        <div style={{
+          display: "flex", gap: 14, overflowX: "auto",
+          padding: "0 20px", scrollbarWidth: "none",
+        }}>
+          {STORIES.map(s => (
+            <div key={s.id} data-press style={{
+              flexShrink: 0, width: 64, cursor: "pointer",
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+            }}>
+              <div style={{
+                width: 60, height: 60, borderRadius: 18,
+                padding: 2,
+                border: s.viewed ? `1.5px solid ${C.borderStrong}` : "1.5px solid #9FE870",
+              }}>
+                <div style={{
+                  width: "100%", height: "100%", borderRadius: 14,
+                  background: s.bg,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 22,
+                }}>{s.emoji}</div>
+              </div>
+              <span style={{
+                fontSize: 10, fontWeight: 500,
+                color: s.viewed ? C.muted : C.sub,
+                textAlign: "center", whiteSpace: "nowrap",
+                overflow: "hidden", textOverflow: "ellipsis", maxWidth: 64,
+              }}>{s.title}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      )}
 
-      {/* ═══ TRAVEL SERVICES ═══ */}
+      {/* ═══ TRAVEL SERVICES ═══ (`aviata` — real flag for flight tickets) */}
       {blockVis.services && (
       <div style={{ padding: "0 20px 24px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {[
             { id: "esim", title: "eSIM", subtitle: "Интернет в поездках", Icon: Smartphone, color: "#22C55E" },
-            { id: "travel", title: "Авиабилеты", subtitle: "Поиск и покупка", Icon: Plane, color: "#3B82F6" },
+            ...(featureFlags.aviata ? [{ id: "travel", title: "Авиабилеты", subtitle: "Поиск и покупка", Icon: Plane, color: "#3B82F6" }] : []),
             { id: "lounge", title: "Lounge", subtitle: "Залы в аэропортах", Icon: Sofa, color: "#A78BFA", soon: true },
             { id: "fasttrack", title: "Fast Track", subtitle: "Без очереди", Icon: Zap, color: "#F59E0B", soon: true },
           ].map(s => (
@@ -1060,24 +1179,17 @@ function MainScreen({
       </div>
       {/* ═════════════ END DARK HERO AREA ═════════════ */}
 
-      {/* ═════════════ FOLDER TABS — bridge dark→light ═════════════ */}
-      {blockVis.products && (
+      {/* ═════════════ FOLDER TABS — bridge dark→light ═════════════
+          Hidden entirely when only one tab is non-empty (real app behavior) */}
+      {blockVis.products && showTabsRow && (
         <div style={{
           backgroundColor: topC.bg, padding: "16px 12px 0",
           position: "sticky", top: 0, zIndex: 20,
         }}>
           <div style={{ display: "flex", gap: 4, position: "relative" }}>
             {(() => {
-              const bankCount = activeCardProducts.reduce((s, g) => s + g.cards.length, 0);
-              const depositCount = emptyState ? 0 : DEPOSITS.length;
-              const brokerCount = emptyState ? 0 : BROKER_ACCOUNTS.reduce((s, g) => s + g.accounts.length, 0);
-              const brokerNotif = emptyState ? 0 : 1;
               const EAR = 10;
-              return [
-                { key: "bank", label: "Банк", count: bankCount },
-                { key: "deposits", label: "Депозиты", count: depositCount },
-                { key: "broker", label: "Брокер", count: brokerCount, notif: brokerNotif },
-              ].map(tab => {
+              return allTabs.map(tab => {
                 const active = productTab === tab.key;
                 return (
                   <div key={tab.key} onClick={() => setProductTab(tab.key)} style={{
@@ -1163,6 +1275,7 @@ function MainScreen({
                     .map(card => (
                       <CardHero key={card.id} card={card} bank={card.bank} C={C} />
                     ))}
+                  {featureFlags.openCard && (
                   <div data-press style={{
                     flexShrink: 0,
                     width: 76, height: 138,
@@ -1182,6 +1295,7 @@ function MainScreen({
                     </div>
                     <span style={{ fontSize: 10, fontWeight: 500, color: C.muted, textAlign: "center", padding: "0 6px" }}>Новая карта</span>
                   </div>
+                  )}
                 </div>
               ) : (
                 /* List view — grouped by bank */
@@ -1336,7 +1450,8 @@ function MainScreen({
               )}
             </div>
 
-            {/* Loans */}
+            {/* Loans — gated by real flag `p2pLoan` */}
+            {featureFlags.p2pLoan && (
             <div style={{ marginBottom: 28 }}>
               <SectionHeader title="Денежные займы" onAdd={() => {}} C={C} />
               {activeLoans.length === 0 ? (
@@ -1391,11 +1506,13 @@ function MainScreen({
                 </div>
               )}
             </div>
+            )}
 
             {/* Credits */}
             <div>
               <SectionHeader title="Кредиты" onAdd={() => {}} C={C} />
               {activeCredits.length === 0 ? (
+                featureFlags.openCredit ? (
                 <div data-press style={{
                   backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
                   padding: "18px 16px", cursor: "pointer",
@@ -1413,6 +1530,7 @@ function MainScreen({
                     <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>До 30 млн ₸ от 12% годовых</div>
                   </div>
                 </div>
+                ) : null
               ) : (
                 <div style={{
                   backgroundColor: C.card, borderRadius: 12,
@@ -1567,8 +1685,8 @@ function MainScreen({
       </div>
       )}
 
-      {/* ═══ CTA ═══ */}
-      {blockVis.cta && (
+      {/* ═══ CTA ═══ (hidden when all open* flags are off, real gating) */}
+      {blockVis.cta && (featureFlags.openCard || featureFlags.openDeposit || featureFlags.openCredit) && (
       <div style={{ order: blockOrder.indexOf("cta"), padding: "0 20px 32px" }}>
         <div data-press style={{
           backgroundColor: C.accentDark, borderRadius: 12, padding: "14px 0",
@@ -1635,6 +1753,9 @@ export default function FreedomV6() {
     BLOCK_LABELS.reduce((acc, b) => ({ ...acc, [b.key]: true }), {})
   );
   const [blockOrder, setBlockOrder] = useState(BLOCK_LABELS.map(b => b.key));
+  const [featureFlags, setFeatureFlags] = useState(
+    FEATURE_FLAGS.reduce((acc, f) => ({ ...acc, [f.key]: f.default }), {})
+  );
 
   const activeCardProducts = emptyState ? EMPTY_CARD_PRODUCTS : CARD_PRODUCTS;
   const activeAccounts = emptyState ? [] : ACCOUNTS_LIST;
@@ -1669,6 +1790,7 @@ export default function FreedomV6() {
           blockVis={blockVis} setBlockVis={setBlockVis}
           blockOrder={blockOrder} setBlockOrder={setBlockOrder}
           emptyState={emptyState} setEmptyState={setEmptyState}
+          featureFlags={featureFlags} setFeatureFlags={setFeatureFlags}
           C={C}
         />
       )}
@@ -1680,6 +1802,7 @@ export default function FreedomV6() {
         productTab={productTab} setProductTab={setProductTab}
         blockVis={blockVis} blockOrder={blockOrder}
         emptyState={emptyState}
+        featureFlags={featureFlags}
         activeCardProducts={activeCardProducts}
         activeAccounts={activeAccounts}
         activeLoans={activeLoans}

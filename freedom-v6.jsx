@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { Search, Bell, Plus, ChevronRight, ChevronDown, X, ArrowLeftRight, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid, Smartphone, Plane, Sofa, Zap, Phone, Globe, QrCode, Repeat, Send, Landmark, Tv, Bus, GraduationCap, Eye, EyeOff, ArrowLeft, ArrowDownLeft, Snowflake, FileText, ShoppingCart, Utensils, Fuel, Wifi, Home, Ticket, Settings2, Check, User, Shield, LogOut, Palette } from "lucide-react";
+import OnboardingFlow, { ONB_START, ONB_GATES, ONB_PRESETS, ONB_STEPS, SUMSUB_PHASES, SUMSUB_PHASE_LABELS } from "./onboarding.jsx";
 
 /* ═══════════════════════════════════════════════
    DATA
@@ -706,7 +707,7 @@ function CurrencyPicker({ current, currencies, onSelect, onClose, C }) {
    BOTTOM SHEET — Constructor
    ═══════════════════════════════════════════════ */
 
-function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrder, setBlockOrder, emptyState, setEmptyState, featureFlags, setFeatureFlags, C }) {
+function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrder, setBlockOrder, emptyState, setEmptyState, featureFlags, setFeatureFlags, onb, setOnb, C }) {
   const isDark = C.bg === '#0E0F0C';
   const themes = [
     { key: "stripe", label: "Light", desc: "Светлая" },
@@ -766,10 +767,10 @@ function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrd
 
   return (
     <>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.35)", zIndex: 200 }} />
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.35)", zIndex: 500 }} />
       <div style={{
         position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
-        width: "100%", maxWidth: 430, zIndex: 201,
+        width: "100%", maxWidth: 430, zIndex: 501,
         backgroundColor: C.card, borderRadius: "20px 20px 0 0",
         padding: "12px 20px 40px", maxHeight: "82vh", overflowY: "auto",
       }}>
@@ -808,6 +809,97 @@ function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrd
             }} />
           </div>
         </div>
+
+        {/* Онбординг — пре-авторизационный флоу (изолированный, см. onboarding.jsx) */}
+        <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>Онбординг</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", marginBottom: onb ? 12 : 24, borderBottom: `1px solid ${C.divider}` }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Показать онбординг</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 1 }}>{onb ? "Флоу поверх аппа" : "Выключено — апп как обычно"}</div>
+          </div>
+          <div onClick={() => setOnb(v => v ? null : { gates: { numberInDb: false, isDemoUser: false, iinExists: false }, stepKey: ONB_START })} style={{
+            width: 44, height: 24, borderRadius: 12,
+            backgroundColor: onb ? C.accentDark : (isDark ? "rgba(255,255,255,0.15)" : "#D1D5DB"),
+            position: "relative", cursor: "pointer", flexShrink: 0, transition: "background-color 0.2s",
+          }}>
+            <div style={{
+              width: 20, height: 20, borderRadius: 10, backgroundColor: "#fff",
+              position: "absolute", top: 2, left: onb ? 22 : 2, transition: "left 0.2s",
+            }} />
+          </div>
+        </div>
+        {onb && (
+          <div style={{ marginBottom: 24 }}>
+            {/* Пресеты-персоны (выставляют гейты и стартуют с phone_entry) */}
+            <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>Пресет (старт со входа)</div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
+              {ONB_PRESETS.map(p => {
+                const active = ONB_GATES.every(g => (onb.gates || {})[g.key] === p.gates[g.key]) && onb.stepKey === ONB_START;
+                return (
+                  <div key={p.key} onClick={() => setOnb({ gates: { ...p.gates }, stepKey: ONB_START })} style={{
+                    padding: "8px 12px", borderRadius: 9, cursor: "pointer", fontSize: 12, fontWeight: 600,
+                    color: active ? C.accent : C.text,
+                    backgroundColor: active ? C.accentDark : C.faint,
+                  }}>{p.label}</div>
+                );
+              })}
+            </div>
+
+            {/* Гейты роутера (мок-ответы развилок) */}
+            <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>Гейты роутера</div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
+              {ONB_GATES.map(g => {
+                const on = !!(onb.gates || {})[g.key];
+                return (
+                  <div key={g.key} onClick={() => setOnb({ ...onb, gates: { ...(onb.gates || {}), [g.key]: !on } })} style={{
+                    padding: "8px 12px", borderRadius: 9, cursor: "pointer", fontSize: 12, fontWeight: 600,
+                    color: on ? C.accent : C.muted,
+                    backgroundColor: on ? C.accentDark : C.faint,
+                  }}>{on ? "✓ " : ""}{g.label}</div>
+                );
+              })}
+            </div>
+
+            {/* Джампер по шагам (сгруппирован) */}
+            <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>Перейти на экран</div>
+            {ONB_STEPS.map((s, i) => {
+              const active = onb.stepKey === s.key;
+              const prev = ONB_STEPS[i - 1];
+              const showGroup = !prev || prev.group !== s.group;
+              return (
+                <div key={s.key}>
+                  {showGroup && (
+                    <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, margin: "8px 0 4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>{s.group}</div>
+                  )}
+                  <div onClick={() => setOnb({ ...onb, stepKey: s.key, sub: "intro" })} style={{
+                    display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 9,
+                    cursor: "pointer", marginBottom: 6,
+                    backgroundColor: active ? C.accentSoft : "transparent",
+                    border: `1px solid ${active ? C.accent : C.border}`,
+                  }}>
+                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.text }}>{s.title}</span>
+                    <span style={{ fontSize: 11, color: C.muted, fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace" }}>{s.key}</span>
+                  </div>
+                  {/* Sumsub под-состояния */}
+                  {s.sumsub && active && (
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "0 0 10px 12px" }}>
+                      {SUMSUB_PHASES.map(p => {
+                        const pa = (onb.sub || "intro") === p;
+                        return (
+                          <div key={p} onClick={() => setOnb({ ...onb, stepKey: s.key, sub: p })} style={{
+                            padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: 600,
+                            color: pa ? C.accent : C.muted,
+                            backgroundColor: pa ? C.accentDark : C.faint,
+                          }}>{SUMSUB_PHASE_LABELS[p]}</div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>Блоки</div>
         <div style={{ position: "relative" }}>
@@ -6190,6 +6282,8 @@ export default function FreedomV6() {
   const popScreen = () => setNavStack(prev => prev.slice(0, -1));
   // Real app launches locked (AuthPin) — any 4-digit code unlocks the prototype
   const [locked, setLocked] = useState(true);
+  // Pre-auth onboarding phase: null = выкл (дефолт, нулевая регрессия); иначе { gates, stepKey, sub? }
+  const [onb, setOnb] = useState(null);
   // Bottom sheets: {type:'promo',promo} | {type:'topup'} | {type:'logout'}
   const [sheet, setSheet] = useState(null);
 
@@ -6237,6 +6331,7 @@ export default function FreedomV6() {
           blockOrder={blockOrder} setBlockOrder={setBlockOrder}
           emptyState={emptyState} setEmptyState={setEmptyState}
           featureFlags={featureFlags} setFeatureFlags={setFeatureFlags}
+          onb={onb} setOnb={setOnb}
           C={C}
         />
       )}
@@ -6816,6 +6911,14 @@ export default function FreedomV6() {
       )}
       {/* Real app behavior: AuthPin lock on launch */}
       {locked && <LockScreen onUnlock={() => setLocked(false)} />}
+      {/* Pre-auth onboarding — sibling overlay, gated by `onb` flag (как LockScreen) */}
+      {onb && (
+        <OnboardingFlow
+          C={C}
+          initial={onb}
+          onComplete={() => { setOnb(null); setLocked(false); setActiveTab("products"); }}
+        />
+      )}
     </>
   );
 }

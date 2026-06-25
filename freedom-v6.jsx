@@ -148,11 +148,46 @@ const CURRENCY_META = {
   USD: { symbol: "$", flag: "🇺🇸", name: "Доллар" },
   EUR: { symbol: "€", flag: "🇪🇺", name: "Евро" },
   RUB: { symbol: "₽", flag: "🇷🇺", name: "Рубль" },
-  KRW: { symbol: "₩", flag: "🇰🇷", name: "Вона" },
+  CNY: { symbol: "¥", flag: "🇨🇳", name: "Юань" },
   TRY: { symbol: "₺", flag: "🇹🇷", name: "Лира" },
+  AED: { symbol: "د.إ", flag: "🇦🇪", name: "Дирхам" },
+  KRW: { symbol: "₩", flag: "🇰🇷", name: "Вона" },
 };
 
-const RATES_TO_KZT = { KZT: 1, USD: 455.0, EUR: 495.0, RUB: 5.1, KRW: 0.33, TRY: 12.5 };
+const RATES_TO_KZT = { KZT: 1, USD: 455.0, EUR: 495.0, RUB: 5.1, CNY: 64.0, TRY: 12.5, AED: 124.0, KRW: 0.33 };
+
+/* ═══════════════════════════════════════════════
+   ПИКЕР ПРОДУКТА — логика из протокола встречи 25.06.2026
+   (флоу пополнения карт/счетов: убран пикер зачисления,
+    счёт зачисления подставляется автоматически по иерархии валют)
+   ═══════════════════════════════════════════════ */
+
+// Иерархия валют для подстановки счёта зачисления.
+// КЗТ — главная валюта банка, остаётся приоритетной (решение со встречи).
+const CURRENCY_HIERARCHY = ["KZT", "USD", "EUR", "RUB", "CNY", "TRY", "AED"];
+
+// Развернуть карту в список её валютных суб-счетов.
+// breakdown содержит реальные счета по валютам; primary — только для моновалютной карты.
+function cardSubAccounts(card) {
+  if (!card) return [];
+  if (card.breakdown && card.breakdown.length) return card.breakdown;
+  return [{ currency: card.primaryCurrency, amount: card.primaryBalance }];
+}
+
+// Подстановка счёта зачисления под картой по валюте списания.
+// 1) если валюта списания есть на карте → моновалютный перевод на неё;
+// 2) иначе → следующий счёт по иерархии КЗТ → USD → EUR → RUB → CNY → TRY → AED.
+function resolveCreditAccount(card, debitCurrency) {
+  const subs = cardSubAccounts(card);
+  if (!subs.length) return null;
+  const exact = subs.find(s => s.currency === debitCurrency);
+  if (exact) return { ...exact, mono: true };
+  for (const cur of CURRENCY_HIERARCHY) {
+    const hit = subs.find(s => s.currency === cur);
+    if (hit) return { ...hit, mono: false };
+  }
+  return { ...subs[0], mono: false };
+}
 
 function fmtCompact(n) {
   const abs = Math.abs(n);
@@ -6258,6 +6293,243 @@ function AviataScreen({ C, onBack, onBuy }) {
 }
 
 /* ═══════════════════════════════════════════════
+   ПИКЕР ПОПОЛНЕНИЯ — флоу из протокола встречи 25.06.2026
+   Bottom sheet с вариантами перевода → только пикер списания →
+   счёт зачисления подставляется автоматически. Поручки ТН без пикеров.
+   ═══════════════════════════════════════════════ */
+
+// Варианты под кнопкой «Пополнить». kind определяет поведение пикера.
+const TOPUP_VARIANTS = [
+  { id: "own",      title: "Между своими счетами",  sub: "Мгновенно · без комиссии",        Icon: Repeat,     color: "#22C55E", kind: "picker" },
+  { id: "otherCard",title: "С карты другого банка", sub: "Visa или Mastercard",             Icon: CreditCard, color: "#3B82F6", kind: "otherCard" },
+  { id: "phone",    title: "По номеру телефона",    sub: "Внутри банка и за его пределами", Icon: Phone,      color: "#0D9488", kind: "picker" },
+  // Поручки ТН — пикеры не показываются, сразу на поручку со счётом-источником
+  { id: "broker",   title: "С брокерского счёта",   sub: "Поручение в Tradernet",           Icon: TrendingUp, color: "#F59E0B", kind: "tn" },
+  { id: "crypto",   title: "С криптокошелька",      sub: "Поручение в Tradernet",           Icon: Zap,        color: "#8B5CF6", kind: "tn" },
+];
+
+// Токенизированные карты других банков из прошлых переводов (экран «карта другого банка»).
+const TOKENIZED_CARDS = [
+  { id: "kaspi", bank: "Kaspi Bank", last4: "8421", network: "VISA", color: "#E4002B" },
+  { id: "halyk", bank: "Halyk Bank", last4: "5510", network: "MC",   color: "#00A94F" },
+];
+
+// Карточка счёта зачисления (read-only) — пикер зачисления убран по решению встречи.
+function CreditAccountCard({ C, card, credit, debitCurrency }) {
+  const cm = CURRENCY_META[credit.currency] || { symbol: credit.currency, flag: "💰" };
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>Счёт зачисления</div>
+      <div style={{
+        backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+        padding: "13px 16px", display: "flex", alignItems: "center", gap: 12,
+      }}>
+        <div style={{
+          width: 38, height: 38, borderRadius: "50%", backgroundColor: C.faint,
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0,
+        }}>{cm.flag}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{card.name} · {credit.currency}</div>
+          <div style={{ fontSize: 12, color: C.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>•• {card.last4}</div>
+        </div>
+        {/* нет шеврона — счёт зачисления сменить нельзя (намеренное ограничение) */}
+      </div>
+      <div style={{ fontSize: 11, color: C.muted, marginTop: 6, lineHeight: 1.4 }}>
+        {credit.mono
+          ? `Моновалютный перевод — счёт в ${debitCurrency} под этой картой`
+          : `На карте нет счёта в ${debitCurrency} — подставлен ${credit.currency} по иерархии валют`}
+      </div>
+    </div>
+  );
+}
+
+// Экран пополнения: ТОЛЬКО пикер списания, счёт зачисления — авто.
+function TopUpPickerScreen({ C, card, variant, onBack, onConfirm }) {
+  // Источники списания: для «своих» — все счета + суб-счета карт; для «карты другого банка» — токенизированные карты.
+  const ownSources = [
+    ...ACCOUNTS_LIST.map(a => ({ id: a.id, name: a.name, sub: `•• ${a.number.replace(/\s/g, "").slice(-4)}`, currency: a.currency, balance: a.balance, external: false })),
+    ...CARD_PRODUCTS.flatMap(g => g.cards.flatMap(c =>
+      cardSubAccounts(c).map(s => ({ id: `${c.id}-${s.currency}`, name: `${c.name} · ${s.currency}`, sub: `•• ${c.last4}`, currency: s.currency, balance: s.amount, external: false }))
+    )),
+  ];
+  const externalSources = TOKENIZED_CARDS.map(t => ({ id: t.id, name: t.bank, sub: `${t.network} •• ${t.last4}`, currency: "KZT", balance: null, external: true, color: t.color }));
+  const sources = variant.kind === "otherCard" ? externalSources : ownSources;
+
+  const [debitId, setDebitId] = useState(sources[0].id);
+  const [amount, setAmount] = useState("");
+  const debit = sources.find(s => s.id === debitId) || sources[0];
+  // Счёт зачисления — подставляется под картой, из-под которой зашли, по валюте списания.
+  const credit = resolveCreditAccount(card, debit.currency);
+  const num = parseFloat(amount.replace(",", ".")) || 0;
+  const valid = num > 0 && (debit.balance == null || num <= debit.balance);
+  const creditCm = credit ? (CURRENCY_META[credit.currency] || { symbol: credit.currency }) : { symbol: "" };
+
+  return (
+    <ScreenShell C={C} title="Пополнить" onBack={onBack}>
+      <div style={{ padding: "4px 20px 110px" }}>
+        {/* Пикер списания — единственный пикер */}
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>
+          {variant.kind === "otherCard" ? "Карта списания" : "Списать со счёта"}
+        </div>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+          overflow: "hidden", marginBottom: variant.kind === "otherCard" ? 12 : 8,
+        }}>
+          {sources.map((s, i) => {
+            const cm = CURRENCY_META[s.currency] || { symbol: s.currency, flag: "💳" };
+            const on = s.id === debitId;
+            return (
+              <div key={s.id} data-press onClick={() => setDebitId(s.id)} style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "12px 16px", cursor: "pointer",
+                borderBottom: i < sources.length - 1 ? `1px solid ${C.divider}` : "none",
+                backgroundColor: on ? C.accentSoft : "transparent",
+              }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: s.external ? 8 : "50%",
+                  backgroundColor: s.external ? s.color : C.faint,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: s.external ? 9 : 16, fontWeight: 800, color: s.external ? "#fff" : C.text, flexShrink: 0,
+                }}>{s.external ? s.sub.split(" ")[0] : cm.flag}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>{s.sub}</div>
+                </div>
+                {s.balance != null && (
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                    {fmtFull(s.balance)} <span style={{ fontSize: 11, color: C.muted }}>{cm.symbol}</span>
+                  </span>
+                )}
+                {on && <Check size={16} color={C.accentDark} strokeWidth={2.6} style={{ marginLeft: 4 }} />}
+              </div>
+            );
+          })}
+          {variant.kind === "otherCard" && (
+            <div data-press style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", cursor: "pointer",
+              borderTop: `1px solid ${C.divider}`,
+            }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 8, backgroundColor: C.faint,
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}><Plus size={16} color={C.text} strokeWidth={1.9} /></div>
+              <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.text }}>Ввести номер карты</span>
+            </div>
+          )}
+        </div>
+
+        {/* Счёт зачисления — read-only, авто-подстановка (пикер убран) */}
+        {credit && <CreditAccountCard C={C} card={card} credit={credit} debitCurrency={debit.currency} />}
+
+        {/* Сумма */}
+        <div style={{ marginTop: 16, marginBottom: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>Сумма пополнения</div>
+          <div style={{
+            backgroundColor: C.card, borderRadius: 12,
+            border: `1.5px solid ${valid || !amount ? C.border : "#EF4444"}`,
+            padding: "16px", display: "flex", alignItems: "center", gap: 8,
+          }}>
+            <input
+              value={amount}
+              onChange={e => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
+              inputMode="decimal" placeholder="0"
+              style={{
+                flex: 1, border: "none", outline: "none", background: "transparent",
+                fontSize: 26, fontWeight: 800, color: C.text,
+                fontFamily: "inherit", fontFeatureSettings: "'tnum'", minWidth: 0,
+              }}
+            />
+            <span style={{ fontSize: 20, fontWeight: 700, color: C.muted }}>{creditCm.symbol}</span>
+          </div>
+          {!valid && amount && debit.balance != null && num > debit.balance && (
+            <div style={{ fontSize: 12, color: "#EF4444", marginTop: 6 }}>
+              Недостаточно средств на счёте списания
+            </div>
+          )}
+        </div>
+
+        <div style={{ fontSize: 12, color: C.muted, marginBottom: 24 }}>
+          {variant.kind === "otherCard" ? "Зачисление мгновенно · комиссия 0%" : "Без комиссии · мгновенно"}
+        </div>
+
+        <div data-press onClick={() => valid && credit && onConfirm({ debit, credit, amount: num, card })} style={{
+          backgroundColor: valid ? C.accentDark : C.faint,
+          borderRadius: 12, padding: "15px 0", textAlign: "center",
+          cursor: valid ? "pointer" : "default", transition: "background-color 0.15s",
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: valid ? C.accent : C.muted }}>Пополнить</span>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+// Поручение ТН — без пикеров, счёт-источник = карта, из-под которой зашли.
+function TnOrderScreen({ C, card, variant, onBack, onConfirm }) {
+  const [amount, setAmount] = useState("");
+  const credit = resolveCreditAccount(card, card.primaryCurrency);
+  const num = parseFloat(amount.replace(",", ".")) || 0;
+  const valid = num > 0;
+  const cm = CURRENCY_META[credit?.currency] || { symbol: credit?.currency || "" };
+
+  return (
+    <ScreenShell C={C} title={variant.title} onBack={onBack}>
+      <div style={{ padding: "4px 20px 110px" }}>
+        {/* Поручка ТН: пикеры не показываются — сразу счёт-источник */}
+        <div style={{
+          backgroundColor: C.accentSoft, borderRadius: 12, padding: "12px 16px", marginBottom: 16,
+          display: "flex", alignItems: "center", gap: 8,
+        }}>
+          <Zap size={14} color={C.accentDark} strokeWidth={2.2} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Поручение в Tradernet · без пикеров</span>
+        </div>
+
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>Зачислить на счёт</div>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+          padding: "13px 16px", display: "flex", alignItems: "center", gap: 12, marginBottom: 16,
+        }}>
+          <div style={{
+            width: 38, height: 38, borderRadius: "50%", backgroundColor: C.faint,
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0,
+          }}>{cm.flag}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{card.name} · {credit?.currency}</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>•• {card.last4}</div>
+          </div>
+        </div>
+
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>Сумма</div>
+        <div style={{
+          backgroundColor: C.card, borderRadius: 12, border: `1.5px solid ${C.border}`,
+          padding: "16px", display: "flex", alignItems: "center", gap: 8, marginBottom: 24,
+        }}>
+          <input
+            value={amount}
+            onChange={e => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
+            inputMode="decimal" placeholder="0"
+            style={{
+              flex: 1, border: "none", outline: "none", background: "transparent",
+              fontSize: 26, fontWeight: 800, color: C.text,
+              fontFamily: "inherit", fontFeatureSettings: "'tnum'", minWidth: 0,
+            }}
+          />
+          <span style={{ fontSize: 20, fontWeight: 700, color: C.muted }}>{cm.symbol}</span>
+        </div>
+
+        <div data-press onClick={() => valid && credit && onConfirm({ credit, amount: num, card, variant })} style={{
+          backgroundColor: valid ? C.accentDark : C.faint,
+          borderRadius: 12, padding: "15px 0", textAlign: "center",
+          cursor: valid ? "pointer" : "default",
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: valid ? C.accent : C.muted }}>Создать поручение</span>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    ROOT
    ═══════════════════════════════════════════════ */
 
@@ -6406,8 +6678,36 @@ export default function FreedomV6() {
             onOpenLimits={() => pushScreen({ type: "cardLimits", card: s.card })}
             onOpenPinChange={() => pushScreen({ type: "pinChange" })}
             onOpenRequisites={() => pushScreen({ type: "requisites", card: s.card })}
-            onTopUp={() => setSheet({ type: "topup" })}
+            onTopUp={() => setSheet({ type: "topup", card: s.card })}
             onOpenAllTransactions={() => pushScreen({ type: "allTransactions" })}
+          />
+        );
+        if (s.type === "topupPicker") return (
+          <TopUpPickerScreen key={i} C={C} card={s.card} variant={s.variant}
+            onBack={popScreen}
+            onConfirm={(p) => pushScreen({
+              type: "flowSuccess",
+              payload: {
+                title: "Пополнение выполнено",
+                message: p.credit.mono ? "Моновалютный перевод" : `Зачислено на счёт в ${p.credit.currency}`,
+                amountStr: `${fmtFull(p.amount)} ${CURRENCY_META[p.credit.currency]?.symbol || ""}`,
+                note: `${p.debit.name} → ${p.card.name} •• ${p.card.last4}`,
+              },
+            })}
+          />
+        );
+        if (s.type === "tnOrder") return (
+          <TnOrderScreen key={i} C={C} card={s.card} variant={s.variant}
+            onBack={popScreen}
+            onConfirm={(p) => pushScreen({
+              type: "flowSuccess",
+              payload: {
+                title: "Поручение создано",
+                message: `${p.variant.title} · исполнение в Tradernet`,
+                amountStr: `${fmtFull(p.amount)} ${CURRENCY_META[p.credit.currency]?.symbol || ""}`,
+                note: `Зачисление на ${p.card.name} •• ${p.card.last4}`,
+              },
+            })}
           />
         );
         if (s.type === "cardLimits") return (
@@ -6860,25 +7160,28 @@ export default function FreedomV6() {
       )}
       {sheet?.type === "topup" && (
         <BottomSheetModal C={C} onClose={() => setSheet(null)}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 16 }}>Пополнить карту</div>
-          {[
-            ...(featureFlags.applePay ? [{ icon: "", title: "Apple Pay", sub: "Мгновенно · без комиссии" }] : []),
-            { icon: "💳", title: "С карты другого банка", sub: "Visa или Mastercard · до 3 минут" },
-            { icon: "🏦", title: "По реквизитам", sub: "Банковским переводом · до 1 дня" },
-          ].map((o, i, arr) => (
-            <div key={i} data-press onClick={() => setSheet(null)} style={{
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 4 }}>Пополнить</div>
+          <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>Выберите, откуда перевести деньги</div>
+          {TOPUP_VARIANTS.map((v, i) => (
+            <div key={v.id} data-press onClick={() => {
+              const card = sheet.card;
+              setSheet(null);
+              if (v.kind === "tn") pushScreen({ type: "tnOrder", card, variant: v });
+              else pushScreen({ type: "topupPicker", card, variant: v });
+            }} style={{
               display: "flex", alignItems: "center", gap: 12, padding: "13px 0",
-              borderBottom: i < arr.length - 1 ? `1px solid ${C.divider}` : "none",
+              borderBottom: i < TOPUP_VARIANTS.length - 1 ? `1px solid ${C.divider}` : "none",
               cursor: "pointer",
             }}>
               <div style={{
-                width: 42, height: 42, borderRadius: 12, backgroundColor: C.faint,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: o.icon === "" ? 17 : 19, fontWeight: 700, color: C.text,
-              }}>{o.icon}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{o.title}</div>
-                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{o.sub}</div>
+                width: 42, height: 42, borderRadius: 12, backgroundColor: `${v.color}14`,
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}>
+                <v.Icon size={19} color={v.color} strokeWidth={1.9} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{v.title}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{v.sub}</div>
               </div>
               <ChevronRight size={15} color={C.muted} strokeWidth={1.8} />
             </div>

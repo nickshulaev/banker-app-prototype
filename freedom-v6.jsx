@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Search, Bell, Plus, ChevronRight, ChevronDown, X, ArrowLeftRight, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid, Smartphone, Plane, Sofa, Zap, Phone, Globe, QrCode, Repeat, Send, Landmark, Tv, Bus, GraduationCap, Eye, EyeOff, ArrowLeft, ArrowDownLeft, Snowflake, FileText, ShoppingCart, Utensils, Fuel, Wifi, Home, Ticket, Settings2, Check, User, Shield, LogOut, Palette } from "lucide-react";
+import { Search, Bell, Plus, ChevronRight, ChevronDown, X, ArrowLeftRight, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid, Smartphone, Plane, Sofa, Zap, Phone, Globe, QrCode, Repeat, Send, Landmark, Tv, Bus, GraduationCap, Eye, EyeOff, ArrowLeft, ArrowDown, ArrowDownLeft, Snowflake, FileText, ShoppingCart, Utensils, Fuel, Wifi, Home, Ticket, Settings2, Check, User, Shield, LogOut, Palette } from "lucide-react";
 import OnboardingFlow, { ONB_START, ONB_GATES, ONB_PRESETS, ONB_STEPS, SUMSUB_PHASES, SUMSUB_PHASE_LABELS } from "./onboarding.jsx";
 
 /* ═══════════════════════════════════════════════
@@ -66,7 +66,7 @@ const CARD_PRODUCTS = [
   {
     bank: "Freedom KZ",
     cards: [
-      { id: "superpickle", name: "SuperPickle", last4: "0088", primaryBalance: 897691.32, primaryCurrency: "USD",
+      { id: "superpickle", name: "SuperPickle", last4: "0088", primaryBalance: 190822.91, primaryCurrency: "USD",
         breakdown: [
           { currency: "KZT", amount: 35251706.16 },
           { currency: "USD", amount: 113324.68 },
@@ -74,10 +74,15 @@ const CARD_PRODUCTS = [
         ], color: "#84CC16", visual: "pickle", fcBalance: 409.18,
       },
       { id: "invest-prestige", name: "Invest Prestige Card", sub: "D75003 — Freedom24", last4: "0011",
-        primaryBalance: 122683.74, primaryCurrency: "USD", breakdown: [], color: "#1E1B4B",
+        primaryBalance: 121445.05, primaryCurrency: "USD",
+        breakdown: [
+          { currency: "USD", amount: 115000.00 },
+          { currency: "EUR", amount: 3500.00 },
+          { currency: "KZT", amount: 1200000.00 },
+        ], color: "#1E1B4B",
         visual: "prestige", fcBalance: 87.42,
       },
-      { id: "harvey-queen", name: "Supercard Harvey Queen", last4: "0088", primaryBalance: 1069.42, primaryCurrency: "USD",
+      { id: "harvey-queen", name: "Supercard Harvey Queen", last4: "0088", primaryBalance: 251722.06, primaryCurrency: "USD",
         breakdown: [
           { currency: "USD", amount: 251709.36 },
           { currency: "KZT", amount: 528.06 },
@@ -89,10 +94,11 @@ const CARD_PRODUCTS = [
   {
     bank: "Cifra Bank",
     cards: [
-      { id: "ru-card", name: "Ru Card", last4: "1222", primaryBalance: 1699039.81, primaryCurrency: "USD",
+      { id: "ru-card", name: "Ru Card", last4: "1222", primaryBalance: 32725.15, primaryCurrency: "USD",
         breakdown: [
           { currency: "KZT", amount: 1577523.88 },
           { currency: "USD", amount: 29258.06 },
+          { currency: "EUR", amount: 0 },
         ], color: "#0D9488", visual: "ru-threads", fcBalance: 156.78,
       },
     ],
@@ -742,8 +748,9 @@ function CurrencyPicker({ current, currencies, onSelect, onClose, C }) {
    BOTTOM SHEET — Constructor
    ═══════════════════════════════════════════════ */
 
-function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrder, setBlockOrder, emptyState, setEmptyState, featureFlags, setFeatureFlags, onb, setOnb, C }) {
+function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrder, setBlockOrder, emptyState, setEmptyState, featureFlags, setFeatureFlags, onb, setOnb, pickerMode, setPickerMode, autoExpandMode, setAutoExpandMode, stressLong, setStressLong, C }) {
   const isDark = C.bg === '#0E0F0C';
+  const [subView, setSubView] = useState(null); // null | "picker" — вложенный экран конструктора
   const themes = [
     { key: "stripe", label: "Light", desc: "Светлая" },
     { key: "dark", label: "Dark", desc: "Тёмная" },
@@ -800,6 +807,75 @@ function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrd
     return 0;
   };
 
+  // Вложенный экран «Пикер счетов» — режимы выбора счёта (=валюты) на экране пополнения
+  if (subView === "picker") {
+    const MODES = [
+      { key: "currencyFirst", label: "Валюта — первая", desc: "Сначала «в какой валюте», потом «откуда списать». Конверсия — осознанный выбор" },
+      { key: "chips", label: "Чипсы валют", desc: "Карта строкой, её счета — чипсы с балансами. Ноль вложенности" },
+      { key: "auto", label: "Автомат", desc: "Счета выбираются сами (моновалюта → объём), решение объяснено строкой" },
+      { key: "n26", label: "N26 · сумма — первая", desc: "Сумма сверху, «Откуда»/«Куда» — строки-дропдауны, затем отдельный экран проверки с комиссией и лимитом" },
+      { key: "revolut", label: "Revolut · карточка перевода", desc: "Источник → стрелка → цель; валюта-дропдаун и сумма в одном блоке, ошибка — шитом с Retry" },
+    ];
+    const EXPANDS = [
+      { key: "currencyFirst", label: "Валюта — первая" },
+      { key: "chips", label: "Чипсы валют" },
+    ];
+    const radio = (items, active, onPick, dim) => items.map(m => (
+      <div key={m.key} onClick={() => !dim && onPick(m.key)} style={{
+        padding: "12px 14px", borderRadius: 10, cursor: dim ? "default" : "pointer", marginBottom: 8,
+        opacity: dim ? 0.4 : 1,
+        backgroundColor: active === m.key ? C.accentSoft : "transparent",
+        border: `1px solid ${active === m.key ? C.accent : C.border}`,
+      }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{m.label}</div>
+        {m.desc && <div style={{ fontSize: 11, color: C.muted, marginTop: 2, lineHeight: 1.4 }}>{m.desc}</div>}
+      </div>
+    ));
+    return (
+      <>
+        <div onClick={onClose} style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.35)", zIndex: 500 }} />
+        <div style={{
+          position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
+          width: "100%", maxWidth: 430, zIndex: 501,
+          backgroundColor: C.card, borderRadius: "20px 20px 0 0",
+          padding: "12px 20px 40px", maxHeight: "82vh", overflowY: "auto",
+        }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: C.border, margin: "0 auto 20px" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+            <div data-press onClick={() => setSubView(null)} style={{ cursor: "pointer", display: "flex", padding: 4 }}>
+              <ArrowLeft size={20} color={C.text} strokeWidth={2} />
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Пикер счетов</div>
+          </div>
+
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>Режим выбора счёта</div>
+          {radio(MODES, pickerMode, setPickerMode, false)}
+
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, margin: "16px 0 10px", textTransform: "uppercase", letterSpacing: "0.06em" }}>«Изменить» в автомате раскрывает</div>
+          {radio(EXPANDS, autoExpandMode, setAutoExpandMode, pickerMode !== "auto")}
+
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, margin: "16px 0 10px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Стресс-тест</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", borderBottom: `1px solid ${C.divider}` }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Длинные суммы</div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 1 }}>Балансы ×1000 — проверка чипсов на переполнение</div>
+            </div>
+            <div onClick={() => setStressLong(v => !v)} style={{
+              width: 44, height: 24, borderRadius: 12,
+              backgroundColor: stressLong ? C.accentDark : (isDark ? "rgba(255,255,255,0.15)" : "#D1D5DB"),
+              position: "relative", cursor: "pointer", flexShrink: 0, transition: "background-color 0.2s",
+            }}>
+              <div style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: "#fff", position: "absolute", top: 2, left: stressLong ? 22 : 2, transition: "left 0.2s" }} />
+            </div>
+          </div>
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 14, lineHeight: 1.5 }}>
+            Путь для проверки: карта → Пополнить → выбрать карту в шторке → экран суммы.
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <div onClick={onClose} style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.35)", zIndex: 500 }} />
@@ -843,6 +919,22 @@ function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrd
               transition: "left 0.2s",
             }} />
           </div>
+        </div>
+
+        {/* Пикер счетов — вложенный экран с режимами выбора счёта на пополнении */}
+        <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>Пикер счетов</div>
+        <div data-press onClick={() => setSubView("picker")} style={{
+          display: "flex", alignItems: "center", gap: 12, padding: "12px 0", marginBottom: 16,
+          borderBottom: `1px solid ${C.divider}`, cursor: "pointer",
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Режим выбора счёта</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 1 }}>
+              {pickerMode === "currencyFirst" ? "Валюта — первая" : pickerMode === "chips" ? "Чипсы валют" : pickerMode === "n26" ? "N26 · сумма — первая" : pickerMode === "revolut" ? "Revolut · карточка перевода" : `Автомат → ${autoExpandMode === "chips" ? "чипсы" : "валюта-первая"}`}
+              {stressLong ? " · стресс-тест сумм" : ""}
+            </div>
+          </div>
+          <ChevronRight size={16} color={C.muted} strokeWidth={1.8} />
         </div>
 
         {/* Онбординг — пре-авторизационный флоу (изолированный, см. onboarding.jsx) */}
@@ -6298,14 +6390,14 @@ function AviataScreen({ C, onBack, onBuy }) {
    счёт зачисления подставляется автоматически. Поручки ТН без пикеров.
    ═══════════════════════════════════════════════ */
 
-// Варианты под кнопкой «Пополнить». kind определяет поведение пикера.
+// Внешние способы пополнения (свои карты выбираются прямо в шторке, не отдельным пунктом).
+// «По номеру телефона» удалён — свою карту нельзя пополнить по номеру телефона.
 const TOPUP_VARIANTS = [
-  { id: "own",      title: "Между своими счетами",  sub: "Мгновенно · без комиссии",        Icon: Repeat,     color: "#22C55E", kind: "picker" },
-  { id: "otherCard",title: "С карты другого банка", sub: "Visa или Mastercard",             Icon: CreditCard, color: "#3B82F6", kind: "otherCard" },
-  { id: "phone",    title: "По номеру телефона",    sub: "Внутри банка и за его пределами", Icon: Phone,      color: "#0D9488", kind: "picker" },
+  { id: "otherCard",    title: "С карты другого банка", sub: "Visa или Mastercard",               Icon: CreditCard, color: "#3B82F6", kind: "otherCard" },
+  { id: "bankTransfer", title: "Банковским переводом",  sub: "По реквизитам · до 3 рабочих дней", Icon: Landmark,   color: "#0D9488", kind: "requisites" },
   // Поручки ТН — пикеры не показываются, сразу на поручку со счётом-источником
-  { id: "broker",   title: "С брокерского счёта",   sub: "Поручение в Tradernet",           Icon: TrendingUp, color: "#F59E0B", kind: "tn" },
-  { id: "crypto",   title: "С криптокошелька",      sub: "Поручение в Tradernet",           Icon: Zap,        color: "#8B5CF6", kind: "tn" },
+  { id: "broker",       title: "С брокерского счёта",   sub: "Поручение в Tradernet",             Icon: TrendingUp, color: "#F59E0B", kind: "tn" },
+  { id: "crypto",       title: "С криптокошелька",      sub: "Digital assets · Tradernet",        Icon: Zap,        color: "#8B5CF6", kind: "tn" },
 ];
 
 // Токенизированные карты других банков из прошлых переводов (экран «карта другого банка»).
@@ -6314,114 +6406,691 @@ const TOKENIZED_CARDS = [
   { id: "halyk", bank: "Halyk Bank", last4: "5510", network: "MC",   color: "#00A94F" },
 ];
 
-// Карточка счёта зачисления (read-only) — пикер зачисления убран по решению встречи.
-function CreditAccountCard({ C, card, credit, debitCurrency }) {
-  const cm = CURRENCY_META[credit.currency] || { symbol: credit.currency, flag: "💰" };
+// Шторка «Пополнить» (прод-состав, улучшенный): весь выбор источника происходит здесь.
+// Свои карты раскрываются в валютные счета, чужие — в токенизированные; дальше один экран суммы.
+function TopUpSheetContent({ C, card, displayCurrency, onPickOwn, onPickExternal, onPickVariant }) {
+  const dc = displayCurrency || "KZT";
+  const dcMeta = CURRENCY_META[dc] || { symbol: dc };
+  const toApp = (amount, currency) => convertTo(convertToKZT(amount, currency), dc);
+  const plural = (n) => `${n} ${n >= 2 && n <= 4 ? "счёта" : "счетов"}`;
+
+  // Свои карты по банкам; карта-получатель уходит в «Скрытые счета» с причиной.
+  // Карты НЕ разворачиваются в счета — счёт (валюта) выбирается дальше, на экране пополнения.
+  const groups = CARD_PRODUCTS.map(g => ({
+    bank: g.bank,
+    nodes: g.cards.filter(c => c.id !== card.id).map(c => {
+      const accounts = cardSubAccounts(c).map(s => ({ ...s, kzt: convertToKZT(s.amount, s.currency) }));
+      return { key: c.id, cardRef: c, title: c.name, last4: c.last4, color: c.color, accounts,
+        totalKZT: accounts.reduce((t, a) => t + a.kzt, 0) };
+    }).sort((a, b) => b.totalKZT - a.totalKZT),
+  })).filter(g => g.nodes.length > 0);
+
+  // Бейдж «по объёму» — на карте с самым крупным счётом (дефолт списания следующего шага).
+  const allNodes = groups.flatMap(g => g.nodes);
+  const maxAcc = (n) => Math.max(...n.accounts.map(a => a.kzt), 0);
+  const topNode = allNodes.length ? allNodes.reduce((mx, n) => (maxAcc(n) > maxAcc(mx) ? n : mx), allNodes[0]) : null;
+  const [otherOpen, setOtherOpen] = useState(false);
+  const [hiddenOpen, setHiddenOpen] = useState(false);
+
+  const label = (text) => <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, margin: "16px 0 6px" }}>{text}</div>;
+
   return (
-    <div style={{ marginBottom: 8 }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>Счёт зачисления</div>
-      <div style={{
-        backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
-        padding: "13px 16px", display: "flex", alignItems: "center", gap: 12,
+    <>
+      <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 4 }}>Пополнить {card.name}</div>
+      <div style={{ fontSize: 13, color: C.muted, marginBottom: 8 }}>Откуда перевести деньги</div>
+
+      {/* Apple Pay — мгновенное пополнение извне */}
+      <div data-press onClick={() => onPickVariant({ id: "applePay", kind: "applePay", title: "Apple Pay" })} style={{
+        display: "flex", alignItems: "center", gap: 12, padding: "12px 0", cursor: "pointer",
       }}>
-        <div style={{
-          width: 38, height: 38, borderRadius: "50%", backgroundColor: C.faint,
-          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0,
-        }}>{cm.flag}</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{card.name} · {credit.currency}</div>
-          <div style={{ fontSize: 12, color: C.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>•• {card.last4}</div>
+        <div style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: "#111827", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Wallet size={18} color="#fff" strokeWidth={1.9} />
         </div>
-        {/* нет шеврона — счёт зачисления сменить нельзя (намеренное ограничение) */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Apple Pay</div>
+          <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Мгновенно · картой из Wallet</div>
+        </div>
+        <ChevronRight size={15} color={C.muted} strokeWidth={1.8} />
       </div>
-      <div style={{ fontSize: 11, color: C.muted, marginTop: 6, lineHeight: 1.4 }}>
-        {credit.mono
-          ? `Моновалютный перевод — счёт в ${debitCurrency} под этой картой`
-          : `На карте нет счёта в ${debitCurrency} — подставлен ${credit.currency} по иерархии валют`}
+
+      {/* Свои карты: тап по карте → сразу экран пополнения (счёт-валюта выбирается там) */}
+      {groups.map(g => (
+        <div key={g.bank}>
+          {label(`Мои карты · ${g.bank}`)}
+          <div style={{ backgroundColor: C.bg, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+            {g.nodes.map((node, ni) => {
+              const availCnt = node.accounts.filter(a => a.amount > 0).length;
+              return (
+                <div key={node.key} data-press onClick={() => onPickOwn(node.cardRef)} style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer",
+                  borderBottom: ni < g.nodes.length - 1 ? `1px solid ${C.divider}` : "none",
+                }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: node.color || C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <CreditCard size={17} color="#fff" strokeWidth={2} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{node.title}</div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 2, fontFeatureSettings: "'tnum'", display: "flex", alignItems: "center", gap: 6 }}>
+                      <span>•• {node.last4} · {availCnt < node.accounts.length ? `доступно ${availCnt} из ${node.accounts.length}` : plural(node.accounts.length)}</span>
+                      {topNode && node.key === topNode.key && (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: C.accentDark, backgroundColor: C.accentSoft, borderRadius: 20, padding: "1px 7px", flexShrink: 0 }}>по объёму</span>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                    {fmtFull(convertTo(node.totalKZT, dc))} <span style={{ fontSize: 11, color: C.muted }}>{dcMeta.symbol}</span>
+                  </div>
+                  <ChevronRight size={15} color={C.muted} strokeWidth={1.8} style={{ marginLeft: 4, flexShrink: 0 }} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {/* Внешние способы (прод-состав: чужая карта, реквизиты, брокер, крипта) */}
+      {label("Другие способы")}
+      {TOPUP_VARIANTS.map((v, i) => (
+        <div key={v.id}>
+          <div data-press onClick={() => v.kind === "otherCard" ? setOtherOpen(o => !o) : onPickVariant(v)} style={{
+            display: "flex", alignItems: "center", gap: 12, padding: "12px 0",
+            borderBottom: i < TOPUP_VARIANTS.length - 1 || (v.kind === "otherCard" && otherOpen) ? `1px solid ${C.divider}` : "none",
+            cursor: "pointer",
+          }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: `${v.color}14`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <v.Icon size={18} color={v.color} strokeWidth={1.9} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{v.title}</div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{v.sub}</div>
+            </div>
+            {v.kind === "otherCard"
+              ? <ChevronDown size={15} color={C.muted} strokeWidth={1.8} style={{ transform: otherOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+              : <ChevronRight size={15} color={C.muted} strokeWidth={1.8} />}
+          </div>
+          {v.kind === "otherCard" && otherOpen && (
+            <div style={{ borderLeft: `3px solid ${v.color}`, backgroundColor: C.faint, borderRadius: "0 8px 8px 0", marginBottom: 4 }}>
+              {TOKENIZED_CARDS.map(t => (
+                <div key={t.id} data-press onClick={() => onPickExternal(t)} style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "10px 14px 10px 12px", cursor: "pointer",
+                  borderBottom: `1px solid ${C.divider}`,
+                }}>
+                  <div style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: t.color, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, flexShrink: 0 }}>{t.network}</div>
+                  <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.text }}>{t.bank}</div>
+                  <div style={{ fontSize: 12, color: C.muted, fontFeatureSettings: "'tnum'" }}>•• {t.last4}</div>
+                  <ChevronRight size={14} color={C.muted} strokeWidth={1.8} />
+                </div>
+              ))}
+              <div data-press onClick={() => onPickExternal(null)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px 10px 12px", cursor: "pointer" }}>
+                <div style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: C.card, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Plus size={15} color={C.text} strokeWidth={1.9} />
+                </div>
+                <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.text }}>Ввести номер карты</span>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+
+      {/* Скрытые счета — не подходят под условия перевода (прозрачность вместо молчаливого фильтра) */}
+      <div data-press onClick={() => setHiddenOpen(o => !o)} style={{
+        display: "flex", alignItems: "center", gap: 12, padding: "14px 0 4px", cursor: "pointer",
+      }}>
+        <EyeOff size={16} color={C.muted} strokeWidth={1.8} />
+        <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.muted }}>Скрытые счета</span>
+        <ChevronDown size={15} color={C.muted} style={{ transform: hiddenOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
       </div>
-    </div>
+      {hiddenOpen && (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", opacity: 0.5 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: card.color || C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <CreditCard size={17} color="#fff" strokeWidth={2} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{card.name}</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Карта зачисления — нельзя списать с неё же</div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
-// Экран пополнения: ТОЛЬКО пикер списания, счёт зачисления — авто.
-function TopUpPickerScreen({ C, card, variant, onBack, onConfirm }) {
-  // Источники списания: для «своих» — все счета + суб-счета карт; для «карты другого банка» — токенизированные карты.
-  const ownSources = [
-    ...ACCOUNTS_LIST.map(a => ({ id: a.id, name: a.name, sub: `•• ${a.number.replace(/\s/g, "").slice(-4)}`, currency: a.currency, balance: a.balance, external: false })),
-    ...CARD_PRODUCTS.flatMap(g => g.cards.flatMap(c =>
-      cardSubAccounts(c).map(s => ({ id: `${c.id}-${s.currency}`, name: `${c.name} · ${s.currency}`, sub: `•• ${c.last4}`, currency: s.currency, balance: s.amount, external: false }))
-    )),
-  ];
-  const externalSources = TOKENIZED_CARDS.map(t => ({ id: t.id, name: t.bank, sub: `${t.network} •• ${t.last4}`, currency: "KZT", balance: null, external: true, color: t.color }));
-  const sources = variant.kind === "otherCard" ? externalSources : ownSources;
+// Универсальный экран пополнения/перевода между своими: обе стороны (карта списания
+// и карта зачисления) менябельны. Способ выбора счёта (=валюты) задаётся режимом
+// из дебаг-блока «Пикер счетов»: currencyFirst (валюта-первая) | chips (чипсы) | auto (автомат).
+function TopUpAmountScreen({ C, card, source, displayCurrency, pickerMode, autoExpandMode, stressLong, onBack, onChangeSource, onConfirm }) {
+  const kind = source.kind; // own | external | applePay
+  const tok = source.tok || null;
+  const S = (v) => (stressLong ? v * 1000 : v); // стресс-тест длинных сумм — только отображение
 
-  const [debitId, setDebitId] = useState(sources[0].id);
   const [amount, setAmount] = useState("");
-  const debit = sources.find(s => s.id === debitId) || sources[0];
-  // Счёт зачисления — подставляется под картой, из-под которой зашли, по валюте списания.
-  const credit = resolveCreditAccount(card, debit.currency);
+  const [autoOpen, setAutoOpen] = useState(false);     // «Изменить» в автомате → полный пикер
+  const [targetOpen, setTargetOpen] = useState(false); // смена карты зачисления
+  const [targetId, setTargetId] = useState(card.id);
+  const [debitSel, setDebitSel] = useState(null);      // id счёта списания; null = авто
+  const [creditSel, setCreditSel] = useState(null);    // валюта зачисления; null = авто
+  const [fromOpen, setFromOpen] = useState(false);     // n26/revolut: дропдаун «Откуда»
+  const [toOpen, setToOpen] = useState(false);         // n26/revolut: дропдаун «Куда» (карты)
+  const [curOpen, setCurOpen] = useState(false);       // revolut: дропдаун валюты цели
+  const [errOpen, setErrOpen] = useState(false);       // revolut: шит «недостаточно средств» + Retry
+
+  const allCards = CARD_PRODUCTS.flatMap(g => g.cards);
+  const target = allCards.find(c => c.id === targetId) || card;
+  const targetAccounts = cardSubAccounts(target);
+
+  // Все возможные источники списания: ненулевые счета всех карт, кроме карты зачисления; по объёму.
+  const ownSources = allCards
+    .filter(c => c.id !== target.id)
+    .flatMap(c => cardSubAccounts(c).map(s => ({
+      id: `${c.id}-${s.currency}`, cardId: c.id, cardName: c.name, cardColor: c.color,
+      last4: c.last4, currency: s.currency, amount: s.amount, kzt: convertToKZT(s.amount, s.currency),
+    })))
+    .filter(s => s.amount > 0)
+    .sort((a, b) => b.kzt - a.kzt);
+
+  // Режим: внешние источники (чужая карта, Apple Pay) списание не выбирают — только зачисление.
+  // N26- и Revolut-раскладки применимы и к внешним (From-блок показывает внешний источник).
+  const mode = kind === "own" ? pickerMode : (["n26", "revolut"].includes(pickerMode) ? pickerMode : "chips");
+  const layout = mode === "auto" ? (autoOpen ? autoExpandMode : "auto") : mode;
+
+  // Авто-дефолт списания: top-счёт карты, выбранной в шторке, иначе top по объёму вообще.
+  const srcCardTop = source.srcCard ? ownSources.find(s => s.cardId === source.srcCard.id) : null;
+  const autoDebit = srcCardTop || ownSources[0] || null;
+
+  // Расчёт пары списание/зачисление по раскладке.
+  let debit = null, credit = null;
+  if (kind !== "own") {
+    credit = creditSel
+      ? (targetAccounts.find(s => s.currency === creditSel) || resolveCreditAccount(target, creditSel))
+      : resolveCreditAccount(target, kind === "external" ? "KZT" : target.primaryCurrency);
+  } else if (layout === "currencyFirst") {
+    // Валюта-первая: валюта зачисления → источники этой валюты (+ секция «с конверсией»).
+    const autoCur = (resolveCreditAccount(target, (autoDebit || {}).currency || "KZT") || {}).currency;
+    const cur = creditSel || autoCur || (targetAccounts[0] || {}).currency;
+    credit = targetAccounts.find(s => s.currency === cur) || resolveCreditAccount(target, cur);
+    const chosen = debitSel ? ownSources.find(s => s.id === debitSel) : null;
+    debit = chosen || ownSources.find(s => s.currency === cur) || autoDebit;
+  } else if (layout === "n26" || layout === "revolut") {
+    // N26/Revolut: «Откуда» = любой свой счёт (дропдаун), «Куда» = карта + валюта (дропдаун).
+    const chosen = debitSel ? ownSources.find(s => s.id === debitSel) : null;
+    debit = chosen || autoDebit;
+    credit = creditSel
+      ? (targetAccounts.find(s => s.currency === creditSel) || resolveCreditAccount(target, creditSel))
+      : resolveCreditAccount(target, (debit || {}).currency || "KZT");
+  } else {
+    // Чипсы: карта списания фиксирована (из шторки), её счёт — чипсом.
+    const chosen = debitSel ? ownSources.find(s => s.id === debitSel) : null;
+    const chipCardId = (chosen || srcCardTop || autoDebit || {}).cardId;
+    const chipsOfCard = ownSources.filter(s => s.cardId === chipCardId);
+    debit = chosen || chipsOfCard[0] || autoDebit;
+    credit = creditSel
+      ? (targetAccounts.find(s => s.currency === creditSel) || resolveCreditAccount(target, creditSel))
+      : resolveCreditAccount(target, (debit || {}).currency || "KZT");
+  }
+
+  // Производные для рендера.
+  const chipCard = kind === "own" && debit ? allCards.find(c => c.id === debit.cardId) : null;
+  const chipSources = chipCard ? ownSources.filter(s => s.cardId === chipCard.id) : [];
+  const monoSources = credit ? ownSources.filter(s => s.currency === credit.currency) : [];
+  const crossSources = credit ? ownSources.filter(s => s.currency !== credit.currency) : [];
+
+  const debitCur = kind === "own" ? (debit ? debit.currency : (credit || {}).currency) : kind === "external" ? "KZT" : (credit || {}).currency;
+  const mono = !!credit && credit.currency === debitCur;
+  const cross = !mono;
   const num = parseFloat(amount.replace(",", ".")) || 0;
-  const valid = num > 0 && (debit.balance == null || num <= debit.balance);
-  const creditCm = credit ? (CURRENCY_META[credit.currency] || { symbol: credit.currency }) : { symbol: "" };
+  const debitEquiv = cross && credit ? convertTo(convertToKZT(num, credit.currency), debitCur) : num;
+  const balance = kind === "own" && debit ? debit.amount : null;
+  const valid = num > 0 && !!credit && (balance == null || debitEquiv <= balance);
+  const creditCm = CURRENCY_META[(credit || {}).currency] || { symbol: (credit || {}).currency || "" };
+  const debitCm = CURRENCY_META[debitCur] || { symbol: debitCur || "" };
+  const rate = (RATES_TO_KZT[debitCur] || 1) / (RATES_TO_KZT[(credit || {}).currency] || 1);
+
+  const extTitle = kind === "external" ? (tok ? tok.bank : "Карта другого банка") : "Apple Pay";
+  const extSub = kind === "external" ? (tok ? `${tok.network} •• ${tok.last4}` : "Visa или Mastercard") : "Картой из Wallet";
+  const confirm = () => valid && onConfirm({
+    debit: kind === "own"
+      ? { name: `${debit.cardName} · ${debit.currency}`, currency: debitCur, sub: `•• ${debit.last4}` }
+      : { name: extTitle, currency: debitCur, sub: extSub },
+    credit: { ...credit, mono }, amount: num, card: target,
+    // Данные для экрана проверки (N26-паттерн: Review с курсом, комиссией и лимитом)
+    rateStr: cross ? `1 ${debitCm.symbol} = ${rate >= 1 ? rate.toFixed(2) : rate.toFixed(4)} ${creditCm.symbol}` : null,
+    debitEquivStr: cross ? `≈ ${fmtFull(debitEquiv)} ${debitCm.symbol}` : null,
+    limitLeftStr: `${fmtFull(convertTo(4980000, (credit || {}).currency || "KZT"))} ${creditCm.symbol}`,
+  });
+
+  const sectionLabel = (t) => <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>{t}</div>;
+
+  // Чипсы валют; в режиме чипсов — с суммами (стресс-тест длинных значений показателен именно тут).
+  const chips = (accounts, activeCur, onPick, withAmounts) => (
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+      {accounts.map(s => {
+        const cm = CURRENCY_META[s.currency] || { symbol: s.currency };
+        const on = s.currency === activeCur;
+        return (
+          <div key={s.currency} data-press onClick={() => onPick(s.currency)} style={{
+            padding: withAmounts ? "7px 11px" : "9px 13px", borderRadius: 10, cursor: "pointer",
+            border: `1.5px solid ${on ? C.accentDark : C.border}`,
+            backgroundColor: on ? C.accentSoft : C.card,
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{cm.symbol} {s.currency}</div>
+            {withAmounts && (
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'" }}>{fmtFull(S(s.amount))}</div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  // Строка источника в списке «валюта-первая» (радио + карта + сумма).
+  const sourceRow = (s, isTop, dim) => {
+    const on = debit && debit.id === s.id;
+    const cm = CURRENCY_META[s.currency] || { symbol: s.currency };
+    return (
+      <div key={s.id} data-press onClick={() => { setDebitSel(s.id); setFromOpen(false); }} style={{
+        display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", cursor: "pointer",
+        opacity: dim && !on ? 0.6 : 1,
+        backgroundColor: on ? C.accentSoft : "transparent",
+        borderBottom: `1px solid ${C.divider}`,
+      }}>
+        <div style={{
+          width: 16, height: 16, borderRadius: "50%", flexShrink: 0,
+          border: on ? `5px solid ${C.accentDark}` : `1.5px solid ${C.border}`,
+          boxSizing: "border-box", backgroundColor: on ? "#fff" : "transparent",
+        }} />
+        <div style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: s.cardColor || C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <CreditCard size={13} color="#fff" strokeWidth={2} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 600, color: C.text, display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.cardName}</span>
+            {isTop && <span style={{ fontSize: 10, fontWeight: 700, color: C.accentDark, backgroundColor: C.accentSoft, borderRadius: 20, padding: "1px 7px", flexShrink: 0 }}>по объёму</span>}
+          </div>
+          {dim && <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>{s.currency} → {(credit || {}).currency} · конверсия</div>}
+        </div>
+        <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+          {fmtFull(S(s.amount))} <span style={{ fontSize: 11, color: C.muted }}>{cm.symbol}</span>
+        </span>
+      </div>
+    );
+  };
 
   return (
     <ScreenShell C={C} title="Пополнить" onBack={onBack}>
       <div style={{ padding: "4px 20px 110px" }}>
-        {/* Пикер списания — единственный пикер */}
-        <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>
-          {variant.kind === "otherCard" ? "Карта списания" : "Списать со счёта"}
-        </div>
-        <div style={{
-          backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
-          overflow: "hidden", marginBottom: variant.kind === "otherCard" ? 12 : 8,
-        }}>
-          {sources.map((s, i) => {
-            const cm = CURRENCY_META[s.currency] || { symbol: s.currency, flag: "💳" };
-            const on = s.id === debitId;
-            return (
-              <div key={s.id} data-press onClick={() => setDebitId(s.id)} style={{
-                display: "flex", alignItems: "center", gap: 12,
-                padding: "12px 16px", cursor: "pointer",
-                borderBottom: i < sources.length - 1 ? `1px solid ${C.divider}` : "none",
-                backgroundColor: on ? C.accentSoft : "transparent",
-              }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: s.external ? 8 : "50%",
-                  backgroundColor: s.external ? s.color : C.faint,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: s.external ? 9 : 16, fontWeight: 800, color: s.external ? "#fff" : C.text, flexShrink: 0,
-                }}>{s.external ? s.sub.split(" ")[0] : cm.flag}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
-                  <div style={{ fontSize: 12, color: C.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>{s.sub}</div>
-                </div>
-                {s.balance != null && (
-                  <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
-                    {fmtFull(s.balance)} <span style={{ fontSize: 11, color: C.muted }}>{cm.symbol}</span>
-                  </span>
-                )}
-                {on && <Check size={16} color={C.accentDark} strokeWidth={2.6} style={{ marginLeft: 4 }} />}
-              </div>
-            );
-          })}
-          {variant.kind === "otherCard" && (
-            <div data-press style={{
-              display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", cursor: "pointer",
-              borderTop: `1px solid ${C.divider}`,
-            }}>
+        {/* Внешний источник (чужая карта / Apple Pay) — компактная строка, счёт не выбирается */}
+        {kind !== "own" && !["n26", "revolut"].includes(layout) && (
+          <div style={{ marginBottom: 14 }}>
+            {sectionLabel("Списать с")}
+            <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: "13px 14px", display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{
-                width: 36, height: 36, borderRadius: 8, backgroundColor: C.faint,
-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-              }}><Plus size={16} color={C.text} strokeWidth={1.9} /></div>
-              <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.text }}>Ввести номер карты</span>
+                width: 34, height: 34, borderRadius: 10,
+                backgroundColor: kind === "external" ? (tok ? tok.color : C.faint) : "#111827",
+                color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 9, fontWeight: 800, flexShrink: 0,
+              }}>
+                {kind === "external" && tok ? tok.network
+                  : kind === "external" ? <CreditCard size={17} color={C.text} strokeWidth={2} />
+                  : <Wallet size={17} color="#fff" strokeWidth={1.9} />}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{extTitle}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>{extSub}</div>
+              </div>
+              <span data-press onClick={onChangeSource} style={{ fontSize: 13, fontWeight: 600, color: C.accentDark, cursor: "pointer", flexShrink: 0 }}>Изменить</span>
+            </div>
+          </div>
+        )}
+
+        {/* Чипсы-раскладка: «Списать с» = карта + чипсы её валютных счетов */}
+        {kind === "own" && layout === "chips" && chipCard && (
+          <div style={{ marginBottom: 14 }}>
+            {sectionLabel("Списать с")}
+            <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: "12px 14px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: chipSources.length > 1 ? 10 : 0 }}>
+                <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: chipCard.color || C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <CreditCard size={17} color="#fff" strokeWidth={2} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{chipCard.name}</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>•• {chipCard.last4}</div>
+                </div>
+                <span data-press onClick={onChangeSource} style={{ fontSize: 13, fontWeight: 600, color: C.accentDark, cursor: "pointer", flexShrink: 0 }}>Изменить</span>
+              </div>
+              {chipSources.length > 1 && chips(chipSources, (debit || {}).currency, (cur) => setDebitSel(`${chipCard.id}-${cur}`), true)}
+            </div>
+          </div>
+        )}
+
+        {/* N26-раскладка: сумма — первая, «Откуда»/«Куда» — строки-дропдауны, далее Review */}
+        {layout === "n26" && (
+          <>
+            <div style={{ marginBottom: 14 }}>
+              {sectionLabel("Сумма пополнения")}
+              <div style={{
+                backgroundColor: C.card, borderRadius: 12,
+                border: `1.5px solid ${valid || !amount ? C.border : "#EF4444"}`,
+                padding: "18px 16px", display: "flex", alignItems: "center", gap: 8,
+              }}>
+                <input
+                  autoFocus
+                  value={amount}
+                  onChange={e => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
+                  inputMode="decimal" placeholder="0"
+                  style={{
+                    flex: 1, border: "none", outline: "none", background: "transparent",
+                    fontSize: 30, fontWeight: 800, color: C.text,
+                    fontFamily: "inherit", fontFeatureSettings: "'tnum'", minWidth: 0,
+                  }}
+                />
+                <span style={{ fontSize: 22, fontWeight: 700, color: C.muted }}>{creditCm.symbol}</span>
+              </div>
+              {cross && (
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 6, fontFeatureSettings: "'tnum'" }}>
+                  Курс 1 {debitCm.symbol} = {rate >= 1 ? rate.toFixed(2) : rate.toFixed(4)} {creditCm.symbol}
+                  {num > 0 && ` · спишем ≈ ${fmtFull(debitEquiv)} ${debitCm.symbol}`}
+                </div>
+              )}
+              {!valid && amount && balance != null && debitEquiv > balance && (
+                <div style={{ fontSize: 12, color: "#EF4444", marginTop: 6 }}>Недостаточно средств на счёте списания</div>
+              )}
+            </div>
+
+            {/* Откуда — дропдаун источника */}
+            <div style={{ marginBottom: 8 }}>
+              {sectionLabel("Откуда")}
+              <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+                <div data-press onClick={() => { if (kind === "own") { setFromOpen(o => !o); setToOpen(false); } }} style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: kind === "own" ? "pointer" : "default",
+                }}>
+                  <div style={{
+                    width: 34, height: 34, borderRadius: kind === "own" ? 8 : 10,
+                    backgroundColor: kind === "own" ? ((debit || {}).cardColor || C.faint) : kind === "external" ? (tok ? tok.color : C.faint) : "#111827",
+                    color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, flexShrink: 0,
+                  }}>
+                    {kind === "own" ? <CreditCard size={17} color="#fff" strokeWidth={2} />
+                      : kind === "external" && tok ? tok.network
+                      : kind === "external" ? <CreditCard size={17} color={C.text} strokeWidth={2} />
+                      : <Wallet size={17} color="#fff" strokeWidth={1.9} />}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {kind === "own" && debit ? `${debit.cardName} · ${debit.currency}` : extTitle}
+                    </div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>
+                      {kind === "own" && debit ? `•• ${debit.last4} · ${fmtFull(S(debit.amount))} ${(CURRENCY_META[debit.currency] || {}).symbol || debit.currency}` : extSub}
+                    </div>
+                  </div>
+                  {kind === "own" && <ChevronDown size={16} color={C.muted} style={{ transform: fromOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s", flexShrink: 0 }} />}
+                </div>
+                {fromOpen && kind === "own" && (
+                  <div style={{ borderTop: `1px solid ${C.divider}` }}>
+                    {monoSources.map((s, i) => sourceRow(s, i === 0, false))}
+                    {crossSources.length > 0 && (
+                      <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textAlign: "center", padding: "8px 0 4px", letterSpacing: "0.05em" }}>С КОНВЕРСИЕЙ</div>
+                    )}
+                    {crossSources.map(s => sourceRow(s, false, true))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Куда — дропдаун карты зачисления + чипсы валют */}
+            <div style={{ marginBottom: 14 }}>
+              {sectionLabel("Куда")}
+              <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+                <div data-press onClick={() => { setToOpen(o => !o); setFromOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: target.color || C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <CreditCard size={17} color="#fff" strokeWidth={2} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{target.name} · {(credit || {}).currency}</div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>•• {target.last4}</div>
+                  </div>
+                  <ChevronDown size={16} color={C.muted} style={{ transform: toOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s", flexShrink: 0 }} />
+                </div>
+                {toOpen && (
+                  <div style={{ borderTop: `1px solid ${C.divider}` }}>
+                    {allCards.filter(c => c.id !== target.id).map(c => (
+                      <div key={c.id} data-press onClick={() => { setTargetId(c.id); setToOpen(false); setCreditSel(null); setDebitSel(null); }} style={{
+                        display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", cursor: "pointer", borderBottom: `1px solid ${C.divider}`,
+                      }}>
+                        <div style={{ width: 30, height: 30, borderRadius: 7, backgroundColor: c.color || C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <CreditCard size={15} color="#fff" strokeWidth={2} />
+                        </div>
+                        <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.text }}>{c.name}</div>
+                        <div style={{ fontSize: 12, color: C.muted, fontFeatureSettings: "'tnum'" }}>•• {c.last4}</div>
+                      </div>
+                    ))}
+                    {targetAccounts.length > 1 && (
+                      <div style={{ padding: "10px 14px" }}>
+                        {chips(targetAccounts, (credit || {}).currency, (cur) => { setCreditSel(cur); setToOpen(false); }, false)}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              {credit && (
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 6, lineHeight: 1.4 }}>
+                  {creditSel ? `Счёт зачисления выбран вручную: ${credit.currency}` : `Счёт зачисления подставлен автоматически: ${credit.currency}`}
+                  {cross ? " · включится конверсия" : ""}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Revolut-раскладка: карточка перевода — источник → ↓ → цель (валюта-дропдаун + сумма в одном блоке) */}
+        {layout === "revolut" && (
+          <>
+            {/* Откуда — строка с кнопкой «Изменить» (Change) */}
+            <div style={{ backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 14px" }}>
+                <div style={{
+                  width: 34, height: 34, borderRadius: kind === "own" ? 8 : 10,
+                  backgroundColor: kind === "own" ? ((debit || {}).cardColor || C.faint) : kind === "external" ? (tok ? tok.color : C.faint) : "#111827",
+                  color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, flexShrink: 0,
+                }}>
+                  {kind === "own" ? <CreditCard size={17} color="#fff" strokeWidth={2} />
+                    : kind === "external" && tok ? tok.network
+                    : kind === "external" ? <CreditCard size={17} color={C.text} strokeWidth={2} />
+                    : <Wallet size={17} color="#fff" strokeWidth={1.9} />}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {kind === "own" && debit ? `${debit.cardName} · ${debit.currency}` : extTitle}
+                  </div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>
+                    {kind === "own" && debit ? `•• ${debit.last4} · ${fmtFull(S(debit.amount))} ${(CURRENCY_META[debit.currency] || {}).symbol || debit.currency}` : extSub}
+                  </div>
+                </div>
+                {kind === "own" && (
+                  <div data-press onClick={() => { setFromOpen(o => !o); setToOpen(false); setCurOpen(false); }} style={{
+                    backgroundColor: C.faint, borderRadius: 18, padding: "7px 14px", cursor: "pointer", flexShrink: 0,
+                  }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: C.text }}>Изменить</span>
+                  </div>
+                )}
+              </div>
+              {fromOpen && kind === "own" && (
+                <div style={{ borderTop: `1px solid ${C.divider}` }}>
+                  {monoSources.map((s, i) => sourceRow(s, i === 0, false))}
+                  {crossSources.length > 0 && (
+                    <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textAlign: "center", padding: "8px 0 4px", letterSpacing: "0.05em" }}>С КОНВЕРСИЕЙ</div>
+                  )}
+                  {crossSources.map(s => sourceRow(s, false, true))}
+                </div>
+              )}
+            </div>
+
+            {/* Стрелка-поток между блоками */}
+            <div style={{ display: "flex", justifyContent: "center", margin: "-4px 0", position: "relative", zIndex: 2 }}>
+              <div style={{ width: 28, height: 28, borderRadius: "50%", backgroundColor: C.faint, border: `3px solid ${C.bg}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <ArrowDown size={13} color={C.text} strokeWidth={2.4} />
+              </div>
+            </div>
+
+            {/* Цель: карта (тап — сменить) + валюта-дропдаун и сумма в одном блоке */}
+            <div style={{ backgroundColor: C.faint, borderRadius: 14, overflow: "hidden", marginBottom: 14 }}>
+              <div data-press onClick={() => { setToOpen(o => !o); setFromOpen(false); setCurOpen(false); }} style={{
+                display: "flex", alignItems: "center", gap: 6, padding: "12px 14px 0", cursor: "pointer",
+              }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: C.muted }}>{target.name} •• {target.last4}</span>
+                <ChevronDown size={13} color={C.muted} style={{ transform: toOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+              </div>
+              {toOpen && (
+                <div style={{ margin: "8px 14px 0", backgroundColor: C.card, borderRadius: 10, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+                  {allCards.filter(c => c.id !== target.id).map((c, ci, arr) => (
+                    <div key={c.id} data-press onClick={() => { setTargetId(c.id); setToOpen(false); setCreditSel(null); setDebitSel(null); }} style={{
+                      display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", cursor: "pointer",
+                      borderBottom: ci < arr.length - 1 ? `1px solid ${C.divider}` : "none",
+                    }}>
+                      <div style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: c.color || C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <CreditCard size={13} color="#fff" strokeWidth={2} />
+                      </div>
+                      <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: C.text }}>{c.name}</span>
+                      <span style={{ fontSize: 12, color: C.muted, fontFeatureSettings: "'tnum'" }}>•• {c.last4}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px 4px" }}>
+                <div data-press onClick={() => { setCurOpen(o => !o); setFromOpen(false); setToOpen(false); }} style={{
+                  display: "flex", alignItems: "center", gap: 6, backgroundColor: C.card, borderRadius: 18,
+                  padding: "7px 12px", cursor: "pointer", border: `1px solid ${C.border}`, flexShrink: 0,
+                }}>
+                  <span style={{ fontSize: 15 }}>{(CURRENCY_META[(credit || {}).currency] || {}).flag}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{(credit || {}).currency}</span>
+                  <ChevronDown size={14} color={C.muted} style={{ transform: curOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+                </div>
+                <input
+                  autoFocus
+                  value={amount}
+                  onChange={e => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
+                  inputMode="decimal" placeholder="0"
+                  style={{
+                    flex: 1, border: "none", outline: "none", background: "transparent",
+                    fontSize: 30, fontWeight: 800, color: C.text, textAlign: "right",
+                    fontFamily: "inherit", fontFeatureSettings: "'tnum'", minWidth: 0,
+                  }}
+                />
+              </div>
+              {curOpen && (
+                <div style={{ margin: "0 14px 8px", backgroundColor: C.card, borderRadius: 10, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+                  {targetAccounts.map((s, i) => {
+                    const cm2 = CURRENCY_META[s.currency] || { symbol: s.currency, flag: "" };
+                    const on = s.currency === (credit || {}).currency;
+                    return (
+                      <div key={s.currency} data-press onClick={() => { setCreditSel(s.currency); setCurOpen(false); }} style={{
+                        display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", cursor: "pointer",
+                        borderBottom: i < targetAccounts.length - 1 ? `1px solid ${C.divider}` : "none",
+                        backgroundColor: on ? C.accentSoft : "transparent",
+                      }}>
+                        <span style={{ fontSize: 16 }}>{cm2.flag}</span>
+                        <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: C.text }}>{cm2.name || s.currency}</span>
+                        <span style={{ fontSize: 12.5, fontWeight: 600, color: C.muted, fontFeatureSettings: "'tnum'" }}>{fmtFull(S(s.amount))} {cm2.symbol}</span>
+                        {on && <Check size={15} color={C.accentDark} strokeWidth={2.6} style={{ marginLeft: 2 }} />}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 14px 12px" }}>
+                <span style={{ fontSize: 11.5, color: C.muted, fontFeatureSettings: "'tnum'" }}>
+                  Баланс: {credit ? `${fmtFull(S(credit.amount))} ${(CURRENCY_META[credit.currency] || {}).symbol || ""}` : "—"}
+                </span>
+                <span style={{ fontSize: 11.5, color: C.muted, fontFeatureSettings: "'tnum'" }}>
+                  {cross ? `Конверсия · 1 ${debitCm.symbol} = ${rate >= 1 ? rate.toFixed(2) : rate.toFixed(4)} ${creditCm.symbol}` : "Без комиссии"}
+                </span>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Зачислить на: карта менябельна (инлайн-список), чипсы валют по раскладке */}
+        {!["n26", "revolut"].includes(layout) && (
+        <div style={{ marginBottom: 14 }}>
+          {sectionLabel("Зачислить на")}
+          <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+            <div data-press onClick={() => setTargetOpen(o => !o)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }}>
+              <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: target.color || C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <CreditCard size={17} color="#fff" strokeWidth={2} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{target.name}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>•• {target.last4}{layout === "auto" && credit ? ` · счёт ${credit.currency}` : ""}</div>
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.accentDark, display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
+                Изменить <ChevronDown size={15} color={C.accentDark} style={{ transform: targetOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+              </span>
+            </div>
+            {targetOpen && allCards.filter(c => c.id !== target.id).map(c => (
+              <div key={c.id} data-press onClick={() => { setTargetId(c.id); setTargetOpen(false); setCreditSel(null); setDebitSel(null); }} style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", cursor: "pointer", borderTop: `1px solid ${C.divider}`,
+              }}>
+                <div style={{ width: 30, height: 30, borderRadius: 7, backgroundColor: c.color || C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <CreditCard size={15} color="#fff" strokeWidth={2} />
+                </div>
+                <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.text }}>{c.name}</div>
+                <div style={{ fontSize: 12, color: C.muted, fontFeatureSettings: "'tnum'" }}>•• {c.last4}</div>
+              </div>
+            ))}
+          </div>
+          {layout === "currencyFirst" && targetAccounts.length > 1 && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>В какой валюте пополнить</div>
+              {chips(targetAccounts, (credit || {}).currency, (cur) => { setCreditSel(cur); setDebitSel(null); }, false)}
+            </div>
+          )}
+          {layout === "chips" && targetAccounts.length > 1 && (
+            <div style={{ marginTop: 8 }}>
+              {chips(targetAccounts, (credit || {}).currency, (cur) => setCreditSel(cur), true)}
+            </div>
+          )}
+          {layout !== "auto" && credit && (
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 6, lineHeight: 1.4 }}>
+              {creditSel ? `Счёт зачисления выбран вручную: ${credit.currency}` : `Счёт зачисления подставлен автоматически: ${credit.currency}`}
+              {cross ? " · включится конверсия" : ""}
             </div>
           )}
         </div>
+        )}
 
-        {/* Счёт зачисления — read-only, авто-подстановка (пикер убран) */}
-        {credit && <CreditAccountCard C={C} card={card} credit={credit} debitCurrency={debit.currency} />}
+        {/* Валюта-первая: источники выбранной валюты + секция «с конверсией» */}
+        {kind === "own" && layout === "currencyFirst" && credit && (
+          <div style={{ marginBottom: 14 }}>
+            {sectionLabel(`Откуда списать ${credit.currency}`)}
+            <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+              {monoSources.map((s, i) => sourceRow(s, i === 0, false))}
+              {monoSources.length === 0 && (
+                <div style={{ padding: "12px 14px", fontSize: 12, color: C.muted }}>
+                  Нет своих счетов в {credit.currency} — выберите источник с конверсией
+                </div>
+              )}
+              {crossSources.length > 0 && (
+                <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textAlign: "center", padding: "8px 0 4px", letterSpacing: "0.05em", borderTop: `1px solid ${C.divider}` }}>
+                  С КОНВЕРСИЕЙ
+                </div>
+              )}
+              {crossSources.map(s => sourceRow(s, false, true))}
+            </div>
+          </div>
+        )}
 
-        {/* Сумма */}
+        {/* Автомат: смарт-строка с объяснением; «Изменить» раскрывает полный пикер на месте */}
+        {kind === "own" && layout === "auto" && debit && credit && (
+          <div style={{ marginBottom: 14, backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+            <Zap size={15} color={C.accentDark} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+            <div style={{ flex: 1, fontSize: 12.5, color: C.muted, lineHeight: 1.5 }}>
+              Спишем с <span style={{ fontWeight: 700, color: C.text }}>{debit.cardName} · {debit.currency}</span>
+              {mono ? " — без конверсии" : ` — конверсия ${debitCm.symbol} → ${creditCm.symbol}`}
+            </div>
+            <span data-press onClick={() => setAutoOpen(true)} style={{ fontSize: 13, fontWeight: 600, color: C.accentDark, cursor: "pointer", flexShrink: 0 }}>Изменить</span>
+          </div>
+        )}
+
+        {/* Сумма — в валюте счёта зачисления (в N26/Revolut-раскладках сумма живёт выше) */}
+        {!["n26", "revolut"].includes(layout) && (
         <div style={{ marginTop: 16, marginBottom: 8 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>Сумма пополнения</div>
           <div style={{
@@ -6441,24 +7110,53 @@ function TopUpPickerScreen({ C, card, variant, onBack, onConfirm }) {
             />
             <span style={{ fontSize: 20, fontWeight: 700, color: C.muted }}>{creditCm.symbol}</span>
           </div>
-          {!valid && amount && debit.balance != null && num > debit.balance && (
+          {cross && (
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 6, fontFeatureSettings: "'tnum'" }}>
+              Курс 1 {debitCm.symbol} = {rate >= 1 ? rate.toFixed(2) : rate.toFixed(4)} {creditCm.symbol}
+              {num > 0 && ` · спишем ≈ ${fmtFull(debitEquiv)} ${debitCm.symbol}`}
+            </div>
+          )}
+          {!valid && amount && balance != null && debitEquiv > balance && (
             <div style={{ fontSize: 12, color: "#EF4444", marginTop: 6 }}>
               Недостаточно средств на счёте списания
             </div>
           )}
         </div>
+        )}
 
+        {layout !== "revolut" && (
         <div style={{ fontSize: 12, color: C.muted, marginBottom: 24 }}>
-          {variant.kind === "otherCard" ? "Зачисление мгновенно · комиссия 0%" : "Без комиссии · мгновенно"}
+          {layout === "n26" ? "Комиссия и лимит — на экране проверки" : kind === "own" ? "Без комиссии · мгновенно" : "Зачисление мгновенно · комиссия 0%"}
+        </div>
+        )}
+
+        {/* Revolut-поведение: кнопка активна при любой сумме; нехватка средств — шитом с Retry */}
+        <div data-press onClick={() => {
+          if (layout === "revolut" && num > 0 && !valid) { setErrOpen(true); return; }
+          confirm();
+        }} style={{
+          backgroundColor: (layout === "revolut" ? num > 0 : valid) ? C.accentDark : C.faint,
+          borderRadius: 12, padding: "15px 0", textAlign: "center",
+          cursor: (layout === "revolut" ? num > 0 : valid) ? "pointer" : "default", transition: "background-color 0.15s",
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: (layout === "revolut" ? num > 0 : valid) ? C.accent : C.muted }}>{layout === "n26" ? "Продолжить" : "Пополнить"}</span>
         </div>
 
-        <div data-press onClick={() => valid && credit && onConfirm({ debit, credit, amount: num, card })} style={{
-          backgroundColor: valid ? C.accentDark : C.faint,
-          borderRadius: 12, padding: "15px 0", textAlign: "center",
-          cursor: valid ? "pointer" : "default", transition: "background-color 0.15s",
-        }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: valid ? C.accent : C.muted }}>Пополнить</span>
-        </div>
+        {errOpen && (
+          <BottomSheetModal C={C} onClose={() => setErrOpen(false)}>
+            <div style={{ textAlign: "center", padding: "8px 0 4px" }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", backgroundColor: "#FEE2E2", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+                <X size={22} color="#EF4444" strokeWidth={2.4} />
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, lineHeight: 1.35, marginBottom: 18 }}>
+                Убедитесь, что на счёте достаточно средств для этой операции
+              </div>
+              <div data-press onClick={() => setErrOpen(false)} style={{ backgroundColor: C.text, borderRadius: 24, padding: "14px 0", cursor: "pointer" }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: C.card }}>Попробовать снова</span>
+              </div>
+            </div>
+          </BottomSheetModal>
+        )}
       </div>
     </ScreenShell>
   );
@@ -6556,6 +7254,10 @@ export default function FreedomV6() {
   const [locked, setLocked] = useState(true);
   // Pre-auth onboarding phase: null = выкл (дефолт, нулевая регрессия); иначе { gates, stepKey, sub? }
   const [onb, setOnb] = useState(null);
+  // Пикер счетов на экране пополнения — режимы из дебаг-блока «Пикер счетов»
+  const [pickerMode, setPickerMode] = useState("currencyFirst"); // currencyFirst | chips | auto
+  const [autoExpandMode, setAutoExpandMode] = useState("currencyFirst"); // что раскрывает «Изменить» в автомате
+  const [stressLong, setStressLong] = useState(false); // стресс-тест длинных сумм в чипсах
   // Bottom sheets: {type:'promo',promo} | {type:'topup'} | {type:'logout'}
   const [sheet, setSheet] = useState(null);
 
@@ -6604,6 +7306,9 @@ export default function FreedomV6() {
           emptyState={emptyState} setEmptyState={setEmptyState}
           featureFlags={featureFlags} setFeatureFlags={setFeatureFlags}
           onb={onb} setOnb={setOnb}
+          pickerMode={pickerMode} setPickerMode={setPickerMode}
+          autoExpandMode={autoExpandMode} setAutoExpandMode={setAutoExpandMode}
+          stressLong={stressLong} setStressLong={setStressLong}
           C={C}
         />
       )}
@@ -6682,16 +7387,50 @@ export default function FreedomV6() {
             onOpenAllTransactions={() => pushScreen({ type: "allTransactions" })}
           />
         );
-        if (s.type === "topupPicker") return (
-          <TopUpPickerScreen key={i} C={C} card={s.card} variant={s.variant}
+        if (s.type === "topupAmount") return (
+          <TopUpAmountScreen key={i} C={C} card={s.card} source={s.source} displayCurrency={displayCurrency}
+            pickerMode={pickerMode} autoExpandMode={autoExpandMode} stressLong={stressLong}
             onBack={popScreen}
-            onConfirm={(p) => pushScreen({
+            onChangeSource={() => { popScreen(); setSheet({ type: "topup", card: s.card }); }}
+            onConfirm={(p) => {
+              // N26-паттерн: перед исполнением — отдельный экран проверки (Review)
+              if (pickerMode === "n26") { pushScreen({ type: "topupReview", payload: p }); return; }
+              pushScreen({
+                type: "flowSuccess",
+                payload: {
+                  title: "Пополнение выполнено",
+                  message: p.credit.mono ? "Моновалютный перевод" : `Зачислено на счёт в ${p.credit.currency}`,
+                  amountStr: `${fmtFull(p.amount)} ${CURRENCY_META[p.credit.currency]?.symbol || ""}`,
+                  note: `${p.debit.name} → ${p.card.name} •• ${p.card.last4}`,
+                },
+              });
+            }}
+          />
+        );
+        if (s.type === "topupReview") return (
+          <GenericConfirmScreen key={i} C={C}
+            title="Проверьте и пополните"
+            subtitle={`${s.payload.debit.name} → ${s.payload.card.name}`}
+            amountStr={`${fmtFull(s.payload.amount)} ${CURRENCY_META[s.payload.credit.currency]?.symbol || ""}`}
+            rows={[
+              { label: "Откуда", value: s.payload.debit.name },
+              { label: "Куда", value: `${s.payload.card.name} · ${s.payload.credit.currency}` },
+              { label: "Комиссия", value: "Бесплатно" },
+              ...(s.payload.rateStr ? [
+                { label: "Курс", value: s.payload.rateStr },
+                { label: "Спишется", value: s.payload.debitEquivStr },
+              ] : []),
+              { label: "Лимит в месяц", value: `осталось ${s.payload.limitLeftStr}` },
+            ]}
+            confirmLabel="Пополнить"
+            onBack={popScreen}
+            onConfirm={() => pushScreen({
               type: "flowSuccess",
               payload: {
                 title: "Пополнение выполнено",
-                message: p.credit.mono ? "Моновалютный перевод" : `Зачислено на счёт в ${p.credit.currency}`,
-                amountStr: `${fmtFull(p.amount)} ${CURRENCY_META[p.credit.currency]?.symbol || ""}`,
-                note: `${p.debit.name} → ${p.card.name} •• ${p.card.last4}`,
+                message: s.payload.credit.mono ? "Моновалютный перевод" : `Зачислено на счёт в ${s.payload.credit.currency}`,
+                amountStr: `${fmtFull(s.payload.amount)} ${CURRENCY_META[s.payload.credit.currency]?.symbol || ""}`,
+                note: `${s.payload.debit.name} → ${s.payload.card.name} •• ${s.payload.card.last4}`,
               },
             })}
           />
@@ -7160,32 +7899,22 @@ export default function FreedomV6() {
       )}
       {sheet?.type === "topup" && (
         <BottomSheetModal C={C} onClose={() => setSheet(null)}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 4 }}>Пополнить</div>
-          <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>Выберите, откуда перевести деньги</div>
-          {TOPUP_VARIANTS.map((v, i) => (
-            <div key={v.id} data-press onClick={() => {
-              const card = sheet.card;
-              setSheet(null);
+          <TopUpSheetContent C={C} card={sheet.card} displayCurrency={displayCurrency}
+            onPickOwn={(srcCard) => {
+              const card = sheet.card; setSheet(null);
+              pushScreen({ type: "topupAmount", card, source: { kind: "own", srcCard } });
+            }}
+            onPickExternal={(tok) => {
+              const card = sheet.card; setSheet(null);
+              pushScreen({ type: "topupAmount", card, source: { kind: "external", tok } });
+            }}
+            onPickVariant={(v) => {
+              const card = sheet.card; setSheet(null);
               if (v.kind === "tn") pushScreen({ type: "tnOrder", card, variant: v });
-              else pushScreen({ type: "topupPicker", card, variant: v });
-            }} style={{
-              display: "flex", alignItems: "center", gap: 12, padding: "13px 0",
-              borderBottom: i < TOPUP_VARIANTS.length - 1 ? `1px solid ${C.divider}` : "none",
-              cursor: "pointer",
-            }}>
-              <div style={{
-                width: 42, height: 42, borderRadius: 12, backgroundColor: `${v.color}14`,
-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-              }}>
-                <v.Icon size={19} color={v.color} strokeWidth={1.9} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{v.title}</div>
-                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{v.sub}</div>
-              </div>
-              <ChevronRight size={15} color={C.muted} strokeWidth={1.8} />
-            </div>
-          ))}
+              else if (v.kind === "requisites") pushScreen({ type: "requisites", card });
+              else if (v.kind === "applePay") pushScreen({ type: "topupAmount", card, source: { kind: "applePay" } });
+            }}
+          />
         </BottomSheetModal>
       )}
       {sheet?.type === "logout" && (

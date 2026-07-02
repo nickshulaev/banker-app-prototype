@@ -6575,7 +6575,7 @@ function TopUpSheetContent({ C, card, displayCurrency, manyCur, onPickOwn, onPic
    (дропдаун по типам) / тонкий разделитель / строка счёта (дропдаун счетов карты).
    Роль-лейбл и сумма — снаружи, у вызывающего экрана.
    Состояния: role src|dst (нулевые счета), «авто»-бейдж, красный баланс при превышении. */
-function CardAccountPicker({ C, displayCurrency, allCards, subsOf, maskAcc, S, excludeCardId, card, account, accounts, role, autoBadge, balanceDanger, onPickCard, onPickAccount }) {
+function CardAccountPicker({ C, displayCurrency, allCards, subsOf, maskAcc, S, excludeCardId, card, account, accounts, role, balanceDanger, onPickCard, onPickAccount }) {
   const [cardOpen, setCardOpen] = useState(false);
   const [accOpen, setAccOpen] = useState(false);
   const dcMeta = CURRENCY_META[displayCurrency] || { symbol: displayCurrency };
@@ -6635,9 +6635,8 @@ function CardAccountPicker({ C, displayCurrency, allCards, subsOf, maskAcc, S, e
         <div style={{ width: 26, height: 26, borderRadius: "50%", backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: C.text, flexShrink: 0 }}>{acm.symbol}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13.5, fontWeight: 600, color: C.text }}>{(account || {}).currency}{acm.name ? ` · ${acm.name}` : ""}</div>
-          <div style={{ fontSize: 11, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'", display: "flex", alignItems: "center", gap: 5 }}>
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'" }}>
             {card && account ? maskAcc(card, account.currency) : "—"}
-            {autoBadge && <span style={{ fontSize: 10, fontWeight: 700, color: C.accentDark, backgroundColor: C.accentSoft, borderRadius: 20, padding: "0 6px" }}>авто</span>}
           </div>
         </div>
         <span style={{ fontSize: 12.5, fontWeight: 700, color: balanceDanger ? "#EF4444" : C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
@@ -6697,7 +6696,6 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
 
   const [debitSel, setDebitSel] = useState(null);   // id счёта списания; null = авто
   const [creditSel, setCreditSel] = useState(null); // валюта зачисления; null = стартовый авто-подбор
-  const [creditTouched, setCreditTouched] = useState(false); // юзер менял валюту цели руками
   const [amount, setAmount] = useState("");
   const [amountSide, setAmountSide] = useState("debit"); // сумма по умолчанию — в валюте СПИСАНИЯ («хочу перевести 300 баксов»)
 
@@ -6818,17 +6816,16 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
         <CardAccountPicker C={C} displayCurrency={displayCurrency} allCards={allCards}
           subsOf={subsOf} maskAcc={maskAcc} S={S} excludeCardId={target.id}
           card={target} account={credit} accounts={targetAccounts}
-          role="dst" autoBadge={!creditTouched}
+          role="dst"
           onPickCard={(c) => {
             // Липкость валюты цели: при смене карты сохраняем выбранную валюту, если счёт есть у новой карты.
             const keep = subsOf(c).some(s => s.currency === (credit || {}).currency) ? credit.currency : null;
             setTargetId(c.id);
             setCreditSel(keep);
-            if (!keep) setCreditTouched(false);
             // Источник не трогаем — сбрасываем только если он совпал с новой картой цели.
             if (debit && debit.cardId === c.id) setDebitSel(null);
           }}
-          onPickAccount={(cur) => { setCreditSel(cur); setCreditTouched(true); }}
+          onPickAccount={(cur) => setCreditSel(cur)}
         />
 
         {/* Сумма — по умолчанию в валюте списания; тап по валютной пилюле переключает сторону ввода */}

@@ -6699,7 +6699,7 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
   const [creditSel, setCreditSel] = useState(null); // валюта зачисления; null = стартовый авто-подбор
   const [creditTouched, setCreditTouched] = useState(false); // юзер менял валюту цели руками
   const [amount, setAmount] = useState("");
-  const [amountSide, setAmountSide] = useState("credit");
+  const [amountSide, setAmountSide] = useState("debit"); // сумма по умолчанию — в валюте СПИСАНИЯ («хочу перевести 300 баксов»)
 
   // Источники: ненулевые счета всех карт, кроме карты-цели; по объёму.
   const ownSources = allCards.filter(c => c.id !== target.id).flatMap(c =>
@@ -6831,13 +6831,13 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
           onPickAccount={(cur) => { setCreditSel(cur); setCreditTouched(true); }}
         />
 
-        {/* Сумма + курс/⇄ + валидация */}
+        {/* Сумма — по умолчанию в валюте списания; тап по валютной пилюле переключает сторону ввода */}
         <div style={{ marginTop: 16, marginBottom: 8 }}>
-          {sectionLabel("Сумма пополнения")}
+          {sectionLabel("Сумма")}
           <div style={{
             backgroundColor: C.card, borderRadius: 12,
             border: `1.5px solid ${valid || !amount ? C.border : "#EF4444"}`,
-            padding: "16px", display: "flex", alignItems: "center", gap: 8,
+            padding: "12px 12px 12px 16px", display: "flex", alignItems: "center", gap: 8,
           }}>
             <input
               autoFocus
@@ -6850,17 +6850,19 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
                 fontFamily: "inherit", fontFeatureSettings: "'tnum'", minWidth: 0,
               }}
             />
-            <span style={{ fontSize: 20, fontWeight: 700, color: C.muted }}>{inputCm.symbol}</span>
+            <div data-press={cross ? true : undefined} onClick={() => cross && focusSide(inCredit ? "debit" : "credit")} style={{
+              display: "flex", alignItems: "center", gap: 5,
+              backgroundColor: C.faint, borderRadius: 10, padding: "8px 12px",
+              cursor: cross ? "pointer" : "default", flexShrink: 0,
+            }}>
+              <span style={{ fontSize: 17, fontWeight: 800, color: C.text }}>{inputCm.symbol}</span>
+              {cross && <ArrowLeftRight size={12} color={C.muted} strokeWidth={2.2} />}
+            </div>
           </div>
           {cross && (
-            <div style={{ fontSize: 12, color: C.muted, marginTop: 6, fontFeatureSettings: "'tnum'", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-              <span>Курс 1 {debitCm.symbol} = {rateFmt} {creditCm.symbol}</span>
-              {num > 0 && (
-                <span>· {inCredit ? `спишем ≈ ${fmtFull(debitEquiv)} ${debitCm.symbol}` : `зачислим ≈ ${fmtFull(creditAmount)} ${creditCm.symbol}`}</span>
-              )}
-              <span data-press onClick={() => focusSide(inCredit ? "debit" : "credit")} style={{ color: C.accentDark, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}>
-                <ArrowLeftRight size={11} strokeWidth={2.2} /> ввести в {inCredit ? debitCm.symbol : creditCm.symbol}
-              </span>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 6, fontFeatureSettings: "'tnum'" }}>
+              Курс 1 {debitCm.symbol} = {rateFmt} {creditCm.symbol}
+              {num > 0 && ` · ${inCredit ? `спишем ≈ ${fmtFull(debitEquiv)} ${debitCm.symbol}` : `зачислим ≈ ${fmtFull(creditAmount)} ${creditCm.symbol}`}`}
             </div>
           )}
           {overBalance && (

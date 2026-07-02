@@ -6696,7 +6696,8 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
   const targetAccounts = subsOf(target).map(s => ({ ...s, kzt: convertToKZT(s.amount, s.currency) }));
 
   const [debitSel, setDebitSel] = useState(null);   // id счёта списания; null = авто
-  const [creditSel, setCreditSel] = useState(null); // валюта зачисления; null = авто
+  const [creditSel, setCreditSel] = useState(null); // валюта зачисления; null = стартовый авто-подбор
+  const [creditTouched, setCreditTouched] = useState(false); // юзер менял валюту цели руками
   const [amount, setAmount] = useState("");
   const [amountSide, setAmountSide] = useState("credit");
 
@@ -6707,8 +6708,12 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
       last4: c.last4, currency: s.currency, amount: s.amount, kzt: convertToKZT(s.amount, s.currency),
     }))
   ).filter(s => s.amount > 0).sort((a, b) => b.kzt - a.kzt);
-  const srcCardTop = source.srcCard ? ownSources.find(s => s.cardId === source.srcCard.id) : null;
-  const autoDebit = srcCardTop || ownSources[0] || null;
+  // Стартовый дефолт: предпочитаем счёт, чья валюта ЕСТЬ у цели — первое отображение
+  // получается с одинаковыми валютами с обеих сторон (без конверсии).
+  const targetCurs = new Set(targetAccounts.map(s => s.currency));
+  const pickAuto = (list) => list.find(s => targetCurs.has(s.currency)) || list[0] || null;
+  const srcList = source.srcCard ? ownSources.filter(s => s.cardId === source.srcCard.id) : [];
+  const autoDebit = (srcList.length ? pickAuto(srcList) : null) || pickAuto(ownSources);
   const chosen = debitSel ? ownSources.find(s => s.id === debitSel) : null;
   const debit = kind === "own" ? (chosen || autoDebit) : null;
   // Резолв счёта зачисления по фактическим счетам цели: валюта списания → иерархия банка.
@@ -6724,6 +6729,11 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
   const credit = creditSel
     ? resolveLocal(creditSel)
     : resolveLocal(kind === "own" ? (debit || {}).currency || "KZT" : kind === "external" ? "KZT" : target.primaryCurrency);
+
+  // ВАЛЮТЫ СТОРОН НЕЗАВИСИМЫ: авто-подбор валюты «Куда» выполняется один раз при входе
+  // в сценарий (и при смене карты цели). Дальше смена валюты «Откуда» цель НЕ трогает —
+  // валюту зачисления меняет только пользователь.
+  useEffect(() => { if (!creditSel && credit) setCreditSel(credit.currency); }, [targetId]); // eslint-disable-line
 
   const debitCard = debit ? allCards.find(c => c.id === debit.cardId) : null;
   const debitCardAccs = debitCard ? subsOf(debitCard).map(s => ({ ...s, kzt: convertToKZT(s.amount, s.currency) })) : [];
@@ -6803,9 +6813,9 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
         <CardAccountPicker C={C} displayCurrency={displayCurrency} allCards={allCards}
           subsOf={subsOf} maskAcc={maskAcc} S={S} excludeCardId={target.id}
           card={target} account={credit} accounts={targetAccounts}
-          role="dst" autoBadge={!creditSel}
-          onPickCard={(c) => { setTargetId(c.id); setCreditSel(null); setDebitSel(null); }}
-          onPickAccount={(cur) => setCreditSel(cur)}
+          role="dst" autoBadge={!creditTouched}
+          onPickCard={(c) => { setTargetId(c.id); setCreditSel(null); setCreditTouched(false); setDebitSel(null); }}
+          onPickAccount={(cur) => { setCreditSel(cur); setCreditTouched(true); }}
         />
 
         {/* Сумма + курс/⇄ + валидация */}

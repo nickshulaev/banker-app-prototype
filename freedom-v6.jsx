@@ -6781,7 +6781,12 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
             subsOf={subsOf} maskAcc={maskAcc} S={S} excludeCardId={target.id}
             card={debitCard} account={debit} accounts={debitCardAccs}
             role="src" balanceDanger={overBalance}
-            onPickCard={(c) => { const top = ownSources.find(s => s.cardId === c.id); if (top) setDebitSel(top.id); }}
+            onPickCard={(c) => {
+              // Липкость валюты источника: при смене карты сохраняем выбранную валюту, если такой счёт есть.
+              const same = ownSources.find(s => s.cardId === c.id && s.currency === (debit || {}).currency);
+              const top = same || ownSources.find(s => s.cardId === c.id);
+              if (top) setDebitSel(top.id);
+            }}
             onPickAccount={(cur) => debitCard && setDebitSel(`${debitCard.id}-${cur}`)}
           />
         ) : (
@@ -6814,7 +6819,15 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
           subsOf={subsOf} maskAcc={maskAcc} S={S} excludeCardId={target.id}
           card={target} account={credit} accounts={targetAccounts}
           role="dst" autoBadge={!creditTouched}
-          onPickCard={(c) => { setTargetId(c.id); setCreditSel(null); setCreditTouched(false); setDebitSel(null); }}
+          onPickCard={(c) => {
+            // Липкость валюты цели: при смене карты сохраняем выбранную валюту, если счёт есть у новой карты.
+            const keep = subsOf(c).some(s => s.currency === (credit || {}).currency) ? credit.currency : null;
+            setTargetId(c.id);
+            setCreditSel(keep);
+            if (!keep) setCreditTouched(false);
+            // Источник не трогаем — сбрасываем только если он совпал с новой картой цели.
+            if (debit && debit.cardId === c.id) setDebitSel(null);
+          }}
           onPickAccount={(cur) => { setCreditSel(cur); setCreditTouched(true); }}
         />
 

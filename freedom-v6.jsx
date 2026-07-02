@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Search, Bell, Plus, ChevronRight, ChevronDown, ChevronsUpDown, X, ArrowLeftRight, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid, Smartphone, Plane, Sofa, Zap, Phone, Globe, QrCode, Repeat, Send, Landmark, Tv, Bus, GraduationCap, Eye, EyeOff, ArrowLeft, ArrowDown, ArrowDownLeft, Snowflake, FileText, ShoppingCart, Utensils, Fuel, Wifi, Home, Ticket, Settings2, Check, User, Shield, LogOut, Palette } from "lucide-react";
+import { Search, Bell, Plus, ChevronRight, ChevronDown, ChevronsUpDown, X, ArrowLeftRight, ArrowUpDown, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid, Smartphone, Plane, Sofa, Zap, Phone, Globe, QrCode, Repeat, Send, Landmark, Tv, Bus, GraduationCap, Eye, EyeOff, ArrowLeft, ArrowDown, ArrowDownLeft, Snowflake, FileText, ShoppingCart, Utensils, Fuel, Wifi, Home, Ticket, Settings2, Check, User, Shield, LogOut, Palette } from "lucide-react";
 import OnboardingFlow, { ONB_START, ONB_GATES, ONB_PRESETS, ONB_STEPS, SUMSUB_PHASES, SUMSUB_PHASE_LABELS } from "./onboarding.jsx";
 
 /* ═══════════════════════════════════════════════
@@ -6575,7 +6575,7 @@ function TopUpSheetContent({ C, card, displayCurrency, manyCur, onPickOwn, onPic
    (дропдаун по типам) / тонкий разделитель / строка счёта (дропдаун счетов карты).
    Роль-лейбл и сумма — снаружи, у вызывающего экрана.
    Состояния: role src|dst (нулевые счета), «авто»-бейдж, красный баланс при превышении. */
-function CardAccountPicker({ C, displayCurrency, allCards, subsOf, maskAcc, S, excludeCardId, card, account, accounts, role, autoBadge, balanceDanger, onPickCard, onPickAccount }) {
+function CardAccountPicker({ C, displayCurrency, allCards, subsOf, maskAcc, S, excludeCardId, card, account, accounts, role, autoBadge, balanceDanger, onPickCard, onPickAccount, footer }) {
   const [cardOpen, setCardOpen] = useState(false);
   const [accOpen, setAccOpen] = useState(false);
   const dcMeta = CURRENCY_META[displayCurrency] || { symbol: displayCurrency };
@@ -6675,6 +6675,13 @@ function CardAccountPicker({ C, displayCurrency, allCards, subsOf, maskAcc, S, e
           })}
         </div>
       )}
+      {/* Опциональный слот (например, сумма со знаком направления) — часть того же листа */}
+      {footer && (
+        <>
+          <div style={{ borderTop: `1px solid ${C.divider}`, marginLeft: 48 }} />
+          {footer}
+        </>
+      )}
     </div>
   );
 }
@@ -6696,7 +6703,8 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
   const targetAccounts = subsOf(target).map(s => ({ ...s, kzt: convertToKZT(s.amount, s.currency) }));
 
   const [debitSel, setDebitSel] = useState(null);   // id счёта списания; null = авто
-  const [creditSel, setCreditSel] = useState(null); // валюта зачисления; null = авто
+  const [creditSel, setCreditSel] = useState(null); // валюта зачисления; null = стартовый авто-подбор
+  const [creditTouched, setCreditTouched] = useState(false); // юзер менял валюту цели руками
   const [amount, setAmount] = useState("");
   const [amountSide, setAmountSide] = useState("credit");
 
@@ -6707,8 +6715,12 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
       last4: c.last4, currency: s.currency, amount: s.amount, kzt: convertToKZT(s.amount, s.currency),
     }))
   ).filter(s => s.amount > 0).sort((a, b) => b.kzt - a.kzt);
-  const srcCardTop = source.srcCard ? ownSources.find(s => s.cardId === source.srcCard.id) : null;
-  const autoDebit = srcCardTop || ownSources[0] || null;
+  // Стартовый дефолт: предпочитаем счёт, чья валюта ЕСТЬ у цели — первое отображение
+  // получается с одинаковыми валютами с обеих сторон (без конверсии).
+  const targetCurs = new Set(targetAccounts.map(s => s.currency));
+  const pickAuto = (list) => list.find(s => targetCurs.has(s.currency)) || list[0] || null;
+  const srcList = source.srcCard ? ownSources.filter(s => s.cardId === source.srcCard.id) : [];
+  const autoDebit = (srcList.length ? pickAuto(srcList) : null) || pickAuto(ownSources);
   const chosen = debitSel ? ownSources.find(s => s.id === debitSel) : null;
   const debit = kind === "own" ? (chosen || autoDebit) : null;
   // Резолв счёта зачисления по фактическим счетам цели: валюта списания → иерархия банка.
@@ -6725,6 +6737,11 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
     ? resolveLocal(creditSel)
     : resolveLocal(kind === "own" ? (debit || {}).currency || "KZT" : kind === "external" ? "KZT" : target.primaryCurrency);
 
+  // ВАЛЮТЫ СТОРОН НЕЗАВИСИМЫ: авто-подбор валюты «Куда» выполняется один раз при входе
+  // в сценарий (и при смене карты цели). Дальше смена валюты «Откуда» цель НЕ трогает —
+  // валюту зачисления меняет только пользователь.
+  useEffect(() => { if (!creditSel && credit) setCreditSel(credit.currency); }, [targetId]); // eslint-disable-line
+
   const debitCard = debit ? allCards.find(c => c.id === debit.cardId) : null;
   const debitCardAccs = debitCard ? subsOf(debitCard).map(s => ({ ...s, kzt: convertToKZT(s.amount, s.currency) })) : [];
 
@@ -6740,7 +6757,6 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
   const inCredit = !cross || amountSide === "credit";
   const creditAmount = inCredit ? num : num * rate;
   const debitEquiv = inCredit ? (cross ? num / rate : num) : num;
-  const inputCm = inCredit ? creditCm : debitCm;
   const balance = kind === "own" && debit ? debit.amount : null;
   const valid = num > 0 && !!credit && (balance == null || debitEquiv <= balance);
   const overBalance = kind === "own" && !!debit && num > 0 && balance != null && debitEquiv > balance;
@@ -6759,13 +6775,49 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
     credit: { ...credit, mono }, amount: creditAmount, card: target,
   });
 
-  const sectionLabel = (t) => <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>{t}</div>;
+  // Разворот перевода (тап по стрелке): стороны меняются местами, карта и валюта каждой сохраняются.
+  const swapSides = () => {
+    if (kind !== "own" || !debit || !credit || !debitCard) return;
+    const oldTargetId = target.id, oldCreditCur = credit.currency;
+    setTargetId(debitCard.id);
+    setCreditSel(debit.currency); setCreditTouched(true);
+    setDebitSel(`${oldTargetId}-${oldCreditCur}`);
+  };
+
+  // Двусторонние поля сумм: активная сторона редактируется, пассивная пересчитывается по курсу.
+  const debitStr = inCredit ? (num > 0 ? fmtFull(debitEquiv) : "") : amount;
+  const creditStr = inCredit ? amount : (num > 0 ? fmtFull(creditAmount) : "");
+
+  // Слот суммы для юнита: знак направления (− списание / + зачисление), ввод с обеих сторон.
+  const amountRow = (side) => {
+    const isDebit = side === "debit";
+    const val = isDebit ? debitStr : creditStr;
+    const sym = isDebit ? debitCm.symbol : creditCm.symbol;
+    const danger = isDebit && overBalance;
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px" }}>
+        <span style={{ fontSize: 20, fontWeight: 800, color: danger ? "#EF4444" : C.muted, width: 16, textAlign: "center", flexShrink: 0 }}>{isDebit ? "−" : "+"}</span>
+        <input
+          autoFocus={!isDebit}
+          value={val}
+          onFocus={() => focusSide(side)}
+          onChange={e => { if ((side === "credit") === inCredit) setAmount(e.target.value.replace(/[^0-9.,]/g, "")); }}
+          inputMode="decimal" placeholder="0"
+          style={{
+            flex: 1, border: "none", outline: "none", background: "transparent",
+            fontSize: 22, fontWeight: 800, color: danger ? "#EF4444" : C.text, textAlign: "right",
+            fontFamily: "inherit", fontFeatureSettings: "'tnum'", minWidth: 0,
+          }}
+        />
+        <span style={{ fontSize: 14, fontWeight: 700, color: C.muted, flexShrink: 0 }}>{sym}</span>
+      </div>
+    );
+  };
 
   return (
     <ScreenShell C={C} title="Пополнить" onBack={onBack}>
-      <div style={{ padding: "4px 20px 110px" }}>
-        {/* Откуда: юнит «карта + счёт» (или внешний источник) */}
-        {sectionLabel("Откуда")}
+      <div style={{ padding: "8px 20px 110px" }}>
+        {/* Юнит-источник (кэпшена нет — направление задаёт стрелка); сумма списания со знаком − в слоте */}
         {kind === "own" ? (
           <CardAccountPicker C={C} displayCurrency={displayCurrency} allCards={allCards}
             subsOf={subsOf} maskAcc={maskAcc} S={S} excludeCardId={target.id}
@@ -6773,6 +6825,7 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
             role="src" balanceDanger={overBalance}
             onPickCard={(c) => { const top = ownSources.find(s => s.cardId === c.id); if (top) setDebitSel(top.id); }}
             onPickAccount={(cur) => debitCard && setDebitSel(`${debitCard.id}-${cur}`)}
+            footer={amountRow("debit")}
           />
         ) : (
           <div style={{ backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
@@ -6793,58 +6846,40 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
           </div>
         )}
 
-        {/* Тихая стрелка-поток */}
-        <div style={{ textAlign: "center", padding: "6px 0" }}>
-          <ArrowDown size={15} color={C.muted} strokeWidth={2} />
+        {/* Яркая стрелка-разворот: сшивает юниты, тап меняет стороны местами */}
+        <div style={{ display: "flex", justifyContent: "center", margin: "-8px 0", position: "relative", zIndex: 2 }}>
+          <div data-press onClick={kind === "own" ? swapSides : undefined} style={{
+            width: 34, height: 34, borderRadius: "50%",
+            backgroundColor: kind === "own" ? C.accentDark : C.faint,
+            border: `3px solid ${C.bg}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: kind === "own" ? "pointer" : "default",
+          }}>
+            <ArrowUpDown size={15} color={kind === "own" ? C.accent : C.muted} strokeWidth={2.4} />
+          </div>
         </div>
 
-        {/* Куда: юнит «карта + счёт» */}
-        {sectionLabel("Куда")}
+        {/* Юнит-цель; сумма зачисления со знаком + в слоте */}
         <CardAccountPicker C={C} displayCurrency={displayCurrency} allCards={allCards}
           subsOf={subsOf} maskAcc={maskAcc} S={S} excludeCardId={target.id}
           card={target} account={credit} accounts={targetAccounts}
-          role="dst" autoBadge={!creditSel}
-          onPickCard={(c) => { setTargetId(c.id); setCreditSel(null); setDebitSel(null); }}
-          onPickAccount={(cur) => setCreditSel(cur)}
+          role="dst" autoBadge={!creditTouched}
+          onPickCard={(c) => { setTargetId(c.id); setCreditSel(null); setCreditTouched(false); setDebitSel(null); }}
+          onPickAccount={(cur) => { setCreditSel(cur); setCreditTouched(true); }}
+          footer={amountRow("credit")}
         />
 
-        {/* Сумма + курс/⇄ + валидация */}
-        <div style={{ marginTop: 16, marginBottom: 8 }}>
-          {sectionLabel("Сумма пополнения")}
-          <div style={{
-            backgroundColor: C.card, borderRadius: 12,
-            border: `1.5px solid ${valid || !amount ? C.border : "#EF4444"}`,
-            padding: "16px", display: "flex", alignItems: "center", gap: 8,
-          }}>
-            <input
-              autoFocus
-              value={amount}
-              onChange={e => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
-              inputMode="decimal" placeholder="0"
-              style={{
-                flex: 1, border: "none", outline: "none", background: "transparent",
-                fontSize: 26, fontWeight: 800, color: C.text,
-                fontFamily: "inherit", fontFeatureSettings: "'tnum'", minWidth: 0,
-              }}
-            />
-            <span style={{ fontSize: 20, fontWeight: 700, color: C.muted }}>{inputCm.symbol}</span>
+        {/* Курс и валидация — под юнитами */}
+        {cross && (
+          <div style={{ fontSize: 12, color: C.muted, margin: "10px 2px 0", fontFeatureSettings: "'tnum'" }}>
+            Курс 1 {debitCm.symbol} = {rateFmt} {creditCm.symbol}
+            {num > 0 && ` · ${inCredit ? `спишем ≈ ${fmtFull(debitEquiv)} ${debitCm.symbol}` : `зачислим ≈ ${fmtFull(creditAmount)} ${creditCm.symbol}`}`}
           </div>
-          {cross && (
-            <div style={{ fontSize: 12, color: C.muted, marginTop: 6, fontFeatureSettings: "'tnum'", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-              <span>Курс 1 {debitCm.symbol} = {rateFmt} {creditCm.symbol}</span>
-              {num > 0 && (
-                <span>· {inCredit ? `спишем ≈ ${fmtFull(debitEquiv)} ${debitCm.symbol}` : `зачислим ≈ ${fmtFull(creditAmount)} ${creditCm.symbol}`}</span>
-              )}
-              <span data-press onClick={() => focusSide(inCredit ? "debit" : "credit")} style={{ color: C.accentDark, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}>
-                <ArrowLeftRight size={11} strokeWidth={2.2} /> ввести в {inCredit ? debitCm.symbol : creditCm.symbol}
-              </span>
-            </div>
-          )}
-          {overBalance && (
-            <div style={{ fontSize: 12, color: "#EF4444", marginTop: 6 }}>Недостаточно средств на счёте списания</div>
-          )}
-        </div>
-        <div style={{ fontSize: 12, color: C.muted, marginBottom: 24 }}>
+        )}
+        {overBalance && (
+          <div style={{ fontSize: 12, color: "#EF4444", marginTop: 6 }}>Недостаточно средств на счёте списания</div>
+        )}
+        <div style={{ fontSize: 12, color: C.muted, margin: "10px 0 20px" }}>
           {kind === "own" ? "Без комиссии · мгновенно" : "Зачисление мгновенно · комиссия 0%"}
         </div>
 

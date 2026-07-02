@@ -6770,7 +6770,7 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
   const sectionLabel = (t) => <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>{t}</div>;
 
   return (
-    <ScreenShell C={C} title="Пополнить" onBack={onBack}>
+    <ScreenShell C={C} title="Между счетами" onBack={onBack}>
       <div style={{ padding: "4px 20px 110px" }}>
         {/* Откуда: юнит «карта + счёт» (или внешний источник) */}
         {sectionLabel("Откуда")}

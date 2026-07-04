@@ -2363,6 +2363,7 @@ function BottomTabBar({ active, onChange, C }) {
         { key: "products", Icon: Wallet, label: "Продукты" },
         { key: "statistics", Icon: BarChart3, label: "Статистика" },
         { key: "payments", Icon: ArrowLeftRight, label: "Переводы" },
+        { key: "investments", Icon: TrendingUp, label: "Инвестиции" },
         { key: "chats", Icon: MessageCircle, label: "Чаты" },
       ].map(tab => {
         const isActive = active === tab.key;
@@ -8026,6 +8027,37 @@ export default function FreedomV6() {
         <StatisticsScreen C={C} displayCurrency={displayCurrency} showInternalCats={showInternalCats}
           onOpenTransaction={(tx, repCur, scope) => pushScreen({ type: "transaction", tx, reportCur: repCur, scope })}
         />
+      )}
+      {activeTab === "investments" && (
+        /* Заглушка: сюда встраивается SDK TraderNet (отдельный трек работ) */
+        <div style={{
+          maxWidth: 430, margin: "0 auto", minHeight: "100dvh",
+          backgroundColor: C.bg,
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', system-ui, sans-serif",
+          display: "flex", flexDirection: "column", paddingBottom: 90,
+        }}>
+          <StatusBar C={C} />
+          <div style={{ padding: "8px 20px 0" }}>
+            <div style={{ fontSize: 24, fontWeight: 800, color: C.text, letterSpacing: -0.5 }}>Инвестиции</div>
+          </div>
+          <div style={{
+            flex: 1, display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center", gap: 14,
+            padding: "0 40px 60px", textAlign: "center",
+          }}>
+            <div style={{
+              width: 72, height: 72, borderRadius: 22, backgroundColor: C.accentSoft,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <TrendingUp size={30} color={C.accentDark} strokeWidth={2} />
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>SDK TraderNet</div>
+            <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.55 }}>
+              Здесь встраивается инвестиционный модуль TraderNet.
+              Экран-заглушка — наполним позже.
+            </div>
+          </div>
+        </div>
       )}
       {activeTab === "chats" && (
         <ChatsScreen C={C} featureFlags={featureFlags}

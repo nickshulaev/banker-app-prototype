@@ -349,6 +349,14 @@ function convertToKZT(amount, currency) {
 function convertTo(amountInKZT, targetCurrency) {
   return amountInKZT / (RATES_TO_KZT[targetCurrency] || 1);
 }
+// Конверсия по курсу НА ДАТУ операции (целевая модель тотала: тотал не дышит с текущим курсом).
+function rateOnDate(currency, date) {
+  const day = RATES_HISTORY[date];
+  return (day && day[currency]) || RATES_TO_KZT[currency] || 1;
+}
+function convertOnDate(amount, currency, date, targetCurrency) {
+  return amount * rateOnDate(currency, date) / rateOnDate(targetCurrency, date);
+}
 
 /* ═══════════════════════════════════════════════
    COLOR PALETTES — clean, Wise-like
@@ -594,13 +602,42 @@ const CREDIT_SCHEDULE = [
 ];
 
 /* Транзакции для ProductDetails */
+/* Транзакции — с признаками для классификатора internal/external (целевая модель тотала):
+   users (кол-во участников), legFrom/legTo ("own" — счёт клиента, "ext" — внешний, null — ноги нет),
+   date — для курса НА ДАТУ операции, currency/amount — валюта и сумма операции (фид не конвертим). */
 const TRANSACTIONS = [
-  { id: 1, name: "Magnum Cash&Carry", category: "Продукты", amount: -15240.00, currency: "KZT", time: "Сегодня, 14:32", Icon: ShoppingCart, color: "#EF4444" },
-  { id: 2, name: "Перевод от Ивана В.", category: "Пополнение", amount: 50000.00, currency: "KZT", time: "Сегодня, 11:05", Icon: ArrowDownLeft, color: "#22C55E" },
-  { id: 3, name: "Del Papa", category: "Рестораны", amount: -8900.00, currency: "KZT", time: "Вчера, 20:14", Icon: Utensils, color: "#F59E0B" },
-  { id: 4, name: "Helios", category: "АЗС", amount: -12500.00, currency: "KZT", time: "Вчера, 09:41", Icon: Fuel, color: "#3B82F6" },
-  { id: 5, name: "Beeline", category: "Мобильная связь", amount: -3490.00, currency: "KZT", time: "10 июня, 16:20", Icon: Smartphone, color: "#8B5CF6" },
+  { id: 1, name: "Magnum Cash&Carry", category: "Продукты", amount: -15240.00, currency: "KZT", date: "2026-07-04", time: "Сегодня, 14:32", Icon: ShoppingCart, color: "#EF4444", legFrom: "own", legTo: "ext" },
+  { id: 2, name: "Перевод от Ивана В.", category: "Пополнение", amount: 50000.00, currency: "KZT", date: "2026-07-04", time: "Сегодня, 11:05", Icon: ArrowDownLeft, color: "#22C55E", users: 2, legFrom: "ext", legTo: "own" },
+  { id: 6, name: "Supercard → Текущий счёт", category: "Между своими", amount: -100000.00, currency: "RUB", date: "2026-07-04", time: "Сегодня, 10:12", Icon: Repeat, color: "#22C55E", legFrom: "own", legTo: "own" },
+  { id: 3, name: "Del Papa", category: "Рестораны", amount: -8900.00, currency: "KZT", date: "2026-07-03", time: "Вчера, 20:14", Icon: Utensils, color: "#F59E0B", legFrom: "own", legTo: "ext" },
+  { id: 7, name: "Покупка USD за RUB", category: "Обмен валют", amount: -100000.00, currency: "RUB", counter: "+ 1 254,71 $", date: "2026-07-03", time: "Вчера, 12:40", Icon: ArrowLeftRight, color: "#F59E0B", legFrom: "own", legTo: "own" },
+  { id: 8, name: "SWIFT · Wells Fargo N.A.", category: "SWIFT-перевод", amount: -1000.00, currency: "USD", date: "2026-07-03", time: "Вчера, 11:02", Icon: Globe, color: "#06B6D4", legFrom: "own", legTo: "ext" },
+  { id: 4, name: "Helios", category: "АЗС", amount: -12500.00, currency: "KZT", date: "2026-07-03", time: "Вчера, 09:41", Icon: Fuel, color: "#3B82F6", legFrom: "own", legTo: "ext" },
+  { id: 5, name: "Beeline", category: "Мобильная связь", amount: -3490.00, currency: "KZT", date: "2026-06-10", time: "10 июня, 16:20", Icon: Smartphone, color: "#8B5CF6", legFrom: "own", legTo: "ext" },
+  { id: 9, name: "Пополнение депозита «КОПИЛКА»", category: "Пополнение депозита", amount: -75000.00, currency: "KZT", date: "2026-06-10", time: "10 июня, 12:05", Icon: PiggyBank, color: "#0EA5E9", legFrom: null, legTo: "own", systemInternal: true },
+  { id: 10, name: "Проценты по депозиту", category: "Проценты", amount: 4120.00, currency: "KZT", date: "2026-06-10", time: "10 июня, 09:00", Icon: PiggyBank, color: "#16A34A", legFrom: null, legTo: "own" },
+  { id: 11, name: "Пополнение брокерского счёта", category: "Брокерский счёт", amount: -500.00, currency: "USD", date: "2026-06-10", time: "10 июня, 08:30", Icon: TrendingUp, color: "#F59E0B", legFrom: "own", legTo: null },
 ];
+
+/* Курсы НА ДАТУ операции (KZT за единицу): тотал считается по историческому курсу
+   и не меняется от движения курса без новых транзакций. Фолбэк — текущие RATES_TO_KZT. */
+const RATES_HISTORY = {
+  "2026-07-04": { KZT: 1, USD: 512.4, EUR: 578.1, RUB: 6.42, CNY: 71.2 },
+  "2026-07-03": { KZT: 1, USD: 509.8, EUR: 575.3, RUB: 6.37, CNY: 70.8 },
+  "2026-06-10": { KZT: 1, USD: 498.0, EUR: 566.9, RUB: 6.21, CNY: 69.4 },
+};
+
+/* Классификатор internal/external (§4 целевой модели, приоритет сверху вниз):
+   операция пересекла границу «всех денег клиента в банке» → external (полная сумма),
+   не пересекла (между своими, конвертация) → internal (вклад в тотал 0, gross → «Перемещено»). */
+function txIsInternal(t) {
+  if ((t.users || 1) > 1) return false;                       // 1. двое участников → деньги ушли другому
+  if (t.legFrom === "own" && t.legTo === "own") return true;  // 2. обе ноги — счета клиента
+  if (t.legFrom == null || t.legTo == null)                   // 3. одна нога отсутствует — системный кейс
+    return t.systemInternal === true;                         //    (депозит — internal; проценты, брокер — external)
+  if (t.shared) return true;                                  // 4. шаринг — internal (решение продукта)
+  return false;
+}
 
 /* ═══════════════════════════════════════════════
    CARD ART — flat, simple
@@ -2705,7 +2742,7 @@ function ProductDetailsScreen({ card, C, featureFlags, onBack, onTransfer, onExc
                   fontSize: 14, fontWeight: 700, fontFeatureSettings: "'tnum'", flexShrink: 0,
                   color: t.amount > 0 ? "#16A34A" : C.text,
                 }}>
-                  {t.amount > 0 ? "+" : ""}{fmtFull(t.amount)} ₸
+                  {t.amount > 0 ? "+" : ""}{fmtFull(t.amount)} {(CURRENCY_META[t.currency] || {}).symbol || "₸"}
                 </span>
               </div>
             ))}
@@ -2788,23 +2825,40 @@ function StubScreen({ C, title, note }) {
    («Статистика», «Движение средств», «Категории расходов»)
    ═══════════════════════════════════════════════ */
 
-function StatisticsScreen({ C, onOpenTransaction }) {
+function StatisticsScreen({ C, displayCurrency, onOpenTransaction }) {
   const [period, setPeriod] = useState("month");
   const [configOpen, setConfigOpen] = useState(false);
   const [hiddenCats, setHiddenCats] = useState([]);
+  const [catFilter, setCatFilter] = useState(null); // явный фильтр по категории (null = все)
   const isDark = C.bg === '#0E0F0C';
-  const spent = TRANSACTIONS.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
-  const income = TRANSACTIONS.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+  const dc = displayCurrency || "KZT";
+  const dcMeta = CURRENCY_META[dc] || { symbol: dc };
+  // Сумма операции в отчётной валюте ПО КУРСУ НА ДАТУ операции (не на момент запроса).
+  const inDC = (t) => convertOnDate(Math.abs(t.amount), t.currency, t.date, dc);
 
-  // Категории расходов (real totalTransactionsDetails)
+  /* Целевая модель тотала: операция пересекла границу «всех денег клиента в банке» →
+     полная сумма в тотале; не пересекла (между своими, конвертация) → вклад 0,
+     gross уходит в «Перемещено» (moved_total). Один источник для сумм и счётчиков. */
+  const filtered = catFilter ? TRANSACTIONS.filter(t => t.category === catFilter) : TRANSACTIONS;
+  const external = filtered.filter(t => !txIsInternal(t));
+  const internal = filtered.filter(t => txIsInternal(t));
+  const income = external.filter(t => t.amount > 0).reduce((s, t) => s + inDC(t), 0);
+  const spent = external.filter(t => t.amount < 0).reduce((s, t) => s + inDC(t), 0);
+  const movedTotal = internal.reduce((s, t) => s + inDC(t), 0);
+  const filterIsInternal = catFilter && filtered.length > 0 && filtered.every(t => txIsInternal(t));
+
+  // Категории расходов — только внешние оттоки, в отчётной валюте по курсу на дату.
   const byCategory = {};
-  TRANSACTIONS.filter(t => t.amount < 0).forEach(t => {
+  TRANSACTIONS.filter(t => t.amount < 0 && !txIsInternal(t)).forEach(t => {
     if (!byCategory[t.category]) byCategory[t.category] = { sum: 0, Icon: t.Icon, color: t.color };
-    byCategory[t.category].sum += Math.abs(t.amount);
+    byCategory[t.category].sum += inDC(t);
   });
   const allCategories = Object.entries(byCategory).sort((a, b) => b[1].sum - a[1].sum);
   const categories = allCategories.filter(([name]) => !hiddenCats.includes(name));
   const maxCat = categories.length ? categories[0][1].sum : 1;
+
+  // Чипы фильтра: все категории фида в порядке появления (внутренние — тоже, кейс «не голый ноль»).
+  const filterCats = TRANSACTIONS.map(t => t.category).filter((v, i, a) => a.indexOf(v) === i);
 
   return (
     <div style={{
@@ -2834,35 +2888,63 @@ function StatisticsScreen({ C, onOpenTransaction }) {
           ))}
         </div>
 
-        {/* Движение средств (real navigationCashFlowTitle) */}
+        {/* Движение средств (real navigationCashFlowTitle) — только внешние операции.
+            Фильтр по внутренней категории → главная цифра «Перемещено», не голый ноль (кейс #3562). */}
         <div style={{ marginBottom: 24 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 12 }}>Движение средств</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {filterIsInternal ? (
             <div style={{
               backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
               padding: "14px 16px",
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                <ArrowDownLeft size={14} color="#16A34A" strokeWidth={2.2} />
-                <span style={{ fontSize: 12, color: C.muted, fontWeight: 500 }}>Поступления</span>
-              </div>
-              <div style={{ fontSize: 17, fontWeight: 800, color: "#16A34A", fontFeatureSettings: "'tnum'" }}>
-                +{fmtFull(income)} <span style={{ fontSize: 12 }}>₸</span>
-              </div>
-            </div>
-            <div style={{
-              backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
-              padding: "14px 16px",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                <TrendingUp size={14} color="#EF4444" strokeWidth={2.2} style={{ transform: "rotate(90deg)" }} />
-                <span style={{ fontSize: 12, color: C.muted, fontWeight: 500 }}>Траты</span>
+                <Repeat size={14} color={C.muted} strokeWidth={2.2} />
+                <span style={{ fontSize: 12, color: C.muted, fontWeight: 500 }}>Перемещено</span>
               </div>
               <div style={{ fontSize: 17, fontWeight: 800, color: C.text, fontFeatureSettings: "'tnum'" }}>
-                −{fmtFull(spent)} <span style={{ fontSize: 12, color: C.muted }}>₸</span>
+                {fmtFull(movedTotal)} <span style={{ fontSize: 12, color: C.muted }}>{dcMeta.symbol}</span>
+              </div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>
+                Внутренние операции не влияют на тотал — деньги остались в банке
               </div>
             </div>
-          </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div style={{
+                backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+                padding: "14px 16px",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                  <ArrowDownLeft size={14} color="#16A34A" strokeWidth={2.2} />
+                  <span style={{ fontSize: 12, color: C.muted, fontWeight: 500 }}>Поступления</span>
+                </div>
+                <div style={{ fontSize: 17, fontWeight: 800, color: "#16A34A", fontFeatureSettings: "'tnum'" }}>
+                  +{fmtFull(income)} <span style={{ fontSize: 12 }}>{dcMeta.symbol}</span>
+                </div>
+              </div>
+              <div style={{
+                backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+                padding: "14px 16px",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                  <TrendingUp size={14} color="#EF4444" strokeWidth={2.2} style={{ transform: "rotate(90deg)" }} />
+                  <span style={{ fontSize: 12, color: C.muted, fontWeight: 500 }}>Траты</span>
+                </div>
+                <div style={{ fontSize: 17, fontWeight: 800, color: C.text, fontFeatureSettings: "'tnum'" }}>
+                  −{fmtFull(spent)} <span style={{ fontSize: 12, color: C.muted }}>{dcMeta.symbol}</span>
+                </div>
+              </div>
+            </div>
+          )}
+          {/* moved_total — gross внутренних перемещений; показывается всегда, когда есть */}
+          {!filterIsInternal && movedTotal > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10, padding: "0 2px" }}>
+              <Repeat size={13} color={C.muted} strokeWidth={2} />
+              <span style={{ fontSize: 12, color: C.muted }}>
+                Перемещено между своими · <span style={{ fontWeight: 700, fontFeatureSettings: "'tnum'" }}>{fmtFull(movedTotal)} {dcMeta.symbol}</span>
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Категории расходов (real totalTransactionsDetails.navigationTitle) */}
@@ -2890,7 +2972,7 @@ function StatisticsScreen({ C, onOpenTransaction }) {
                   </div>
                   <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.text }}>{name}</span>
                   <span style={{ fontSize: 14, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
-                    {fmtFull(cat.sum)} <span style={{ fontSize: 11, color: C.muted }}>₸</span>
+                    {fmtFull(cat.sum)} <span style={{ fontSize: 11, color: C.muted }}>{dcMeta.symbol}</span>
                   </span>
                 </div>
                 <div style={{
@@ -2907,38 +2989,60 @@ function StatisticsScreen({ C, onOpenTransaction }) {
           </div>
         </div>
 
-        {/* История операций */}
+        {/* История операций — строки фида в валюте операции; фильтр по категории явный */}
         <div>
           <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 12 }}>История операций</div>
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none", paddingBottom: 10 }}>
+            {[null, ...filterCats].map(cat => (
+              <div key={cat || "all"} data-press onClick={() => setCatFilter(cat)} style={{
+                flexShrink: 0, padding: "6px 12px", borderRadius: 16, cursor: "pointer",
+                fontSize: 12, fontWeight: 600,
+                backgroundColor: catFilter === cat ? C.accentDark : C.faint,
+                color: catFilter === cat ? C.accent : C.sub,
+              }}>{cat || "Все"}</div>
+            ))}
+          </div>
           <div style={{
             backgroundColor: C.card, borderRadius: 12,
             border: `1px solid ${C.border}`, overflow: "hidden",
           }}>
-            {TRANSACTIONS.map((t, i) => (
-              <div key={t.id} data-press onClick={() => onOpenTransaction?.(t)} style={{
-                display: "flex", alignItems: "center", gap: 12,
-                padding: "13px 16px", cursor: "pointer",
-                borderBottom: i < TRANSACTIONS.length - 1 ? `1px solid ${C.divider}` : "none",
-              }}>
-                <div style={{
-                  width: 38, height: 38, borderRadius: "50%",
-                  backgroundColor: `${t.color}14`,
-                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            {filtered.map((t, i) => {
+              const internalTx = txIsInternal(t);
+              const sym = (CURRENCY_META[t.currency] || {}).symbol || t.currency;
+              return (
+                <div key={t.id} data-press onClick={() => onOpenTransaction?.(t)} style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  padding: "13px 16px", cursor: "pointer",
+                  borderBottom: i < filtered.length - 1 ? `1px solid ${C.divider}` : "none",
                 }}>
-                  <t.Icon size={16} color={t.color} strokeWidth={1.9} />
+                  <div style={{
+                    width: 38, height: 38, borderRadius: "50%",
+                    backgroundColor: `${t.color}14`,
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>
+                    <t.Icon size={16} color={t.color} strokeWidth={1.9} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.category} · {t.time}</span>
+                      {internalTx && (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: C.muted, backgroundColor: C.faint, borderRadius: 20, padding: "1px 7px", flexShrink: 0 }}>внутренняя</span>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{
+                      fontSize: 14, fontWeight: 700, fontFeatureSettings: "'tnum'",
+                      color: t.amount > 0 ? "#16A34A" : C.text,
+                    }}>
+                      {t.amount > 0 ? "+" : ""}{fmtFull(t.amount)} {sym}
+                    </div>
+                    {t.counter && <div style={{ fontSize: 11, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'" }}>{t.counter}</div>}
+                  </div>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</div>
-                  <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{t.category} · {t.time}</div>
-                </div>
-                <span style={{
-                  fontSize: 14, fontWeight: 700, fontFeatureSettings: "'tnum'", flexShrink: 0,
-                  color: t.amount > 0 ? "#16A34A" : C.text,
-                }}>
-                  {t.amount > 0 ? "+" : ""}{fmtFull(t.amount)} ₸
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -3178,7 +3282,7 @@ function TransactionDetailsScreen({ tx, C, featureFlags, onBack, onSplit, onAddT
             fontSize: 32, fontWeight: 800, fontFeatureSettings: "'tnum'", letterSpacing: -1,
             color: tx.amount > 0 ? "#16A34A" : C.text,
           }}>
-            {tx.amount > 0 ? "+" : ""}{fmtFull(tx.amount)} <span style={{ fontSize: 18, color: C.muted }}>₸</span>
+            {tx.amount > 0 ? "+" : ""}{fmtFull(tx.amount)} <span style={{ fontSize: 18, color: C.muted }}>{(CURRENCY_META[tx.currency] || {}).symbol || "₸"}</span>
           </div>
           {/* Status chip */}
           <div style={{
@@ -3361,7 +3465,7 @@ function SplitConfirmScreen({ C, payload, onBack, onConfirm }) {
         <div style={{ textAlign: "center", margin: "12px 0 28px" }}>
           <div style={{ fontSize: 13, color: C.muted, fontWeight: 500, marginBottom: 8 }}>Разделить счет · {tx.name}</div>
           <div style={{ fontSize: 36, fontWeight: 800, color: C.text, letterSpacing: -1, fontFeatureSettings: "'tnum'" }}>
-            {fmtFull(Math.abs(tx.amount))} <span style={{ fontSize: 20, color: C.muted }}>₸</span>
+            {fmtFull(Math.abs(tx.amount))} <span style={{ fontSize: 20, color: C.muted }}>{(CURRENCY_META[tx.currency] || {}).symbol || "₸"}</span>
           </div>
         </div>
         <div style={{
@@ -5299,7 +5403,7 @@ function AccountDetailsScreen({ account, C, onBack, onOpenRequisites, onTransfer
                 <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{t.time}</div>
               </div>
               <span style={{ fontSize: 14, fontWeight: 700, fontFeatureSettings: "'tnum'", color: t.amount > 0 ? "#16A34A" : C.text }}>
-                {t.amount > 0 ? "+" : ""}{fmtFull(t.amount)} ₸
+                {t.amount > 0 ? "+" : ""}{fmtFull(t.amount)} {(CURRENCY_META[t.currency] || {}).symbol || "₸"}
               </span>
             </div>
           ))}
@@ -5647,7 +5751,7 @@ function AllTransactionsScreen({ C, onBack, onOpenTransaction }) {
                     <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{t.category}</div>
                   </div>
                   <span style={{ fontSize: 14, fontWeight: 700, fontFeatureSettings: "'tnum'", color: t.amount > 0 ? "#16A34A" : C.text }}>
-                    {t.amount > 0 ? "+" : ""}{fmtFull(t.amount)} ₸
+                    {t.amount > 0 ? "+" : ""}{fmtFull(t.amount)} {(CURRENCY_META[t.currency] || {}).symbol || "₸"}
                   </span>
                 </div>
               ))}
@@ -7718,7 +7822,7 @@ export default function FreedomV6() {
         />
       )}
       {activeTab === "statistics" && (
-        <StatisticsScreen C={C}
+        <StatisticsScreen C={C} displayCurrency={displayCurrency}
           onOpenTransaction={(tx) => pushScreen({ type: "transaction", tx })}
         />
       )}

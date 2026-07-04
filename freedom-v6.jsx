@@ -608,21 +608,21 @@ const CREDIT_SCHEDULE = [
    users (кол-во участников), legFrom/legTo ("own" — счёт клиента, "ext" — внешний, null — ноги нет),
    date — для курса НА ДАТУ операции, currency/amount — валюта и сумма операции (фид не конвертим). */
 const TRANSACTIONS = [
-  { id: 1, products: ["harvey-queen"], name: "Magnum Cash&Carry", category: "Продукты", amount: -15240.00, currency: "KZT", date: "2026-07-04", time: "Сегодня, 14:32", Icon: ShoppingCart, color: "#EF4444", legFrom: "own", legTo: "ext" },
-  { id: 2, products: ["harvey-queen"], name: "Перевод от Ивана В.", category: "Пополнение", amount: 50000.00, currency: "KZT", date: "2026-07-04", time: "Сегодня, 11:05", Icon: ArrowDownLeft, color: "#22C55E", users: 2, legFrom: "ext", legTo: "own" },
-  { id: 6, products: ["harvey-queen", "acc-a3"], name: "Supercard → Рублики", category: "Между своими", amount: -100000.00, currency: "RUB", date: "2026-07-04", time: "Сегодня, 10:12", Icon: Repeat, color: "#22C55E", legFrom: "own", legTo: "own" },
-  { id: 3, products: ["harvey-queen"], name: "Del Papa", category: "Рестораны", amount: -8900.00, currency: "KZT", date: "2026-07-03", time: "Вчера, 20:14", Icon: Utensils, color: "#F59E0B", legFrom: "own", legTo: "ext" },
-  { id: 7, products: ["harvey-queen"], name: "Покупка USD за RUB", category: "Обмен валют", amount: -100000.00, currency: "RUB", counter: "+ 1 254,71 $", date: "2026-07-03", time: "Вчера, 12:40", Icon: ArrowLeftRight, color: "#F59E0B", legFrom: "own", legTo: "own" },
-  { id: 8, products: ["acc-a1"], name: "SWIFT · Wells Fargo N.A.", category: "SWIFT-перевод", amount: -1000.00, currency: "USD", date: "2026-07-03", time: "Вчера, 11:02", Icon: Globe, color: "#06B6D4", legFrom: "own", legTo: "ext" },
-  { id: 4, products: ["harvey-queen"], name: "Helios", category: "АЗС", amount: -12500.00, currency: "KZT", date: "2026-07-03", time: "Вчера, 09:41", Icon: Fuel, color: "#3B82F6", legFrom: "own", legTo: "ext" },
-  { id: 15, products: ["harvey-queen"], name: "Yandex Go", category: "Транспорт", amount: -6540.00, currency: "KZT", date: "2026-06-21", time: "21 июня, 19:05", Icon: Bus, color: "#F59E0B", legFrom: "own", legTo: "ext" },
-  { id: 14, products: ["acc-a2"], name: "Booking.com", category: "Путешествия", amount: -320.00, currency: "EUR", date: "2026-06-18", time: "18 июня, 22:40", Icon: Plane, color: "#3B82F6", legFrom: "own", legTo: "ext" },
-  { id: 5, products: ["harvey-queen"], name: "Beeline", category: "Мобильная связь", amount: -3490.00, currency: "KZT", date: "2026-06-10", time: "10 июня, 16:20", Icon: Smartphone, color: "#8B5CF6", legFrom: "own", legTo: "ext" },
-  { id: 9, products: [], name: "Пополнение депозита «КОПИЛКА»", category: "Пополнение депозита", amount: -75000.00, currency: "KZT", date: "2026-06-10", time: "10 июня, 12:05", Icon: PiggyBank, color: "#0EA5E9", legFrom: null, legTo: "own", systemInternal: true },
-  { id: 10, products: [], name: "Проценты по депозиту", category: "Проценты", amount: 4120.00, currency: "KZT", date: "2026-06-10", time: "10 июня, 09:00", Icon: PiggyBank, color: "#16A34A", legFrom: null, legTo: "own" },
-  { id: 11, products: ["harvey-queen"], name: "Пополнение брокерского счёта", category: "Брокерский счёт", amount: -500.00, currency: "USD", date: "2026-06-10", time: "10 июня, 08:30", Icon: TrendingUp, color: "#F59E0B", legFrom: "own", legTo: null },
-  { id: 13, products: ["harvey-queen"], name: "Arbat Fit · абонемент", category: "Спорт", amount: -45000.00, currency: "KZT", date: "2026-06-07", time: "7 июня, 08:15", Icon: Zap, color: "#8B5CF6", legFrom: "own", legTo: "ext" },
-  { id: 12, products: ["harvey-queen"], name: "Зарплата · Freedom Holding", category: "Пополнение", amount: 850000.00, currency: "KZT", date: "2026-06-05", time: "5 июня, 10:00", Icon: ArrowDownLeft, color: "#22C55E", users: 2, legFrom: "ext", legTo: "own" },
+  { id: 1, srcProd: "harvey-queen", dstProd: null, name: "Magnum Cash&Carry", category: "Продукты", amount: -15240.00, currency: "KZT", date: "2026-07-04", time: "Сегодня, 14:32", Icon: ShoppingCart, color: "#EF4444", legFrom: "own", legTo: "ext" },
+  { id: 2, srcProd: null, dstProd: "harvey-queen", name: "Перевод от Ивана В.", category: "Пополнение", amount: 50000.00, currency: "KZT", date: "2026-07-04", time: "Сегодня, 11:05", Icon: ArrowDownLeft, color: "#22C55E", users: 2, legFrom: "ext", legTo: "own" },
+  { id: 6, srcProd: "harvey-queen", dstProd: "acc-a3", name: "Supercard → Рублики", category: "Между своими", amount: -100000.00, currency: "RUB", date: "2026-07-04", time: "Сегодня, 10:12", Icon: Repeat, color: "#22C55E", legFrom: "own", legTo: "own" },
+  { id: 3, srcProd: "harvey-queen", dstProd: null, name: "Del Papa", category: "Рестораны", amount: -8900.00, currency: "KZT", date: "2026-07-03", time: "Вчера, 20:14", Icon: Utensils, color: "#F59E0B", legFrom: "own", legTo: "ext" },
+  { id: 7, srcProd: "harvey-queen", dstProd: "harvey-queen", name: "Покупка USD за RUB", category: "Обмен валют", amount: -100000.00, currency: "RUB", counter: "+ 1 254,71 $", date: "2026-07-03", time: "Вчера, 12:40", Icon: ArrowLeftRight, color: "#F59E0B", legFrom: "own", legTo: "own" },
+  { id: 8, srcProd: "acc-a1", dstProd: null, name: "SWIFT · Wells Fargo N.A.", category: "SWIFT-перевод", amount: -1000.00, currency: "USD", date: "2026-07-03", time: "Вчера, 11:02", Icon: Globe, color: "#06B6D4", legFrom: "own", legTo: "ext" },
+  { id: 4, srcProd: "harvey-queen", dstProd: null, name: "Helios", category: "АЗС", amount: -12500.00, currency: "KZT", date: "2026-07-03", time: "Вчера, 09:41", Icon: Fuel, color: "#3B82F6", legFrom: "own", legTo: "ext" },
+  { id: 15, srcProd: "harvey-queen", dstProd: null, name: "Yandex Go", category: "Транспорт", amount: -6540.00, currency: "KZT", date: "2026-06-21", time: "21 июня, 19:05", Icon: Bus, color: "#F59E0B", legFrom: "own", legTo: "ext" },
+  { id: 14, srcProd: "acc-a2", dstProd: null, name: "Booking.com", category: "Путешествия", amount: -320.00, currency: "EUR", date: "2026-06-18", time: "18 июня, 22:40", Icon: Plane, color: "#3B82F6", legFrom: "own", legTo: "ext" },
+  { id: 5, srcProd: "harvey-queen", dstProd: null, name: "Beeline", category: "Мобильная связь", amount: -3490.00, currency: "KZT", date: "2026-06-10", time: "10 июня, 16:20", Icon: Smartphone, color: "#8B5CF6", legFrom: "own", legTo: "ext" },
+  { id: 9, srcProd: null, dstProd: null, name: "Пополнение депозита «КОПИЛКА»", category: "Пополнение депозита", amount: -75000.00, currency: "KZT", date: "2026-06-10", time: "10 июня, 12:05", Icon: PiggyBank, color: "#0EA5E9", legFrom: null, legTo: "own", systemInternal: true },
+  { id: 10, srcProd: null, dstProd: null, name: "Проценты по депозиту", category: "Проценты", amount: 4120.00, currency: "KZT", date: "2026-06-10", time: "10 июня, 09:00", Icon: PiggyBank, color: "#16A34A", legFrom: null, legTo: "own" },
+  { id: 11, srcProd: "harvey-queen", dstProd: null, name: "Пополнение брокерского счёта", category: "Брокерский счёт", amount: -500.00, currency: "USD", date: "2026-06-10", time: "10 июня, 08:30", Icon: TrendingUp, color: "#F59E0B", legFrom: "own", legTo: null },
+  { id: 13, srcProd: "harvey-queen", dstProd: null, name: "Arbat Fit · абонемент", category: "Спорт", amount: -45000.00, currency: "KZT", date: "2026-06-07", time: "7 июня, 08:15", Icon: Zap, color: "#8B5CF6", legFrom: "own", legTo: "ext" },
+  { id: 12, srcProd: null, dstProd: "harvey-queen", name: "Зарплата · Freedom Holding", category: "Пополнение", amount: 850000.00, currency: "KZT", date: "2026-06-05", time: "5 июня, 10:00", Icon: ArrowDownLeft, color: "#22C55E", users: 2, legFrom: "ext", legTo: "own" },
 ];
 
 /* Курсы НА ДАТУ операции (KZT за единицу): тотал считается по историческому курсу
@@ -2866,24 +2866,34 @@ function StatisticsScreen({ C, displayCurrency, showInternalCats, onOpenTransact
   // Период: month = текущий месяц моков (июль 2026), year = всё, range = пресет из шита.
   const periodPrefix = period === "month" ? "2026-07" : period === "range" ? rangePreset : null;
   const base = (periodPrefix ? TRANSACTIONS.filter(t => t.date.startsWith(periodPrefix)) : TRANSACTIONS)
-    .filter(t => !prodFilter || (t.products || []).includes(prodFilter));
+    .filter(t => !prodFilter || t.srcProd === prodFilter || t.dstProd === prodFilter);
 
-  /* Целевая модель тотала: операция пересекла границу «всех денег клиента в банке» →
-     полная сумма в тотале; не пересекла (между своими, конвертация) → вклад 0,
-     gross уходит в «Перемещено» (moved_total). Один источник для сумм и счётчиков. */
+  /* Целевая модель тотала: граница ОТНОСИТЕЛЬНА выбранного скоупа.
+     Все продукты → граница = портфель: между своими 0, gross → «Перемещено».
+     Один продукт → граница = продукт: перевод между своими = честный ±
+     (у цели приток), «внутренним» остаётся лишь не пересёкшее границу
+     продукта (обмен валют внутри одной карты). Инвариант: per-product
+     вклады внутренних переводов взаимно гасятся → сходится с портфельным нулём. */
+  const inScopeInternal = (t) => prodFilter
+    ? (t.srcProd === prodFilter && t.dstProd === prodFilter)
+    : txIsInternal(t);
+  // Сумма со знаком в скоупе: запись хранит знак стороны-источника; для продукта-цели — приток.
+  const scopeSigned = (t) => (prodFilter && t.dstProd === prodFilter && t.srcProd !== prodFilter)
+    ? Math.abs(t.amount) : t.amount;
+
   const filtered = catFilter ? base.filter(t => t.category === catFilter) : base;
-  const external = filtered.filter(t => !txIsInternal(t));
-  const internal = filtered.filter(t => txIsInternal(t));
-  const income = external.filter(t => t.amount > 0).reduce((s, t) => s + inDC(t), 0);
-  const spent = external.filter(t => t.amount < 0).reduce((s, t) => s + inDC(t), 0);
+  const external = filtered.filter(t => !inScopeInternal(t));
+  const internal = filtered.filter(t => inScopeInternal(t));
+  const income = external.filter(t => scopeSigned(t) > 0).reduce((s, t) => s + inDC(t), 0);
+  const spent = external.filter(t => scopeSigned(t) < 0).reduce((s, t) => s + inDC(t), 0);
   const movedTotal = internal.reduce((s, t) => s + inDC(t), 0);
-  const filterIsInternal = catFilter && filtered.length > 0 && filtered.every(t => txIsInternal(t));
+  const filterIsInternal = catFilter && filtered.length > 0 && filtered.every(t => inScopeInternal(t));
 
   // Категории расходов — внешние оттоки периода; счётчик операций из того же массива, что и суммы.
   // Дебаг-режим «показать внутренние»: internal-категории видимы, но с бейджем и без вклада в тотал.
   const byCategory = {};
-  base.filter(t => t.amount < 0 && (!txIsInternal(t) || showInternalCats)).forEach(t => {
-    const internalTx = txIsInternal(t);
+  base.filter(t => scopeSigned(t) < 0 && (!inScopeInternal(t) || showInternalCats)).forEach(t => {
+    const internalTx = inScopeInternal(t);
     if (!byCategory[t.category]) byCategory[t.category] = { sum: 0, count: 0, Icon: t.Icon, color: t.color, internal: internalTx };
     byCategory[t.category].sum += inDC(t);
     byCategory[t.category].count += 1;
@@ -3098,10 +3108,11 @@ function StatisticsScreen({ C, displayCurrency, showInternalCats, onOpenTransact
             border: `1px solid ${C.border}`, overflow: "hidden",
           }}>
             {filtered.map((t, i) => {
-              const internalTx = txIsInternal(t);
+              const internalTx = inScopeInternal(t);
+              const signed = scopeSigned(t); // в скоупе продукта у стороны-цели перевод — приток «+»
               const sym = (CURRENCY_META[t.currency] || {}).symbol || t.currency;
               return (
-                <div key={t.id} data-press onClick={() => onOpenTransaction?.(t, dc)} style={{
+                <div key={t.id} data-press onClick={() => onOpenTransaction?.(t, dc, prodSel)} style={{
                   display: "flex", alignItems: "center", gap: 12,
                   padding: "13px 16px", cursor: "pointer",
                   borderBottom: i < filtered.length - 1 ? `1px solid ${C.divider}` : "none",
@@ -3125,9 +3136,9 @@ function StatisticsScreen({ C, displayCurrency, showInternalCats, onOpenTransact
                   <div style={{ textAlign: "right", flexShrink: 0 }}>
                     <div style={{
                       fontSize: 14, fontWeight: 700, fontFeatureSettings: "'tnum'",
-                      color: t.amount > 0 ? "#16A34A" : C.text,
+                      color: signed > 0 ? "#16A34A" : C.text,
                     }}>
-                      {t.amount > 0 ? "+" : ""}{fmtFull(t.amount)} {sym}
+                      {signed > 0 ? "+" : ""}{fmtFull(signed)} {sym}
                     </div>
                     {t.counter && <div style={{ fontSize: 11, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'" }}>{t.counter}</div>}
                   </div>
@@ -3394,11 +3405,14 @@ function SuccessScreen({ C, title, message, amountStr, note, onDone }) {
    («Транзакция», Карта списания, «В шаблоны», «Разделить»)
    ═══════════════════════════════════════════════ */
 
-function TransactionDetailsScreen({ tx, C, featureFlags, reportCurrency, onBack, onSplit, onAddTemplate }) {
+function TransactionDetailsScreen({ tx, C, featureFlags, reportCurrency, scope, onBack, onSplit, onAddTemplate }) {
   const isExpense = tx.amount < 0;
   // Вклад операции в тотал (целевая модель): internal → 0, external в чужой валюте → курс на дату.
+  // Граница относительна скоупа: из статистики продукта перевод между своими — честный ± продукта.
   const repCur = reportCurrency || "KZT";
   const isInternal = tx.date ? txIsInternal(tx) : false;
+  const crossesScope = isInternal && scope && (tx.srcProd === scope.id) !== (tx.dstProd === scope.id);
+  const scopeSignedAmt = crossesScope ? (tx.dstProd === scope.id ? Math.abs(tx.amount) : tx.amount) : null;
   const crossCur = tx.date && !isInternal && tx.currency !== repCur;
   const repMeta = CURRENCY_META[repCur] || { symbol: repCur };
   const dateFmt = tx.date ? tx.date.split("-").reverse().join(".") : "";
@@ -3434,8 +3448,18 @@ function TransactionDetailsScreen({ tx, C, featureFlags, reportCurrency, onBack,
           </div>
         </div>
 
-        {/* Вклад в тотал: внутренняя → 0, внешняя в чужой валюте → по курсу на дату операции */}
-        {isInternal && (
+        {/* Вклад в тотал: внутренняя → 0 (портфель); в скоупе продукта — честный ± его границы */}
+        {crossesScope && (
+          <div style={{
+            backgroundColor: C.faint, borderRadius: 12, padding: "12px 14px", marginBottom: 16,
+            fontSize: 12.5, color: C.muted, lineHeight: 1.5, fontFeatureSettings: "'tnum'",
+          }}>
+            Для {scope.name}: <span style={{ fontWeight: 700, color: scopeSignedAmt > 0 ? "#16A34A" : C.text }}>
+              {scopeSignedAmt > 0 ? "+" : ""}{fmtFull(scopeSignedAmt)} {(CURRENCY_META[tx.currency] || {}).symbol || tx.currency}</span>
+            <div style={{ marginTop: 2 }}>В общем тотале: 0 — деньги остались в банке</div>
+          </div>
+        )}
+        {isInternal && !crossesScope && (
           <div style={{
             backgroundColor: C.faint, borderRadius: 12, padding: "12px 14px", marginBottom: 16,
             display: "flex", alignItems: "center", gap: 10,
@@ -7984,7 +8008,7 @@ export default function FreedomV6() {
       )}
       {activeTab === "statistics" && (
         <StatisticsScreen C={C} displayCurrency={displayCurrency} showInternalCats={showInternalCats}
-          onOpenTransaction={(tx, repCur) => pushScreen({ type: "transaction", tx, reportCur: repCur })}
+          onOpenTransaction={(tx, repCur, scope) => pushScreen({ type: "transaction", tx, reportCur: repCur, scope })}
         />
       )}
       {activeTab === "chats" && (
@@ -8169,7 +8193,7 @@ export default function FreedomV6() {
           />
         );
         if (s.type === "transaction") return (
-          <TransactionDetailsScreen key={i} tx={s.tx} C={C} featureFlags={featureFlags} reportCurrency={s.reportCur || displayCurrency}
+          <TransactionDetailsScreen key={i} tx={s.tx} C={C} featureFlags={featureFlags} reportCurrency={s.reportCur || displayCurrency} scope={s.scope}
             onBack={popScreen}
             onSplit={(tx) => pushScreen({ type: "splitMain", tx })}
             onAddTemplate={() => pushScreen({ type: "templateCreated" })}

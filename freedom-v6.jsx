@@ -430,6 +430,8 @@ const FEATURE_FLAGS = [
   { key: "toIban", desc: "Перевод по номеру счёта (IBAN)", default: true },
   { key: "payPayeesGroups", desc: "Оплата услуг (категории)", default: true },
   { key: "digitalAssets", desc: "Криптокошелёк (Digital Assets)", default: true },
+  { key: "mastercard", desc: "Экспресс перевод за рубеж (MoneySend)", default: true },
+  { key: "crystal", desc: "Валютные контракты (SWIFT)", default: true },
   { key: "paySwift", desc: "SWIFT-переводы", default: true },
   { key: "conversionRates", desc: "Курсы валют на экране переводов", default: true },
   { key: "cardPanCVV", desc: "Показ номера карты в деталях", default: true },
@@ -606,21 +608,21 @@ const CREDIT_SCHEDULE = [
    users (кол-во участников), legFrom/legTo ("own" — счёт клиента, "ext" — внешний, null — ноги нет),
    date — для курса НА ДАТУ операции, currency/amount — валюта и сумма операции (фид не конвертим). */
 const TRANSACTIONS = [
-  { id: 1, name: "Magnum Cash&Carry", category: "Продукты", amount: -15240.00, currency: "KZT", date: "2026-07-04", time: "Сегодня, 14:32", Icon: ShoppingCart, color: "#EF4444", legFrom: "own", legTo: "ext" },
-  { id: 2, name: "Перевод от Ивана В.", category: "Пополнение", amount: 50000.00, currency: "KZT", date: "2026-07-04", time: "Сегодня, 11:05", Icon: ArrowDownLeft, color: "#22C55E", users: 2, legFrom: "ext", legTo: "own" },
-  { id: 6, name: "Supercard → Текущий счёт", category: "Между своими", amount: -100000.00, currency: "RUB", date: "2026-07-04", time: "Сегодня, 10:12", Icon: Repeat, color: "#22C55E", legFrom: "own", legTo: "own" },
-  { id: 3, name: "Del Papa", category: "Рестораны", amount: -8900.00, currency: "KZT", date: "2026-07-03", time: "Вчера, 20:14", Icon: Utensils, color: "#F59E0B", legFrom: "own", legTo: "ext" },
-  { id: 7, name: "Покупка USD за RUB", category: "Обмен валют", amount: -100000.00, currency: "RUB", counter: "+ 1 254,71 $", date: "2026-07-03", time: "Вчера, 12:40", Icon: ArrowLeftRight, color: "#F59E0B", legFrom: "own", legTo: "own" },
-  { id: 8, name: "SWIFT · Wells Fargo N.A.", category: "SWIFT-перевод", amount: -1000.00, currency: "USD", date: "2026-07-03", time: "Вчера, 11:02", Icon: Globe, color: "#06B6D4", legFrom: "own", legTo: "ext" },
-  { id: 4, name: "Helios", category: "АЗС", amount: -12500.00, currency: "KZT", date: "2026-07-03", time: "Вчера, 09:41", Icon: Fuel, color: "#3B82F6", legFrom: "own", legTo: "ext" },
-  { id: 15, name: "Yandex Go", category: "Транспорт", amount: -6540.00, currency: "KZT", date: "2026-06-21", time: "21 июня, 19:05", Icon: Bus, color: "#F59E0B", legFrom: "own", legTo: "ext" },
-  { id: 14, name: "Booking.com", category: "Путешествия", amount: -320.00, currency: "EUR", date: "2026-06-18", time: "18 июня, 22:40", Icon: Plane, color: "#3B82F6", legFrom: "own", legTo: "ext" },
-  { id: 5, name: "Beeline", category: "Мобильная связь", amount: -3490.00, currency: "KZT", date: "2026-06-10", time: "10 июня, 16:20", Icon: Smartphone, color: "#8B5CF6", legFrom: "own", legTo: "ext" },
-  { id: 9, name: "Пополнение депозита «КОПИЛКА»", category: "Пополнение депозита", amount: -75000.00, currency: "KZT", date: "2026-06-10", time: "10 июня, 12:05", Icon: PiggyBank, color: "#0EA5E9", legFrom: null, legTo: "own", systemInternal: true },
-  { id: 10, name: "Проценты по депозиту", category: "Проценты", amount: 4120.00, currency: "KZT", date: "2026-06-10", time: "10 июня, 09:00", Icon: PiggyBank, color: "#16A34A", legFrom: null, legTo: "own" },
-  { id: 11, name: "Пополнение брокерского счёта", category: "Брокерский счёт", amount: -500.00, currency: "USD", date: "2026-06-10", time: "10 июня, 08:30", Icon: TrendingUp, color: "#F59E0B", legFrom: "own", legTo: null },
-  { id: 13, name: "Arbat Fit · абонемент", category: "Спорт", amount: -45000.00, currency: "KZT", date: "2026-06-07", time: "7 июня, 08:15", Icon: Zap, color: "#8B5CF6", legFrom: "own", legTo: "ext" },
-  { id: 12, name: "Зарплата · Freedom Holding", category: "Пополнение", amount: 850000.00, currency: "KZT", date: "2026-06-05", time: "5 июня, 10:00", Icon: ArrowDownLeft, color: "#22C55E", users: 2, legFrom: "ext", legTo: "own" },
+  { id: 1, products: ["harvey-queen"], name: "Magnum Cash&Carry", category: "Продукты", amount: -15240.00, currency: "KZT", date: "2026-07-04", time: "Сегодня, 14:32", Icon: ShoppingCart, color: "#EF4444", legFrom: "own", legTo: "ext" },
+  { id: 2, products: ["harvey-queen"], name: "Перевод от Ивана В.", category: "Пополнение", amount: 50000.00, currency: "KZT", date: "2026-07-04", time: "Сегодня, 11:05", Icon: ArrowDownLeft, color: "#22C55E", users: 2, legFrom: "ext", legTo: "own" },
+  { id: 6, products: ["harvey-queen", "acc-a3"], name: "Supercard → Рублики", category: "Между своими", amount: -100000.00, currency: "RUB", date: "2026-07-04", time: "Сегодня, 10:12", Icon: Repeat, color: "#22C55E", legFrom: "own", legTo: "own" },
+  { id: 3, products: ["harvey-queen"], name: "Del Papa", category: "Рестораны", amount: -8900.00, currency: "KZT", date: "2026-07-03", time: "Вчера, 20:14", Icon: Utensils, color: "#F59E0B", legFrom: "own", legTo: "ext" },
+  { id: 7, products: ["harvey-queen"], name: "Покупка USD за RUB", category: "Обмен валют", amount: -100000.00, currency: "RUB", counter: "+ 1 254,71 $", date: "2026-07-03", time: "Вчера, 12:40", Icon: ArrowLeftRight, color: "#F59E0B", legFrom: "own", legTo: "own" },
+  { id: 8, products: ["acc-a1"], name: "SWIFT · Wells Fargo N.A.", category: "SWIFT-перевод", amount: -1000.00, currency: "USD", date: "2026-07-03", time: "Вчера, 11:02", Icon: Globe, color: "#06B6D4", legFrom: "own", legTo: "ext" },
+  { id: 4, products: ["harvey-queen"], name: "Helios", category: "АЗС", amount: -12500.00, currency: "KZT", date: "2026-07-03", time: "Вчера, 09:41", Icon: Fuel, color: "#3B82F6", legFrom: "own", legTo: "ext" },
+  { id: 15, products: ["harvey-queen"], name: "Yandex Go", category: "Транспорт", amount: -6540.00, currency: "KZT", date: "2026-06-21", time: "21 июня, 19:05", Icon: Bus, color: "#F59E0B", legFrom: "own", legTo: "ext" },
+  { id: 14, products: ["acc-a2"], name: "Booking.com", category: "Путешествия", amount: -320.00, currency: "EUR", date: "2026-06-18", time: "18 июня, 22:40", Icon: Plane, color: "#3B82F6", legFrom: "own", legTo: "ext" },
+  { id: 5, products: ["harvey-queen"], name: "Beeline", category: "Мобильная связь", amount: -3490.00, currency: "KZT", date: "2026-06-10", time: "10 июня, 16:20", Icon: Smartphone, color: "#8B5CF6", legFrom: "own", legTo: "ext" },
+  { id: 9, products: [], name: "Пополнение депозита «КОПИЛКА»", category: "Пополнение депозита", amount: -75000.00, currency: "KZT", date: "2026-06-10", time: "10 июня, 12:05", Icon: PiggyBank, color: "#0EA5E9", legFrom: null, legTo: "own", systemInternal: true },
+  { id: 10, products: [], name: "Проценты по депозиту", category: "Проценты", amount: 4120.00, currency: "KZT", date: "2026-06-10", time: "10 июня, 09:00", Icon: PiggyBank, color: "#16A34A", legFrom: null, legTo: "own" },
+  { id: 11, products: ["harvey-queen"], name: "Пополнение брокерского счёта", category: "Брокерский счёт", amount: -500.00, currency: "USD", date: "2026-06-10", time: "10 июня, 08:30", Icon: TrendingUp, color: "#F59E0B", legFrom: "own", legTo: null },
+  { id: 13, products: ["harvey-queen"], name: "Arbat Fit · абонемент", category: "Спорт", amount: -45000.00, currency: "KZT", date: "2026-06-07", time: "7 июня, 08:15", Icon: Zap, color: "#8B5CF6", legFrom: "own", legTo: "ext" },
+  { id: 12, products: ["harvey-queen"], name: "Зарплата · Freedom Holding", category: "Пополнение", amount: 850000.00, currency: "KZT", date: "2026-06-05", time: "5 июня, 10:00", Icon: ArrowDownLeft, color: "#22C55E", users: 2, legFrom: "ext", legTo: "own" },
 ];
 
 /* Курсы НА ДАТУ операции (KZT за единицу): тотал считается по историческому курсу
@@ -2402,7 +2404,7 @@ function BottomTabBar({ active, onChange, C }) {
    «Другим» (По номеру телефона / На карту другого банка / По номеру счета / SWIFT) → Оплата услуг.
    selectedProduct = вход «Перевести» с продукта: пункты фильтруются его transferAllowedSettings
    (прод checkTransferAllowedSettingsForSelectedProduct), заголовок «Отправить». */
-function PaymentsScreen({ C, featureFlags, selectedProduct, embedded, onOpenStub, onTemplates, onTransferOwn, onRequestMoney, onClientTransfer, onFromOtherBank, onBrokerRefill, onPhoneTransfer, onToOtherCard, onConversion, onQrScan, onSwift, onIban, onMobilePay, onOpenCategory, onOpenTemplate }) {
+function PaymentsScreen({ C, featureFlags, selectedProduct, embedded, onOpenStub, onTemplates, onTransferOwn, onRequestMoney, onClientTransfer, onFromOtherBank, onBrokerRefill, onPhoneTransfer, onToOtherCard, onConversion, onQrScan, onSwift, onIban, onMobilePay, onOpenCategory, onOpenTemplate, onServices }) {
   // Гейт настроек выбранного продукта: без продукта — всё разрешено (как в проде).
   const sp = (path) => !selectedProduct ? true : selectedProduct.flags[path] === true;
   // «На свой брокерский счет» — если есть инвестиции с replenishAllowed; сабтайтл с receptions.
@@ -2451,39 +2453,23 @@ function PaymentsScreen({ C, featureFlags, selectedProduct, embedded, onOpenStub
         {!embedded && (
           <div style={{ fontSize: 24, fontWeight: 800, color: C.text, letterSpacing: -0.5, marginBottom: 14 }}>Переводы</div>
         )}
-        {/* Search */}
-        <div style={{
-          display: "flex", alignItems: "center", gap: 8,
-          backgroundColor: C.card, border: `1px solid ${C.border}`,
-          borderRadius: 12, padding: "10px 14px", marginBottom: 20,
-        }}>
-          <Search size={16} color={C.muted} strokeWidth={1.8} />
-          <span style={{ fontSize: 14, color: C.muted }}>Поиск</span>
-        </div>
-
-        {/* Пресеты + строка «Шаблоны и автопереводы» (flag paymentTemplate) */}
-        {featureFlags.paymentTemplate && sp("withdrawalAllowed") && (
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ display: "flex", gap: 14, overflowX: "auto", scrollbarWidth: "none", paddingBottom: 10 }}>
-              {PAYMENT_TEMPLATES.map(t => (
-                <div key={t.id} data-press onClick={() => onOpenTemplate?.(t)} style={{
-                  flexShrink: 0, width: 56, display: "flex", flexDirection: "column",
-                  alignItems: "center", gap: 6, cursor: "pointer",
-                }}>
-                  <div style={{
-                    width: 50, height: 50, borderRadius: "50%",
-                    backgroundColor: `${t.color}18`,
-                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 21,
-                  }}>{t.emoji}</div>
-                  <span style={{ fontSize: 10, fontWeight: 500, color: C.sub, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 56 }}>{t.title}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
-              <Row Icon={Star} color="#F59E0B" title="Шаблоны и автопереводы" onClick={onTemplates || onOpenStub} last />
-            </div>
+        {/* Search + юзер-иконка (прод: Search contacts… + аватар; шаблоны спрятаны за ним) */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+          <div style={{
+            flex: 1, display: "flex", alignItems: "center", gap: 8,
+            backgroundColor: C.card, border: `1px solid ${C.border}`,
+            borderRadius: 12, padding: "10px 14px",
+          }}>
+            <Search size={16} color={C.muted} strokeWidth={1.8} />
+            <span style={{ fontSize: 14, color: C.muted }}>Поиск контактов…</span>
           </div>
-        )}
+          <div data-press onClick={onTemplates || onOpenStub} style={{
+            width: 40, height: 40, borderRadius: 12, backgroundColor: C.accentSoft,
+            display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0,
+          }}>
+            <User size={18} color={C.accentDark} strokeWidth={2} />
+          </div>
+        </div>
 
         {/* Внутри Банка (getToClientBank; не для Цифра-продукта) */}
         {selectedProduct?.group !== "cifra" && withinBlocks.length > 0 && (
@@ -2519,9 +2505,9 @@ function PaymentsScreen({ C, featureFlags, selectedProduct, embedded, onOpenStub
 
         {/* Себе (ownTransfersSection) */}
         <Section title="Себе">
-          <Row Icon={Repeat} color="#22C55E" title="Между счетами" subtitle="Мгновенно и без комиссии" onClick={onTransferOwn} />
+          <Row Icon={Repeat} color="#22C55E" title="Между счетами" subtitle="Карты, Кредиты, Депозиты" onClick={onTransferOwn} />
           {featureFlags.p2pFromCard && selectedProduct?.group !== "cifra" && (
-            <Row Icon={ArrowDownLeft} color="#3B82F6" title="С карты другого банка" subtitle="Пополнение Visa или Mastercard" onClick={onFromOtherBank} />
+            <Row Icon={ArrowDownLeft} color="#3B82F6" title="С карты другого банка" subtitle="В Тенге, Долларах и Евро" onClick={onFromOtherBank} />
           )}
           {featureFlags.conversionRates && (
             <Row Icon={ArrowLeftRight} color="#F59E0B" title="Обмен валюты" subtitle="Конвертация по курсу" onClick={onConversion} />
@@ -2535,29 +2521,32 @@ function PaymentsScreen({ C, featureFlags, selectedProduct, embedded, onOpenStub
         {selectedProduct?.group !== "cifra" && (
           <Section title="Другим">
             {featureFlags.toPhoneNumber && (
-              <Row Icon={Phone} color="#22C55E" title="По номеру телефона" subtitle="Внутри банка и за его пределами" onClick={onPhoneTransfer} />
+              <Row Icon={Phone} color="#22C55E" title="По номеру телефона" subtitle="Клиенту Freedom, в банки РФ, Казахстана и других стран" onClick={onPhoneTransfer} />
             )}
             {featureFlags.p2pToCard && (
-              <Row Icon={CreditCard} color="#3B82F6" title="На карту другого банка" subtitle="Visa или Mastercard" onClick={onToOtherCard} />
+              <Row Icon={CreditCard} color="#3B82F6" title="На карту другого банка" subtitle="В долларах, евро, рублях и других валютах" onClick={onToOtherCard} />
             )}
             {featureFlags.toIban && sp("country") && (
-              <Row Icon={FileText} color="#8B5CF6" title="По номеру счета" subtitle="IBAN-перевод" onClick={onIban} />
+              <Row Icon={FileText} color="#8B5CF6" title="По номеру счета" subtitle="Внутри Казахстана" onClick={onIban} />
+            )}
+            {featureFlags.mastercard && sp("mastercard") && (
+              <Row Icon={Globe} color="#F59E0B" title="Экспресс перевод за рубеж" subtitle="Powered by MasterCard"
+                onClick={() => onOpenStub?.("Экспресс перевод за рубеж", "Перевод по номеру карты за рубеж — MoneySend (MasterCard). Флоу в прототип не включён.")} />
             )}
             {featureFlags.paySwift && sp("swift") && (
-              <Row Icon={Globe} color="#06B6D4" title="Переводом SWIFT" subtitle="В любую страну" onClick={onSwift} last />
+              <Row Icon={Globe} color="#06B6D4" title="Переводом SWIFT" subtitle="В любую страну" onClick={onSwift} />
+            )}
+            {featureFlags.crystal && sp("swift") && (
+              <Row Icon={FileText} color="#0EA5E9" title="Валютные контракты" subtitle="Для переводов SWIFT"
+                onClick={() => onOpenStub?.("Валютные контракты", "Валютные контракты для SWIFT-переводов (crystal). Флоу в прототип не включён.")} last />
             )}
           </Section>
         )}
 
-        {/* Оплата услуг (paymentsSection: payPayeesGroups && s.portmone) */}
+        {/* Оплата услуг (paymentsSection: payPayeesGroups && s.portmone) — одна строка, состав внутри */}
         {featureFlags.payPayeesGroups && sp("portmone") && (
           <Section title="Оплата услуг">
-            <Row Icon={QrCode} color="#22C55E" title="Оплата по QR или штрихкоду" onClick={onQrScan} />
-            {PAYMENT_CATEGORIES.map((cat, i) => (
-              <Row key={cat.id} Icon={cat.Icon} color={cat.color} title={cat.title}
-                onClick={cat.id === "mobile" && featureFlags.payMobile ? onMobilePay : () => onOpenCategory?.(cat)}
-                last={i === PAYMENT_CATEGORIES.length - 1} />
-            ))}
+            <Row Icon={Home} color="#22C55E" title="Оплата услуг" subtitle="Мобильная связь и транспортные карты РК" onClick={onServices} last />
           </Section>
         )}
       </div>
@@ -2864,9 +2853,20 @@ function StatisticsScreen({ C, displayCurrency, showInternalCats, onOpenTransact
   // Сумма операции в отчётной валюте ПО КУРСУ НА ДАТУ операции (не на момент запроса).
   const inDC = (t) => convertOnDate(Math.abs(t.amount), t.currency, t.date, dc);
 
+  // Пикер «Карта или счёт» (прод-фильтр Card or Account): статистика по конкретному продукту
+  // убирает коллизии — операция видна только у своей карты/счёта. null = все продукты.
+  const [prodFilter, setProdFilter] = useState(null);
+  const [prodSheetOpen, setProdSheetOpen] = useState(false);
+  const prodOptions = [
+    ...CARD_PRODUCTS.flatMap(g => g.cards.filter(c => !c.blocked).map(c => ({ id: c.id, name: c.name, kind: "card" }))),
+    ...ACCOUNTS_LIST.map(a => ({ id: `acc-${a.id}`, name: a.name, kind: "account" })),
+  ];
+  const prodName = prodFilter ? (prodOptions.find(o => o.id === prodFilter) || {}).name : null;
+
   // Период: month = текущий месяц моков (июль 2026), year = всё, range = пресет из шита.
   const periodPrefix = period === "month" ? "2026-07" : period === "range" ? rangePreset : null;
-  const base = periodPrefix ? TRANSACTIONS.filter(t => t.date.startsWith(periodPrefix)) : TRANSACTIONS;
+  const base = (periodPrefix ? TRANSACTIONS.filter(t => t.date.startsWith(periodPrefix)) : TRANSACTIONS)
+    .filter(t => !prodFilter || (t.products || []).includes(prodFilter));
 
   /* Целевая модель тотала: операция пересекла границу «всех денег клиента в банке» →
      полная сумма в тотале; не пересекла (между своими, конвертация) → вклад 0,
@@ -2922,21 +2922,32 @@ function StatisticsScreen({ C, displayCurrency, showInternalCats, onOpenTransact
           </div>
         </div>
 
-        {/* Период (real transactionFilters.periodSheet): month = июль 2026, year = всё, range = пресет */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+        {/* Фильтры (прод transactionFilters: Period · Card or Account): month = июль 2026, year = всё */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 20, overflowX: "auto", scrollbarWidth: "none" }}>
           {[
             { key: "month", label: "За месяц" },
             { key: "year", label: "За год" },
             { key: "range", label: period === "range" ? ({ "2026-06": "Июнь", "2026-07": "Июль" })[rangePreset] : "Период" },
           ].map(p => (
             <div key={p.key} data-press onClick={() => p.key === "range" ? setPeriodSheetOpen(true) : pickPeriod(p.key)} style={{
-              padding: "7px 14px", borderRadius: 18, cursor: "pointer",
+              flexShrink: 0, padding: "7px 14px", borderRadius: 18, cursor: "pointer",
               fontSize: 13, fontWeight: 600,
               backgroundColor: period === p.key ? C.accentDark : C.faint,
               color: period === p.key ? C.accent : C.sub,
               transition: "all 0.15s",
             }}>{p.label}</div>
           ))}
+          <div data-press onClick={() => setProdSheetOpen(true)} style={{
+            flexShrink: 0, display: "flex", alignItems: "center", gap: 5,
+            padding: "7px 14px", borderRadius: 18, cursor: "pointer",
+            fontSize: 13, fontWeight: 600,
+            backgroundColor: prodFilter ? C.accentDark : C.faint,
+            color: prodFilter ? C.accent : C.sub,
+            transition: "all 0.15s",
+          }}>
+            <span style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prodName || "Карта или счёт"}</span>
+            <ChevronDown size={13} strokeWidth={2.2} />
+          </div>
         </div>
 
         {/* Движение средств (real navigationCashFlowTitle) — только внешние операции.
@@ -3156,6 +3167,32 @@ function StatisticsScreen({ C, displayCurrency, showInternalCats, onOpenTransact
             }}>
               <span style={{ flex: 1, fontSize: 15, fontWeight: 600, color: C.text }}>{p.label} 2026</span>
               {period === "range" && rangePreset === p.key && <Check size={17} color={C.accentDark} strokeWidth={2.4} />}
+            </div>
+          ))}
+        </BottomSheetModal>
+      )}
+
+      {/* «Карта или счёт» — статистика по конкретному продукту (прод Card or Account) */}
+      {prodSheetOpen && (
+        <BottomSheetModal C={C} onClose={() => setProdSheetOpen(false)}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 16 }}>Карта или счёт</div>
+          <div data-press onClick={() => { setProdFilter(null); setCatFilter(null); setProdSheetOpen(false); }} style={{
+            display: "flex", alignItems: "center", gap: 12, padding: "12px 0", cursor: "pointer",
+            borderBottom: `1px solid ${C.divider}`,
+          }}>
+            <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: C.text }}>Все карты и счета</span>
+            {!prodFilter && <Check size={17} color={C.accentDark} strokeWidth={2.4} />}
+          </div>
+          {prodOptions.map((o, i) => (
+            <div key={o.id} data-press onClick={() => { setProdFilter(o.id); setCatFilter(null); setProdSheetOpen(false); }} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "12px 0", cursor: "pointer",
+              borderBottom: i < prodOptions.length - 1 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                {o.kind === "card" ? <CreditCard size={15} color={C.text} strokeWidth={2} /> : <Landmark size={15} color={C.text} strokeWidth={2} />}
+              </div>
+              <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o.name}</span>
+              {prodFilter === o.id && <Check size={17} color={C.accentDark} strokeWidth={2.4} />}
             </div>
           ))}
         </BottomSheetModal>
@@ -7908,7 +7945,8 @@ export default function FreedomV6() {
       )}
       {activeTab === "payments" && (
         <PaymentsScreen C={C} featureFlags={featureFlags}
-          onOpenStub={() => {}}
+          onOpenStub={(title, note) => title && pushScreen({ type: "stub", title, note })}
+          onServices={() => pushScreen({ type: "servicesList" })}
           onTemplates={() => pushScreen({ type: "cardTransfer" })}
           onTransferOwn={openTransferHub}
           onRequestMoney={() => pushScreen({ type: "requestCreate" })}
@@ -7967,6 +8005,35 @@ export default function FreedomV6() {
             })}
           />
         );
+        if (s.type === "servicesList") return (
+          <ScreenShell key={i} C={C} title="Оплата услуг" onBack={popScreen}>
+            <div style={{ padding: "4px 20px 110px" }}>
+              <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 16 }}>
+                <div data-press onClick={() => pushScreen({ type: "qrScanner" })} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", cursor: "pointer" }}>
+                  <div style={{ width: 38, height: 38, borderRadius: "50%", backgroundColor: "#22C55E14", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <QrCode size={17} color="#22C55E" strokeWidth={1.9} />
+                  </div>
+                  <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.text }}>Оплата по QR или штрихкоду</span>
+                  <ChevronRight size={15} color={C.muted} strokeWidth={1.8} />
+                </div>
+              </div>
+              <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+                {PAYMENT_CATEGORIES.map((cat, ci) => (
+                  <div key={cat.id} data-press
+                    onClick={() => cat.id === "mobile" && featureFlags.payMobile ? pushScreen({ type: "mobilePay" }) : pushScreen({ type: "category", category: cat })}
+                    style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", cursor: "pointer",
+                      borderBottom: ci < PAYMENT_CATEGORIES.length - 1 ? `1px solid ${C.divider}` : "none" }}>
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", backgroundColor: `${cat.color}14`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <cat.Icon size={17} color={cat.color} strokeWidth={1.9} />
+                    </div>
+                    <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.text }}>{cat.title}</span>
+                    <ChevronRight size={15} color={C.muted} strokeWidth={1.8} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </ScreenShell>
+        );
         if (s.type === "stub") return (
           <ScreenShell key={i} C={C} title={s.title} onBack={popScreen}>
             <div style={{ padding: "48px 40px", textAlign: "center" }}>
@@ -7983,7 +8050,8 @@ export default function FreedomV6() {
           <ScreenShell key={i} C={C} title="Отправить" onBack={popScreen}>
             <PaymentsScreen C={C} featureFlags={featureFlags} embedded
               selectedProduct={buildProducts(manyCur, includeBlocked).find(p => p.id === s.productId) || null}
-              onOpenStub={() => {}}
+              onOpenStub={(title, note) => title && pushScreen({ type: "stub", title, note })}
+              onServices={() => pushScreen({ type: "servicesList" })}
               onTemplates={() => pushScreen({ type: "cardTransfer" })}
               onTransferOwn={() => openTransferFrom(s.productId)}
               onRequestMoney={() => pushScreen({ type: "requestCreate" })}

@@ -244,23 +244,30 @@ const PRODUCT_GROUPS = [
 // { id, kind, group, name, last4?, mask?, color, blocked?, minReplenish?, accounts[], flags{} }
 function buildProducts(manyCur, includeBlocked = true) {
   const out = [];
-  CARD_PRODUCTS.forEach(g => g.cards.forEach(c => out.push({
-    id: c.id, kind: "card", group: c.type || "deposit", name: c.name,
-    last4: c.last4, mask: null, color: c.color, blocked: !!c.blocked,
-    accounts: cardSubAccountsX(c, manyCur),
-    flags: {
-      withdrawalAllowed: !c.blocked, replenishAllowed: !c.blocked,
-      toCifra: (c.type || "deposit") !== "cifra", fromCifra: false,
-      ...(c.flags || {}),
-    },
-  })));
+  CARD_PRODUCTS.forEach(g => g.cards.forEach(c => {
+    const cifra = (c.type || "deposit") === "cifra";
+    out.push({
+      id: c.id, kind: "card", group: c.type || "deposit", name: c.name,
+      last4: c.last4, mask: null, color: c.color, blocked: !!c.blocked,
+      accounts: cardSubAccountsX(c, manyCur),
+      // transferAllowedSettings (прод DTOTransferAllowedSettings): из Цифры «другим» недоступно.
+      flags: {
+        withdrawalAllowed: !c.blocked, replenishAllowed: !c.blocked,
+        toCifra: !cifra, fromCifra: false,
+        bankClient: !c.blocked && !cifra, country: !c.blocked && !cifra, swift: !c.blocked && !cifra,
+        portmone: !c.blocked && !cifra, moneyRequest: !cifra, loanP2p: !cifra, brokerRefill: !c.blocked && !cifra,
+        ...(c.flags || {}),
+      },
+    });
+  }));
   ACCOUNTS_LIST.forEach(a => out.push({
     id: `acc-${a.id}`, kind: "account", group: "account", name: a.name,
     last4: a.number.replace(/\s/g, "").slice(-4),
     mask: `${a.number.slice(0, 4)}•••${a.number.replace(/\s/g, "").slice(-5)}`,
     color: "#475569",
     accounts: [{ currency: a.currency, amount: a.balance }],
-    flags: { withdrawalAllowed: true, replenishAllowed: true, toCifra: true, fromCifra: false },
+    flags: { withdrawalAllowed: true, replenishAllowed: true, toCifra: true, fromCifra: false,
+      bankClient: true, country: true, swift: true, portmone: true, moneyRequest: true, loanP2p: true, brokerRefill: true },
   }));
   DEPOSITS.forEach(d => out.push({
     id: `dep-${d.id}`, kind: "deposit", group: "depositProd",
@@ -404,6 +411,11 @@ const FEATURE_FLAGS = [
   { key: "openCard", desc: "Открытие карты", default: true },
   { key: "openCredit", desc: "Открытие кредита", default: true },
   { key: "toPhoneNumber", desc: "Перевод по номеру телефона", default: true },
+  { key: "paymentTemplate", desc: "Шаблоны переводов", default: true },
+  { key: "p2pToCard", desc: "Перевод на карту другого банка", default: true },
+  { key: "p2pFromCard", desc: "Пополнение с карты другого банка", default: true },
+  { key: "toIban", desc: "Перевод по номеру счёта (IBAN)", default: true },
+  { key: "payPayeesGroups", desc: "Оплата услуг (категории)", default: true },
   { key: "paySwift", desc: "SWIFT-переводы", default: true },
   { key: "conversionRates", desc: "Курсы валют на экране переводов", default: true },
   { key: "cardPanCVV", desc: "Показ номера карты в деталях", default: true },
@@ -2317,7 +2329,17 @@ function BottomTabBar({ active, onChange, C }) {
    Шаблоны → «Себе» → «Другим» → «Оплата услуг»
    ═══════════════════════════════════════════════ */
 
-function PaymentsScreen({ C, featureFlags, onOpenStub, onTransferOwn, onRequestMoney, onPhoneTransfer, onConversion, onQrScan, onSwift, onCardTransfer, onIban, onMobilePay, onOpenCategory, onOpenTemplate }) {
+/* ХАБ «ПЕРЕВОДЫ» — прод-структура PaymentsViewModel (iOS develop):
+   Пресеты → Шаблоны (paymentTemplate) → «Внутри Банка» (Запросить + Отправить, DoubleCell) →
+   «Себе» (Между счетами / С карты другого банка / Обмен валюты / На свой брокерский счет) →
+   «Другим» (По номеру телефона / На карту другого банка / По номеру счета / SWIFT) → Оплата услуг.
+   selectedProduct = вход «Перевести» с продукта: пункты фильтруются его transferAllowedSettings
+   (прод checkTransferAllowedSettingsForSelectedProduct), заголовок «Отправить». */
+function PaymentsScreen({ C, featureFlags, selectedProduct, embedded, onOpenStub, onTemplates, onTransferOwn, onRequestMoney, onClientTransfer, onFromOtherBank, onBrokerRefill, onPhoneTransfer, onToOtherCard, onConversion, onQrScan, onSwift, onIban, onMobilePay, onOpenCategory, onOpenTemplate }) {
+  // Гейт настроек выбранного продукта: без продукта — всё разрешено (как в проде).
+  const sp = (path) => !selectedProduct ? true : selectedProduct.flags[path] === true;
+  // «На свой брокерский счет» — если есть инвестиции с replenishAllowed; сабтайтл с receptions.
+  const brokerReceptions = BROKER_ACCOUNTS.map(g => g.group).filter((v, i, a) => a.indexOf(v) === i).join(", ");
   const Row = ({ Icon, color, title, subtitle, last, onClick }) => (
     <div data-press onClick={onClick || onOpenStub} style={{
       display: "flex", alignItems: "center", gap: 12,
@@ -2349,16 +2371,19 @@ function PaymentsScreen({ C, featureFlags, onOpenStub, onTransferOwn, onRequestM
     </div>
   );
 
-  return (
-    <div style={{
-      maxWidth: 430, margin: "0 auto", minHeight: "100dvh",
-      backgroundColor: C.bg,
-      fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', system-ui, sans-serif",
-      overflowX: "clip", paddingBottom: 90,
-    }}>
-      <StatusBar C={C} />
-      <div style={{ padding: "8px 20px 0" }}>
-        <div style={{ fontSize: 24, fontWeight: 800, color: C.text, letterSpacing: -0.5, marginBottom: 14 }}>Переводы</div>
+  // «Внутри Банка»: Запросить (moneyRequest && (s.moneyRequest || s.loanP2p)) + Отправить (s.bankClient);
+  // 1 действие — полноширинное, 2 — двухколоночный DoubleCell (прод-правило).
+  const withinBlocks = [];
+  if (featureFlags.moneyRequest && (sp("moneyRequest") || sp("loanP2p")))
+    withinBlocks.push({ Icon: Send, color: "#EC4899", title: "Запросить", onClick: onRequestMoney });
+  if (sp("bankClient"))
+    withinBlocks.push({ Icon: Landmark, color: "#0D9488", title: "Отправить", sub: "На карту или счет", onClick: onClientTransfer });
+
+  const inner = (
+      <div style={{ padding: embedded ? "4px 20px 0" : "8px 20px 0" }}>
+        {!embedded && (
+          <div style={{ fontSize: 24, fontWeight: 800, color: C.text, letterSpacing: -0.5, marginBottom: 14 }}>Переводы</div>
+        )}
         {/* Search */}
         <div style={{
           display: "flex", alignItems: "center", gap: 8,
@@ -2369,77 +2394,118 @@ function PaymentsScreen({ C, featureFlags, onOpenStub, onTransferOwn, onRequestM
           <span style={{ fontSize: 14, color: C.muted }}>Поиск</span>
         </div>
 
-        {/* Шаблоны и автопереводы (real `paymentTemplate`) */}
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: C.text, letterSpacing: -0.2, marginBottom: 12 }}>Шаблоны и автопереводы</div>
-          <div style={{ display: "flex", gap: 14, overflowX: "auto", scrollbarWidth: "none", paddingBottom: 4 }}>
-            {PAYMENT_TEMPLATES.map(t => (
-              <div key={t.id} data-press onClick={() => onOpenTemplate?.(t)} style={{
-                flexShrink: 0, width: 56, display: "flex", flexDirection: "column",
-                alignItems: "center", gap: 6, cursor: "pointer",
-              }}>
-                <div style={{
-                  width: 50, height: 50, borderRadius: "50%",
-                  backgroundColor: `${t.color}18`,
-                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 21,
-                }}>{t.emoji}</div>
-                <span style={{ fontSize: 10, fontWeight: 500, color: C.sub, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 56 }}>{t.title}</span>
-              </div>
-            ))}
-            <div data-press onClick={onOpenStub} style={{
-              flexShrink: 0, width: 56, display: "flex", flexDirection: "column",
-              alignItems: "center", gap: 6, cursor: "pointer",
-            }}>
-              <div style={{
-                width: 50, height: 50, borderRadius: "50%",
-                backgroundColor: C.faint,
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <Plus size={18} color={C.sub} strokeWidth={1.8} />
-              </div>
-              <span style={{ fontSize: 10, color: C.muted }}>Новый</span>
+        {/* Пресеты + строка «Шаблоны и автопереводы» (flag paymentTemplate) */}
+        {featureFlags.paymentTemplate && sp("withdrawalAllowed") && (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ display: "flex", gap: 14, overflowX: "auto", scrollbarWidth: "none", paddingBottom: 10 }}>
+              {PAYMENT_TEMPLATES.map(t => (
+                <div key={t.id} data-press onClick={() => onOpenTemplate?.(t)} style={{
+                  flexShrink: 0, width: 56, display: "flex", flexDirection: "column",
+                  alignItems: "center", gap: 6, cursor: "pointer",
+                }}>
+                  <div style={{
+                    width: 50, height: 50, borderRadius: "50%",
+                    backgroundColor: `${t.color}18`,
+                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 21,
+                  }}>{t.emoji}</div>
+                  <span style={{ fontSize: 10, fontWeight: 500, color: C.sub, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 56 }}>{t.title}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+              <Row Icon={Star} color="#F59E0B" title="Шаблоны и автопереводы" onClick={onTemplates || onOpenStub} last />
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Внутри Банка (getToClientBank; не для Цифра-продукта) */}
+        {selectedProduct?.group !== "cifra" && withinBlocks.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.text, letterSpacing: -0.2, marginBottom: 12 }}>Внутри Банка</div>
+            {withinBlocks.length === 1 ? (
+              <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+                <Row {...withinBlocks[0]} subtitle={withinBlocks[0].sub} last />
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 10 }}>
+                {withinBlocks.map((b, i) => (
+                  <div key={i} data-press onClick={b.onClick || onOpenStub} style={{
+                    flex: 1, backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+                    padding: "14px", cursor: "pointer", display: "flex", flexDirection: "column", gap: 8,
+                  }}>
+                    <div style={{
+                      width: 34, height: 34, borderRadius: "50%", backgroundColor: `${b.color}14`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <b.Icon size={16} color={b.color} strokeWidth={1.9} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{b.title}</div>
+                      {b.sub && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{b.sub}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Себе (ownTransfersSection) */}
         <Section title="Себе">
           <Row Icon={Repeat} color="#22C55E" title="Между счетами" subtitle="Мгновенно и без комиссии" onClick={onTransferOwn} />
-          <Row Icon={ArrowDownLeft} color="#3B82F6" title="С карты другого банка" subtitle="Пополнение Visa или Mastercard" />
-          {featureFlags.conversionRates ? (
-            <Row Icon={ArrowLeftRight} color="#F59E0B" title="Конвертация валют" subtitle={`1$ = ${RATES_TO_KZT.USD}₸ · 1€ = ${RATES_TO_KZT.EUR}₸`} onClick={onConversion} last />
-          ) : (
-            <Row Icon={ArrowLeftRight} color="#F59E0B" title="Конвертация валют" onClick={onConversion} last />
+          {featureFlags.p2pFromCard && selectedProduct?.group !== "cifra" && (
+            <Row Icon={ArrowDownLeft} color="#3B82F6" title="С карты другого банка" subtitle="Пополнение Visa или Mastercard" onClick={onFromOtherBank} />
+          )}
+          {featureFlags.conversionRates && (
+            <Row Icon={ArrowLeftRight} color="#F59E0B" title="Обмен валюты" subtitle="Конвертация по курсу" onClick={onConversion} />
+          )}
+          {sp("brokerRefill") && (
+            <Row Icon={TrendingUp} color="#F59E0B" title="На свой брокерский счет" subtitle={`Брокер – ${brokerReceptions}`} onClick={onBrokerRefill} last />
           )}
         </Section>
 
-        {/* Другим (othersTransfersSection) */}
-        <Section title="Другим">
-          {featureFlags.toPhoneNumber && (
-            <Row Icon={Phone} color="#22C55E" title="По номеру телефона" subtitle="Внутри банка и за его пределами" onClick={onPhoneTransfer} />
-          )}
-          <Row Icon={Landmark} color="#0D9488" title="Внутри Банка" subtitle="На карту или счет" onClick={onCardTransfer} />
-          <Row Icon={CreditCard} color="#3B82F6" title="По номеру карты" subtitle="Visa или Mastercard" onClick={onCardTransfer} />
-          <Row Icon={FileText} color="#8B5CF6" title="По номеру счета" subtitle="IBAN-перевод" onClick={onIban} />
-          {featureFlags.paySwift && (
-            <Row Icon={Globe} color="#06B6D4" title="Переводом SWIFT" subtitle="В любую страну" onClick={onSwift} />
-          )}
-          {featureFlags.moneyRequest && (
-            <Row Icon={Send} color="#EC4899" title="Запросить" subtitle="У клиента банка" onClick={onRequestMoney} />
-          )}
-          <Row Icon={TrendingUp} color="#F59E0B" title="На брокерский счёт" subtitle="Freedom Broker" last />
-        </Section>
+        {/* Другим (othersTransfersSection; из Цифры недоступно) */}
+        {selectedProduct?.group !== "cifra" && (
+          <Section title="Другим">
+            {featureFlags.toPhoneNumber && (
+              <Row Icon={Phone} color="#22C55E" title="По номеру телефона" subtitle="Внутри банка и за его пределами" onClick={onPhoneTransfer} />
+            )}
+            {featureFlags.p2pToCard && (
+              <Row Icon={CreditCard} color="#3B82F6" title="На карту другого банка" subtitle="Visa или Mastercard" onClick={onToOtherCard} />
+            )}
+            {featureFlags.toIban && sp("country") && (
+              <Row Icon={FileText} color="#8B5CF6" title="По номеру счета" subtitle="IBAN-перевод" onClick={onIban} />
+            )}
+            {featureFlags.paySwift && sp("swift") && (
+              <Row Icon={Globe} color="#06B6D4" title="Переводом SWIFT" subtitle="В любую страну" onClick={onSwift} last />
+            )}
+          </Section>
+        )}
 
-        {/* Оплата услуг (paymentsSection) */}
-        <Section title="Оплата услуг">
-          <Row Icon={QrCode} color="#22C55E" title="Оплата по QR или штрихкоду" onClick={onQrScan} />
-          {PAYMENT_CATEGORIES.map((cat, i) => (
-            <Row key={cat.id} Icon={cat.Icon} color={cat.color} title={cat.title}
-              onClick={cat.id === "mobile" && featureFlags.payMobile ? onMobilePay : () => onOpenCategory?.(cat)}
-              last={i === PAYMENT_CATEGORIES.length - 1} />
-          ))}
-        </Section>
+        {/* Оплата услуг (paymentsSection: payPayeesGroups && s.portmone) */}
+        {featureFlags.payPayeesGroups && sp("portmone") && (
+          <Section title="Оплата услуг">
+            <Row Icon={QrCode} color="#22C55E" title="Оплата по QR или штрихкоду" onClick={onQrScan} />
+            {PAYMENT_CATEGORIES.map((cat, i) => (
+              <Row key={cat.id} Icon={cat.Icon} color={cat.color} title={cat.title}
+                onClick={cat.id === "mobile" && featureFlags.payMobile ? onMobilePay : () => onOpenCategory?.(cat)}
+                last={i === PAYMENT_CATEGORIES.length - 1} />
+            ))}
+          </Section>
+        )}
       </div>
+  );
+
+  if (embedded) return inner;
+  return (
+    <div style={{
+      maxWidth: 430, margin: "0 auto", minHeight: "100dvh",
+      backgroundColor: C.bg,
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', system-ui, sans-serif",
+      overflowX: "clip", paddingBottom: 90,
+    }}>
+      <StatusBar C={C} />
+      {inner}
     </div>
   );
 }
@@ -6964,6 +7030,243 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
   );
 }
 
+/* ЭКРАН TRANSFER (прод Transfer: «Отправить» внутри банка) — три сегмента получателя:
+   Контакты (телефон) / Карта / IBAN. Проверка получателя как в getAccountInfo:
+   заголовок ошибок = тип перевода; не-клиент по IBAN + флаг toIban → оффер «перевод по стране». */
+function TransferClientScreen({ C, featureFlags, initialSegment, onBack, onCountry, onNext }) {
+  const SEGMENTS = [
+    { key: "contact", label: "Контакты", navTitle: "По номеру телефона" },
+    { key: "card", label: "Карта", navTitle: "По номеру карты" },
+    { key: "iban", label: "IBAN", navTitle: "По номеру счёта" },
+  ];
+  const [seg, setSeg] = useState(initialSegment || "contact");
+  const [value, setValue] = useState("");
+  const [error, setError] = useState(null);       // { title, message }
+  const [countryOffer, setCountryOffer] = useState(false);
+  const segMeta = SEGMENTS.find(s => s.key === seg);
+
+  const switchSeg = (k) => { setSeg(k); setValue(""); setError(null); setCountryOffer(false); };
+
+  // Проверка получателя (мок getAccountInfo): BIN 4400 = клиент банка; IBAN KZ = клиент.
+  const submit = () => {
+    setError(null); setCountryOffer(false);
+    if (seg === "card") {
+      const digits = value.replace(/\D/g, "");
+      if (digits.length < 16) { setError({ title: segMeta.navTitle, message: "Введите номер карты (16 символов)" }); return; }
+      if (!digits.startsWith("4400")) { setError({ title: segMeta.navTitle, message: "Клиент не найден" }); return; }
+      onNext({ type: "card", navTitle: segMeta.navTitle, name: "Карта клиента Банка", detail: `•• ${digits.slice(-4)}` });
+    } else if (seg === "iban") {
+      const iban = value.replace(/\s/g, "").toUpperCase();
+      if (iban.length < 8) { setError({ title: segMeta.navTitle, message: "Введите номер счёта" }); return; }
+      if (!iban.startsWith("KZ")) {
+        if (featureFlags.toIban) setCountryOffer(true);
+        else setError({ title: segMeta.navTitle, message: "Клиент не найден" });
+        return;
+      }
+      onNext({ type: "iban", navTitle: segMeta.navTitle, name: "Счёт клиента Банка", detail: `${iban.slice(0, 4)}…${iban.slice(-4)}` });
+    }
+  };
+
+  return (
+    <ScreenShell C={C} title="Отправить" onBack={onBack}>
+      <div style={{ padding: "4px 20px 110px" }}>
+        {/* Сегменты получателя (прод TransferSegmentEnum: contact / card / iban) */}
+        <div style={{ display: "flex", backgroundColor: C.faint, borderRadius: 12, padding: 3, marginBottom: 16 }}>
+          {SEGMENTS.map(s => (
+            <div key={s.key} data-press onClick={() => switchSeg(s.key)} style={{
+              flex: 1, textAlign: "center", padding: "9px 0", borderRadius: 10, cursor: "pointer",
+              backgroundColor: seg === s.key ? C.card : "transparent",
+              boxShadow: seg === s.key ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: seg === s.key ? C.text : C.muted }}>{s.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {seg === "contact" ? (
+          <>
+            <div style={{
+              backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+              padding: "13px 16px", marginBottom: 16,
+            }}>
+              <input value={value} onChange={e => setValue(e.target.value)}
+                placeholder="Номер телефона или контакт" inputMode="tel"
+                style={{ width: "100%", border: "none", outline: "none", background: "transparent", fontSize: 15, color: C.text, fontFamily: "inherit" }} />
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>Контакты</div>
+            <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+              {RECENT_TRANSFERS.filter(ct => !value || (ct.name + ct.surname).toLowerCase().includes(value.toLowerCase())).map((ct, i, arr) => (
+                <div key={i} data-press onClick={() => onNext({ type: "phone", navTitle: "По номеру телефона", name: `${ct.name} ${ct.surname}`, detail: ct.phone })} style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", cursor: "pointer",
+                  borderBottom: i < arr.length - 1 ? `1px solid ${C.divider}` : "none",
+                }}>
+                  <div style={{ width: 38, height: 38, borderRadius: "50%", backgroundColor: C.accentSoft, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: C.accentDark, flexShrink: 0 }}>
+                    {ct.name[0]}{ct.surname ? ct.surname[0] : ""}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{ct.name} {ct.surname}</div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'" }}>{ct.phone}</div>
+                  </div>
+                  <ChevronRight size={15} color={C.muted} strokeWidth={1.8} />
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{
+              backgroundColor: C.card, borderRadius: 12,
+              border: `1.5px solid ${error ? "#EF4444" : C.border}`,
+              padding: "13px 16px",
+            }}>
+              <input value={value}
+                onChange={e => { setValue(seg === "card" ? e.target.value.replace(/[^\d\s]/g, "") : e.target.value); setError(null); setCountryOffer(false); }}
+                placeholder={seg === "card" ? "Номер карты получателя" : "KZ00 0000 0000 0000 0000"}
+                inputMode={seg === "card" ? "numeric" : "text"}
+                style={{ width: "100%", border: "none", outline: "none", background: "transparent", fontSize: 15, color: C.text, fontFamily: "inherit", fontFeatureSettings: "'tnum'" }} />
+            </div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 8 }}>
+              {seg === "card" ? "Введите данные карты зачисления" : "Введите номер счёта"}
+            </div>
+
+            {/* Алерт проверки получателя: заголовок = тип перевода (прод getAccountInfo) */}
+            {error && (
+              <div style={{ marginTop: 14, backgroundColor: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 12, padding: "12px 14px" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#B91C1C" }}>{error.title}</div>
+                <div style={{ fontSize: 12.5, color: "#B91C1C", marginTop: 3 }}>{error.message}</div>
+              </div>
+            )}
+            {countryOffer && (
+              <div style={{ marginTop: 14, backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "13px 14px" }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text }}>Клиент не найден</div>
+                <div style={{ fontSize: 12.5, color: C.muted, marginTop: 3, lineHeight: 1.45 }}>Выполнить перевод по стране?</div>
+                <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                  <div data-press onClick={() => setCountryOffer(false)} style={{ flex: 1, textAlign: "center", padding: "10px 0", borderRadius: 10, backgroundColor: C.faint, cursor: "pointer" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Отмена</span>
+                  </div>
+                  <div data-press onClick={onCountry} style={{ flex: 1, textAlign: "center", padding: "10px 0", borderRadius: 10, backgroundColor: C.accentDark, cursor: "pointer" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.accent }}>Перевести</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div data-press onClick={submit} style={{
+              marginTop: 20, backgroundColor: value ? C.accentDark : C.faint,
+              borderRadius: 12, padding: "15px 0", textAlign: "center", cursor: value ? "pointer" : "default",
+            }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: value ? C.accent : C.muted }}>Продолжить</span>
+            </div>
+          </>
+        )}
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ЭКРАН СУММЫ «ДРУГОМУ» (прод TransferDetails: телефон / карта / IBAN) —
+   получатель + источник (CardAccountPicker) + сумма с MAX. Заголовок = тип перевода. */
+function TransferDetailsScreen({ C, recipient, displayCurrency, stressLong, manyCur, includeBlocked, showUnavailable, onBack, onConfirm }) {
+  const S = (v) => (stressLong ? v * 1000 : v);
+  const products = buildProducts(manyCur, includeBlocked);
+  const maskFor = (p, cur) => (p && p.mask) ? p.mask
+    : `KZ${((p || {}).last4 || "00").slice(0, 2)}55•••${(cur.charCodeAt(0) * 37 + cur.charCodeAt(2)) % 900 + 100}${cur}`;
+
+  const [debitSel, setDebitSel] = useState(null);
+  const [amount, setAmount] = useState("");
+
+  // Источники: продукты с разрешённым «другим»-направлением (bankClient) и списанием.
+  const ownSources = products.flatMap(p => {
+    const av = productAsSource(p, null);
+    if (!av.ok || p.flags.bankClient !== true) return [];
+    return p.accounts.filter(s => s.amount > 0).map(s => ({
+      id: `${p.id}::${s.currency}`, prodId: p.id, prodName: p.name,
+      last4: p.last4, currency: s.currency, amount: s.amount, kzt: convertToKZT(s.amount, s.currency),
+    }));
+  }).sort((a, b) => b.kzt - a.kzt);
+  const chosen = debitSel ? ownSources.find(s => s.id === debitSel) : null;
+  const debit = chosen || ownSources[0] || null;
+  const debitProduct = debit ? products.find(p => p.id === debit.prodId) : null;
+  const debitProductAccs = debitProduct ? debitProduct.accounts.map(s => ({ ...s, kzt: convertToKZT(s.amount, s.currency) })) : [];
+  const dcm = CURRENCY_META[(debit || {}).currency] || { symbol: (debit || {}).currency || "" };
+
+  const num = parseFloat(amount.replace(",", ".")) || 0;
+  const balance = debit ? debit.amount : null;
+  const overBalance = num > 0 && balance != null && num > balance;
+  const valid = num > 0 && !!debit && !overBalance;
+
+  return (
+    <ScreenShell C={C} title={recipient.navTitle} onBack={onBack}>
+      <div style={{ padding: "4px 20px 110px" }}>
+        {/* Получатель */}
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>Получатель</div>
+        <div style={{ backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+          <div style={{ width: 38, height: 38, borderRadius: "50%", backgroundColor: C.accentSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            {recipient.type === "phone"
+              ? <span style={{ fontSize: 13, fontWeight: 700, color: C.accentDark }}>{recipient.name.split(" ").map(w => w[0]).join("").slice(0, 2)}</span>
+              : recipient.type === "card" ? <CreditCard size={17} color={C.accentDark} strokeWidth={2} /> : <FileText size={17} color={C.accentDark} strokeWidth={2} />}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{recipient.name}</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>{recipient.detail}</div>
+          </div>
+        </div>
+
+        {/* Откуда */}
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>Откуда</div>
+        <CardAccountPicker C={C} displayCurrency={displayCurrency} products={products.filter(p => p.flags.bankClient === true)}
+          counterpart={null} showUnavailable={showUnavailable} S={S} maskFor={maskFor}
+          product={debitProduct} account={debit} accounts={debitProductAccs}
+          role="src" balanceDanger={overBalance}
+          onPickProduct={(p) => {
+            const same = ownSources.find(s => s.prodId === p.id && s.currency === (debit || {}).currency);
+            const top = same || ownSources.find(s => s.prodId === p.id);
+            if (top) setDebitSel(top.id);
+          }}
+          onPickAccount={(cur) => debitProduct && setDebitSel(`${debitProduct.id}::${cur}`)}
+        />
+
+        {/* Сумма — в валюте счёта списания (валюта получателя неизвестна до исполнения) */}
+        <div style={{ marginTop: 16, marginBottom: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>Сумма</div>
+          <div style={{
+            backgroundColor: C.card, borderRadius: 12,
+            border: `1.5px solid ${valid || !amount ? C.border : "#EF4444"}`,
+            padding: "12px 12px 12px 16px", display: "flex", alignItems: "center", gap: 8,
+          }}>
+            <input autoFocus value={amount}
+              onChange={e => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
+              inputMode="decimal" placeholder="0"
+              style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 26, fontWeight: 800, color: C.text, fontFamily: "inherit", fontFeatureSettings: "'tnum'", minWidth: 0 }} />
+            {debit && (
+              <div data-press onClick={() => setAmount((debit.amount).toFixed(2))} style={{ backgroundColor: C.faint, borderRadius: 10, padding: "8px 11px", cursor: "pointer", flexShrink: 0 }}>
+                <span style={{ fontSize: 12, fontWeight: 800, color: C.accentDark, letterSpacing: "0.03em" }}>MAX</span>
+              </div>
+            )}
+            <div style={{ backgroundColor: C.faint, borderRadius: 10, padding: "8px 12px", flexShrink: 0 }}>
+              <span style={{ fontSize: 17, fontWeight: 800, color: C.text }}>{dcm.symbol}</span>
+            </div>
+          </div>
+          {overBalance && (
+            <div style={{ fontSize: 12, color: "#EF4444", marginTop: 6 }}>Недостаточно средств на счёте списания</div>
+          )}
+        </div>
+        <div style={{ fontSize: 12, color: C.muted, marginBottom: 24 }}>
+          {recipient.type === "phone" ? "Без комиссии · внутри банка" : recipient.type === "card" ? "Комиссия 0% · до 5 минут" : "По реквизитам счёта · до 1 рабочего дня"}
+        </div>
+
+        <div data-press onClick={() => valid && onConfirm({ recipient, debit, amount: num })} style={{
+          backgroundColor: valid ? C.accentDark : C.faint,
+          borderRadius: 12, padding: "15px 0", textAlign: "center",
+          cursor: valid ? "pointer" : "default",
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: valid ? C.accent : C.muted }}>Продолжить</span>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
 // Поручение ТН — без пикеров, счёт-источник = карта, из-под которой зашли.
 function TnOrderScreen({ C, card, variant, onBack, onConfirm }) {
   const [amount, setAmount] = useState("");
@@ -7077,6 +7380,22 @@ export default function FreedomV6() {
     // «Обменять» с экрана карты: одна карта с обеих сторон → режим «Обмен валют».
     pushScreen({ type: "topupAmount", card: { id: cardId }, source: { kind: "own", srcCard: { id: cardId } } });
   };
+  const openFromOtherBank = () => {
+    // «С карты другого банка»: пополнение крупнейшей своей карты с токенизированной чужой.
+    const prods = buildProducts(manyCur, includeBlocked);
+    const dst = prods.filter(p => p.kind === "card" && productAsTarget(p, null).ok)
+      .sort((a, b) => prodScore(b) - prodScore(a))[0];
+    if (!dst) return;
+    pushScreen({ type: "topupAmount", card: { id: dst.id }, source: { kind: "external", tok: TOKENIZED_CARDS[0] } });
+  };
+  const openBrokerRefill = () => {
+    // «На свой брокерский счет»: цель — первый брокерский продукт, источник — крупнейший.
+    const prods = buildProducts(manyCur, includeBlocked);
+    const dst = prods.find(p => p.kind === "broker");
+    const src = prods.filter(p => productAsSource(p, dst).ok).sort((a, b) => prodScore(b) - prodScore(a))[0];
+    if (!dst || !src) return;
+    pushScreen({ type: "topupAmount", card: { id: dst.id }, source: { kind: "own", srcCard: { id: src.id } } });
+  };
   const popScreen = () => setNavStack(prev => prev.slice(0, -1));
   // Real app launches locked (AuthPin) — any 4-digit code unlocks the prototype
   const [locked, setLocked] = useState(true);
@@ -7181,14 +7500,18 @@ export default function FreedomV6() {
       {activeTab === "payments" && (
         <PaymentsScreen C={C} featureFlags={featureFlags}
           onOpenStub={() => {}}
+          onTemplates={() => pushScreen({ type: "cardTransfer" })}
           onTransferOwn={openTransferHub}
           onRequestMoney={() => pushScreen({ type: "requestCreate" })}
-          onPhoneTransfer={() => pushScreen({ type: "phoneTransfer" })}
+          onClientTransfer={() => pushScreen({ type: "transferClient", segment: "contact" })}
+          onFromOtherBank={openFromOtherBank}
+          onBrokerRefill={openBrokerRefill}
+          onPhoneTransfer={() => pushScreen({ type: "transferClient", segment: "contact" })}
+          onToOtherCard={() => pushScreen({ type: "transferClient", segment: "card" })}
+          onIban={() => pushScreen({ type: "transferClient", segment: "iban" })}
           onConversion={() => pushScreen({ type: "conversion" })}
           onQrScan={() => pushScreen({ type: "qrScanner" })}
           onSwift={() => pushScreen({ type: "swift" })}
-          onCardTransfer={() => pushScreen({ type: "cardTransfer" })}
-          onIban={() => pushScreen({ type: "ibanTransfer" })}
           onMobilePay={() => pushScreen({ type: "mobilePay" })}
           onOpenCategory={(category) => pushScreen({ type: "category", category })}
           onOpenTemplate={(template) => pushScreen({ type: "templatePay", template })}
@@ -7208,7 +7531,7 @@ export default function FreedomV6() {
         if (s.type === "product") return (
           <ProductDetailsScreen key={i} card={s.card} C={C} featureFlags={featureFlags}
             onBack={popScreen}
-            onTransfer={() => openTransferFrom(s.card.id)}
+            onTransfer={() => pushScreen({ type: "transferHub", productId: s.card.id })}
             onExchange={() => openExchange(s.card.id)}
             onOpenTransaction={(tx) => pushScreen({ type: "transaction", tx })}
             onOpenLimits={() => pushScreen({ type: "cardLimits", card: s.card })}
@@ -7231,6 +7554,51 @@ export default function FreedomV6() {
                 message: p.credit.mono ? "Моновалютный перевод" : `Зачислено на счёт в ${p.credit.currency}`,
                 amountStr: `${fmtFull(p.amount)} ${CURRENCY_META[p.credit.currency]?.symbol || ""}`,
                 note: `${p.debit.name} → ${p.card.name} •• ${p.card.last4}`,
+              },
+            })}
+          />
+        );
+        if (s.type === "transferHub") return (
+          <ScreenShell key={i} C={C} title="Отправить" onBack={popScreen}>
+            <PaymentsScreen C={C} featureFlags={featureFlags} embedded
+              selectedProduct={buildProducts(manyCur, includeBlocked).find(p => p.id === s.productId) || null}
+              onOpenStub={() => {}}
+              onTemplates={() => pushScreen({ type: "cardTransfer" })}
+              onTransferOwn={() => openTransferFrom(s.productId)}
+              onRequestMoney={() => pushScreen({ type: "requestCreate" })}
+              onClientTransfer={() => pushScreen({ type: "transferClient", segment: "contact" })}
+              onFromOtherBank={openFromOtherBank}
+              onBrokerRefill={openBrokerRefill}
+              onPhoneTransfer={() => pushScreen({ type: "transferClient", segment: "contact" })}
+              onToOtherCard={() => pushScreen({ type: "transferClient", segment: "card" })}
+              onIban={() => pushScreen({ type: "transferClient", segment: "iban" })}
+              onConversion={() => pushScreen({ type: "conversion" })}
+              onQrScan={() => pushScreen({ type: "qrScanner" })}
+              onSwift={() => pushScreen({ type: "swift" })}
+              onMobilePay={() => pushScreen({ type: "mobilePay" })}
+              onOpenCategory={(category) => pushScreen({ type: "category", category })}
+              onOpenTemplate={(template) => pushScreen({ type: "templatePay", template })}
+            />
+          </ScreenShell>
+        );
+        if (s.type === "transferClient") return (
+          <TransferClientScreen key={i} C={C} featureFlags={featureFlags} initialSegment={s.segment}
+            onBack={popScreen}
+            onCountry={() => pushScreen({ type: "swift" })}
+            onNext={(recipient) => pushScreen({ type: "transferDetails", recipient })}
+          />
+        );
+        if (s.type === "transferDetails") return (
+          <TransferDetailsScreen key={i} C={C} recipient={s.recipient} displayCurrency={displayCurrency}
+            stressLong={stressLong} manyCur={manyCur} includeBlocked={includeBlocked} showUnavailable={showUnavailable}
+            onBack={popScreen}
+            onConfirm={(p) => pushScreen({
+              type: "flowSuccess",
+              payload: {
+                title: "Перевод выполнен",
+                message: p.recipient.navTitle,
+                amountStr: `${fmtFull(p.amount)} ${CURRENCY_META[p.debit.currency]?.symbol || ""}`,
+                note: `${p.debit.prodName} → ${p.recipient.name}`,
               },
             })}
           />
@@ -7388,7 +7756,7 @@ export default function FreedomV6() {
           <AccountDetailsScreen key={i} account={s.account} C={C}
             onBack={popScreen}
             onOpenRequisites={() => pushScreen({ type: "requisites" })}
-            onTransfer={() => openTransferFrom(`acc-${s.account.id}`)}
+            onTransfer={() => pushScreen({ type: "transferHub", productId: `acc-${s.account.id}` })}
             onOpenTransaction={(tx) => pushScreen({ type: "transaction", tx })}
           />
         );

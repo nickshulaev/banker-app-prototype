@@ -6735,6 +6735,13 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
     }
   }, [targetId]); // eslint-disable-line
 
+  // Обмен валют: стороны обязаны отличаться валютой — разводим, если дефолт свёл их вместе.
+  useEffect(() => {
+    if (!sameProduct || !debit || !credit || credit.currency !== debit.currency) return;
+    const alt = targetAccounts.find(s => s.currency !== debit.currency);
+    if (alt) setCreditSel(alt.currency);
+  }, [sameProduct, (debit || {}).currency, (credit || {}).currency]); // eslint-disable-line
+
   const debitProductAccs = debitProduct ? debitProduct.accounts.map(s => ({
     ...s, kzt: convertToKZT(s.amount, s.currency),
     // Депозит-цель: чужие валюты у источника недоступны; обмен: валюта цели недоступна.

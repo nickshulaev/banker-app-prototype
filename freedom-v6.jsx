@@ -246,15 +246,19 @@ function buildProducts(manyCur, includeBlocked = true) {
   const out = [];
   CARD_PRODUCTS.forEach(g => g.cards.forEach(c => {
     const cifra = (c.type || "deposit") === "cifra";
+    const invest = (c.type || "deposit") === "invest";
     out.push({
       id: c.id, kind: "card", group: c.type || "deposit", name: c.name,
       last4: c.last4, mask: null, color: c.color, blocked: !!c.blocked,
       accounts: cardSubAccountsX(c, manyCur),
-      // transferAllowedSettings (прод DTOTransferAllowedSettings): из Цифры «другим» недоступно.
+      // transferAllowedSettings (прод DTOTransferAllowedSettings): из Цифры «другим» недоступно;
+      // инвест-карта (CPS Freedom Broker): телефон/карта/SWIFT есть, «Внутри Банка»/IBAN — нет.
       flags: {
         withdrawalAllowed: !c.blocked, replenishAllowed: !c.blocked,
         toCifra: !cifra, fromCifra: false,
-        bankClient: !c.blocked && !cifra, country: !c.blocked && !cifra, swift: !c.blocked && !cifra,
+        bankClient: !c.blocked && !cifra && !invest, smp: !c.blocked,
+        country: !c.blocked && !cifra && !invest, swift: !c.blocked && !cifra,
+        toOtherBankCard: !c.blocked && !cifra, digitalAssets: !c.blocked && invest,
         portmone: !c.blocked && !cifra, moneyRequest: !cifra, loanP2p: !cifra, brokerRefill: !c.blocked && !cifra,
         ...(c.flags || {}),
       },
@@ -267,7 +271,8 @@ function buildProducts(manyCur, includeBlocked = true) {
     color: "#475569",
     accounts: [{ currency: a.currency, amount: a.balance }],
     flags: { withdrawalAllowed: true, replenishAllowed: true, toCifra: true, fromCifra: false,
-      bankClient: true, country: true, swift: true, portmone: true, moneyRequest: true, loanP2p: true, brokerRefill: true },
+      bankClient: true, smp: true, country: true, swift: true, toOtherBankCard: true, digitalAssets: false,
+      portmone: true, moneyRequest: true, loanP2p: true, brokerRefill: true },
   }));
   DEPOSITS.forEach(d => out.push({
     id: `dep-${d.id}`, kind: "deposit", group: "depositProd",
@@ -416,6 +421,7 @@ const FEATURE_FLAGS = [
   { key: "p2pFromCard", desc: "Пополнение с карты другого банка", default: true },
   { key: "toIban", desc: "Перевод по номеру счёта (IBAN)", default: true },
   { key: "payPayeesGroups", desc: "Оплата услуг (категории)", default: true },
+  { key: "digitalAssets", desc: "Криптокошелёк (Digital Assets)", default: true },
   { key: "paySwift", desc: "SWIFT-переводы", default: true },
   { key: "conversionRates", desc: "Курсы валют на экране переводов", default: true },
   { key: "cardPanCVV", desc: "Показ номера карты в деталях", default: true },
@@ -6598,6 +6604,88 @@ function TopUpSheetContent({ C, card, displayCurrency, manyCur, showUnavailable,
   );
 }
 
+/* Шторка «Отправить» с продукта (прод WithdrawProductSheetModel + checkWithdrawalAllowed):
+   строки = PaymentType, группы по groupId (сепаратор между ними), порядок = order.
+   Один доступный способ — прод открывает его сразу без шторки (см. openWithdraw). */
+function withdrawPaymentTypes(p, prods, featureFlags) {
+  if (!p || !p.flags.withdrawalAllowed || !p.accounts.some(a => a.amount > 0)) return [];
+  const types = [];
+  // Группа 0 — свои: криптокошелёк (инвест-карты) → брокерский → своя карта/счёт
+  if (featureFlags.digitalAssets && p.flags.digitalAssets === true) types.push("digitalAssets");
+  if (p.flags.brokerRefill === true && prods.some(t => t.kind === "broker" && t.flags.replenishAllowed)) types.push("toOwnBroker");
+  if (prods.some(t => t.id !== p.id && t.kind !== "broker" && productAsSource(p, t).ok && productAsTarget(t, p).ok)) types.push("ownProducts");
+  // Группа 1 — другим: телефон (smp/sbp/bankClient) → карта банка → внутри банка → IBAN → SWIFT
+  if (featureFlags.toPhoneNumber && (p.flags.smp === true || p.flags.bankClient === true)) types.push("phoneNumber");
+  if (featureFlags.p2pToCard && p.flags.toOtherBankCard === true) types.push("toOtherBankCard");
+  if (p.flags.bankClient === true) types.push("insideBank");
+  if (featureFlags.toIban && p.flags.country === true) types.push("country");
+  if (featureFlags.paySwift && p.flags.swift === true) types.push("swift");
+  // Группа 2 — конвертация внутри мультивалютной карты
+  if (featureFlags.conversionRates && p.kind === "card" && !p.blocked && p.accounts.length > 1) types.push("conversion");
+  return types;
+}
+const WITHDRAW_GROUP = { digitalAssets: 0, toOwnBroker: 0, ownProducts: 0, phoneNumber: 1, toOtherBankCard: 1, insideBank: 1, country: 1, swift: 1, conversion: 2 };
+
+function WithdrawSheetContent({ C, product, featureFlags, manyCur, includeBlocked, onPick }) {
+  const prods = buildProducts(manyCur, includeBlocked);
+  const p = prods.find(x => x.id === product.id) || null;
+  const types = withdrawPaymentTypes(p, prods, featureFlags);
+  // Тексты — прод Localizable.strings (paymentsFlow.payments.* / productsFlow.* / tradernetFlow.cps.item.*)
+  const META = {
+    digitalAssets: { Icon: Wallet, title: "На криптокошелёк", sub: null },
+    toOwnBroker: {
+      Icon: TrendingUp, title: "На брокерский счёт",
+      sub: p && p.group === "invest"
+        ? (p.name.includes("TFOS") ? "TFOS" : "Freedom Broker")
+        : BROKER_ACCOUNTS.map(g => g.group).join(", "),
+    },
+    ownProducts: { Icon: Repeat, title: "На свою карту или счёт", sub: "Freedom Bank KZ" },
+    phoneNumber: {
+      Icon: Phone, title: "По номеру телефона",
+      sub: p && p.group === "cifra" ? "В банки РФ" : "Клиенту Freedom, в банки РФ, Казахстана и других стран",
+    },
+    toOtherBankCard: { Icon: CreditCard, title: "На банковскую карту", sub: "В Тенге, Рублях и других валютах" },
+    insideBank: { Icon: Landmark, title: "Внутри Банка", sub: "По номеру телефона, карты, счёта" },
+    country: { Icon: FileText, title: "По номеру счета", sub: "Внутри Казахстана" },
+    swift: { Icon: Globe, title: "Переводом SWIFT", sub: "В любую страну" },
+    conversion: { Icon: ArrowLeftRight, title: "Конвертация", sub: "Обмен валюты внутри карты" },
+  };
+  return (
+    <>
+      <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 2 }}>Отправить</div>
+      <div style={{ fontSize: 13, color: C.muted, marginBottom: 8 }}>
+        {p ? (p.last4 ? `•• ${p.last4}, ${p.name}` : p.name) : ""}
+      </div>
+      {types.length === 0 && (
+        <div style={{ padding: "18px 0 8px", fontSize: 13, color: C.muted, lineHeight: 1.5 }}>
+          Переводы с этого продукта недоступны
+        </div>
+      )}
+      {types.map((t, i) => {
+        const m = META[t];
+        const sep = i > 0 && WITHDRAW_GROUP[t] !== WITHDRAW_GROUP[types[i - 1]];
+        return (
+          <div key={t}>
+            {sep && <div style={{ height: 1, backgroundColor: C.divider, margin: "6px 0" }} />}
+            <div data-press onClick={() => onPick(t)} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "12px 0", cursor: "pointer",
+            }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: C.accentSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <m.Icon size={18} color={C.accentDark} strokeWidth={1.9} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{m.title}</div>
+                {m.sub && <div style={{ fontSize: 12, color: C.muted, marginTop: 2, lineHeight: 1.35 }}>{m.sub}</div>}
+              </div>
+              <ChevronRight size={15} color={C.muted} strokeWidth={1.8} />
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 // Иконка класса продукта (аватар в пикерах).
 const PRODUCT_KIND_ICON = { card: CreditCard, account: Landmark, deposit: PiggyBank, credit: Banknote, broker: TrendingUp };
 
@@ -7175,10 +7263,10 @@ function TransferDetailsScreen({ C, recipient, displayCurrency, stressLong, many
   const [debitSel, setDebitSel] = useState(null);
   const [amount, setAmount] = useState("");
 
-  // Источники: продукты с разрешённым «другим»-направлением (bankClient) и списанием.
+  // Источники: продукты с разрешённым «другим»-направлением (bankClient либо smp/sbp) и списанием.
   const ownSources = products.flatMap(p => {
     const av = productAsSource(p, null);
-    if (!av.ok || p.flags.bankClient !== true) return [];
+    if (!av.ok || !(p.flags.bankClient === true || p.flags.smp === true)) return [];
     return p.accounts.filter(s => s.amount > 0).map(s => ({
       id: `${p.id}::${s.currency}`, prodId: p.id, prodName: p.name,
       last4: p.last4, currency: s.currency, amount: s.amount, kzt: convertToKZT(s.amount, s.currency),
@@ -7214,7 +7302,7 @@ function TransferDetailsScreen({ C, recipient, displayCurrency, stressLong, many
 
         {/* Откуда */}
         <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>Откуда</div>
-        <CardAccountPicker C={C} displayCurrency={displayCurrency} products={products.filter(p => p.flags.bankClient === true)}
+        <CardAccountPicker C={C} displayCurrency={displayCurrency} products={products.filter(p => p.flags.bankClient === true || p.flags.smp === true)}
           counterpart={null} showUnavailable={showUnavailable} S={S} maskFor={maskFor}
           product={debitProduct} account={debit} accounts={debitProductAccs}
           role="src" balanceDanger={overBalance}
@@ -7396,6 +7484,36 @@ export default function FreedomV6() {
     if (!dst || !src) return;
     pushScreen({ type: "topupAmount", card: { id: dst.id }, source: { kind: "own", srcCard: { id: src.id } } });
   };
+  const openBrokerRefillFrom = (srcId) => {
+    // Из шторки «Отправить»: источник — этот продукт; цель — брокер его reception (инвест-карта TFOS → TFOS).
+    const prods = buildProducts(manyCur, includeBlocked);
+    const src = prods.find(p => p.id === srcId);
+    const wantTfos = src && src.group === "invest" && src.name.includes("TFOS");
+    const dst = prods.find(p => p.kind === "broker" && (!wantTfos || p.name.startsWith("TFOS")))
+      || prods.find(p => p.kind === "broker");
+    if (!dst || !src) return;
+    pushScreen({ type: "topupAmount", card: { id: dst.id }, source: { kind: "own", srcCard: { id: srcId } } });
+  };
+  // Тап по строке шторки «Отправить» → прод-роутинг ProductDetailsPresenter.onTransfer(with:)
+  const routeWithdraw = (prodId, t) => {
+    if (t === "ownProducts") openTransferFrom(prodId);
+    else if (t === "conversion") openExchange(prodId);
+    else if (t === "toOwnBroker") openBrokerRefillFrom(prodId);
+    else if (t === "digitalAssets") pushScreen({ type: "stub", title: "На криптокошелёк", note: "Вывод на криптокошелёк — флоу Tradernet · Digital Assets. В прототип не включён." });
+    else if (t === "phoneNumber" || t === "insideBank") pushScreen({ type: "transferClient", segment: "contact" });
+    else if (t === "toOtherBankCard") pushScreen({ type: "transferClient", segment: "card" });
+    else if (t === "country") pushScreen({ type: "transferClient", segment: "iban" });
+    else if (t === "swift") pushScreen({ type: "swift" });
+  };
+  const openWithdraw = (prodId) => {
+    // Прод onTransfer(): один доступный способ — сразу переход, иначе шторка WithdrawProductSheetModel.
+    const prods = buildProducts(manyCur, includeBlocked);
+    const p = prods.find(x => x.id === prodId);
+    if (!p) return;
+    const types = withdrawPaymentTypes(p, prods, featureFlags);
+    if (types.length === 1) routeWithdraw(prodId, types[0]);
+    else setSheet({ type: "withdraw", product: p });
+  };
   const popScreen = () => setNavStack(prev => prev.slice(0, -1));
   // Real app launches locked (AuthPin) — any 4-digit code unlocks the prototype
   const [locked, setLocked] = useState(true);
@@ -7531,7 +7649,7 @@ export default function FreedomV6() {
         if (s.type === "product") return (
           <ProductDetailsScreen key={i} card={s.card} C={C} featureFlags={featureFlags}
             onBack={popScreen}
-            onTransfer={() => pushScreen({ type: "transferHub", productId: s.card.id })}
+            onTransfer={() => openWithdraw(s.card.id)}
             onExchange={() => openExchange(s.card.id)}
             onOpenTransaction={(tx) => pushScreen({ type: "transaction", tx })}
             onOpenLimits={() => pushScreen({ type: "cardLimits", card: s.card })}
@@ -7558,6 +7676,18 @@ export default function FreedomV6() {
             })}
           />
         );
+        if (s.type === "stub") return (
+          <ScreenShell key={i} C={C} title={s.title} onBack={popScreen}>
+            <div style={{ padding: "48px 40px", textAlign: "center" }}>
+              <div style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+                <Wallet size={26} color={C.muted} strokeWidth={1.8} />
+              </div>
+              <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.55 }}>{s.note}</div>
+            </div>
+          </ScreenShell>
+        );
+        // transferHub — хаб с фильтром по продукту (прод PaymentsFlow.selectedProduct).
+        // Актуальный вход с кнопки «Перевести» — шторка WithdrawSheetContent; кейс оставлен для сравнения.
         if (s.type === "transferHub") return (
           <ScreenShell key={i} C={C} title="Отправить" onBack={popScreen}>
             <PaymentsScreen C={C} featureFlags={featureFlags} embedded
@@ -7756,7 +7886,7 @@ export default function FreedomV6() {
           <AccountDetailsScreen key={i} account={s.account} C={C}
             onBack={popScreen}
             onOpenRequisites={() => pushScreen({ type: "requisites" })}
-            onTransfer={() => pushScreen({ type: "transferHub", productId: `acc-${s.account.id}` })}
+            onTransfer={() => openWithdraw(`acc-${s.account.id}`)}
             onOpenTransaction={(tx) => pushScreen({ type: "transaction", tx })}
           />
         );
@@ -8066,6 +8196,14 @@ export default function FreedomV6() {
               else if (v.kind === "requisites") pushScreen({ type: "requisites", card });
               else if (v.kind === "applePay") pushScreen({ type: "topupAmount", card, source: { kind: "applePay" } });
             }}
+          />
+        </BottomSheetModal>
+      )}
+      {sheet?.type === "withdraw" && (
+        <BottomSheetModal C={C} onClose={() => setSheet(null)}>
+          <WithdrawSheetContent C={C} product={sheet.product} featureFlags={featureFlags}
+            manyCur={manyCur} includeBlocked={includeBlocked}
+            onPick={(t) => { const pid = sheet.product.id; setSheet(null); routeWithdraw(pid, t); }}
           />
         </BottomSheetModal>
       )}

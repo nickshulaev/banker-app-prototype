@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Search, Bell, Plus, ChevronRight, ChevronDown, ChevronsUpDown, X, ArrowLeftRight, PiggyBank, Banknote, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid, Smartphone, Plane, Sofa, Zap, Phone, Globe, QrCode, Repeat, Send, Landmark, Tv, Bus, GraduationCap, Eye, EyeOff, ArrowLeft, ArrowDown, ArrowDownLeft, Snowflake, FileText, ShoppingCart, Utensils, Fuel, Wifi, Home, Ticket, Settings2, Check, User, Shield, LogOut, Palette } from "lucide-react";
+import { Search, Bell, Plus, ChevronRight, ChevronDown, ChevronsUpDown, X, ArrowLeftRight, ArrowUpDown, PiggyBank, Banknote, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid, Smartphone, Plane, Sofa, Zap, Phone, Globe, QrCode, Repeat, Send, Landmark, Tv, Bus, GraduationCap, Eye, EyeOff, ArrowLeft, ArrowDown, ArrowDownLeft, Snowflake, FileText, ShoppingCart, Utensils, Fuel, Wifi, Home, Ticket, Settings2, Check, User, Shield, LogOut, Palette } from "lucide-react";
 import OnboardingFlow, { ONB_START, ONB_GATES, ONB_PRESETS, ONB_STEPS, SUMSUB_PHASES, SUMSUB_PHASE_LABELS } from "./onboarding.jsx";
 
 /* ═══════════════════════════════════════════════
@@ -2449,7 +2449,7 @@ function PaymentsScreen({ C, featureFlags, onOpenStub, onTransferOwn, onRequestM
    Card visual + balance + actions + transactions
    ═══════════════════════════════════════════════ */
 
-function ProductDetailsScreen({ card, C, featureFlags, onBack, onTransfer, onOpenTransaction, onOpenLimits, onOpenPinChange, onOpenRequisites, onTopUp, onOpenAllTransactions }) {
+function ProductDetailsScreen({ card, C, featureFlags, onBack, onTransfer, onExchange, onOpenTransaction, onOpenLimits, onOpenPinChange, onOpenRequisites, onTopUp, onOpenAllTransactions }) {
   const [panVisible, setPanVisible] = useState(false);
   const [isFrozen, setIsFrozen] = useState(false);
   const cm = CURRENCY_META[card.primaryCurrency] || { symbol: card.primaryCurrency };
@@ -2548,11 +2548,12 @@ function ProductDetailsScreen({ card, C, featureFlags, onBack, onTransfer, onOpe
         </div>
       </div>
 
-      {/* Actions — real ProductInfoAction set */}
-      <div style={{ display: "flex", justifyContent: "center", gap: 22, marginBottom: 28 }}>
+      {/* Actions — real ProductInfoAction set (+ «Обменять»: конвертация внутри карты) */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 16, marginBottom: 28 }}>
         {[
           { Icon: Plus, label: "Пополнить", onClick: onTopUp },
           { Icon: Send, label: "Перевести", onClick: onTransfer },
+          { Icon: ArrowLeftRight, label: "Обменять", onClick: onExchange },
           { Icon: FileText, label: "Реквизиты", onClick: onOpenRequisites },
           { Icon: Snowflake, label: isFrozen ? "Разморозить" : "Заморозить", onClick: () => setIsFrozen(v => !v), active: isFrozen },
         ].map((a, i) => (
@@ -2944,194 +2945,6 @@ function ScreenShell({ C, title, onBack, children }) {
       </div>
       {children}
     </div>
-  );
-}
-
-function TransferOwnScreen({ C, featureFlags, onBack, onNext }) {
-  const [fromIdx, setFromIdx] = useState(0);
-  const [toIdx, setToIdx] = useState(1);
-  const [amount, setAmount] = useState("1000");
-  const from = TRANSFER_PRODUCTS[fromIdx];
-  const to = TRANSFER_PRODUCTS[toIdx];
-  const num = parseFloat(amount.replace(",", ".")) || 0;
-  const valid = num > 0 && num <= from.balance;
-  const cm = CURRENCY_META[from.currency] || { symbol: from.currency };
-
-  const ProductRow = ({ label, product }) => (
-    <div style={{ marginBottom: 12 }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>{label}</div>
-      <div style={{
-        backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
-        padding: "13px 16px", display: "flex", alignItems: "center", gap: 12,
-      }}>
-        <div style={{
-          width: 38, height: 38, borderRadius: "50%", backgroundColor: C.faint,
-          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0,
-        }}>🇺🇸</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{product.name}</div>
-          <div style={{ fontSize: 12, color: C.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>{product.number}</div>
-        </div>
-        <span style={{ fontSize: 14, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
-          {fmtFull(product.balance)} <span style={{ fontSize: 11, color: C.muted }}>$</span>
-        </span>
-      </div>
-    </div>
-  );
-
-  return (
-    <ScreenShell C={C} title="Между своими счетами" onBack={onBack}>
-      <div style={{ padding: "4px 20px 110px" }}>
-        <ProductRow label="Списать со счёта" product={from} />
-
-        {/* Swap — real `transferSwap` flag */}
-        {featureFlags.transferSwap && (
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
-            <div data-press onClick={() => { setFromIdx(toIdx); setToIdx(fromIdx); }} style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              padding: "7px 14px", borderRadius: 18,
-              backgroundColor: C.faint, cursor: "pointer",
-            }}>
-              <Repeat size={13} color={C.sub} strokeWidth={2} style={{ transform: "rotate(90deg)" }} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: C.sub }}>Поменять счета местами</span>
-            </div>
-          </div>
-        )}
-
-        <ProductRow label="Зачислить на счёт" product={to} />
-
-        {/* Сумма (real sumFieldTitle) */}
-        <div style={{ marginTop: 20, marginBottom: 8 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>Сумма</div>
-          <div style={{
-            backgroundColor: C.card, borderRadius: 12,
-            border: `1.5px solid ${valid || !amount ? C.border : "#EF4444"}`,
-            padding: "16px", display: "flex", alignItems: "center", gap: 8,
-          }}>
-            <input
-              value={amount}
-              onChange={e => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
-              inputMode="decimal"
-              placeholder="0"
-              style={{
-                flex: 1, border: "none", outline: "none", background: "transparent",
-                fontSize: 26, fontWeight: 800, color: C.text,
-                fontFamily: "inherit", fontFeatureSettings: "'tnum'",
-                minWidth: 0,
-              }}
-            />
-            <span style={{ fontSize: 20, fontWeight: 700, color: C.muted }}>{cm.symbol}</span>
-          </div>
-          {!valid && amount && num > from.balance && (
-            <div style={{ fontSize: 12, color: "#EF4444", marginTop: 6 }}>
-              Перевод должен быть меньше {fmtFull(from.balance)} {cm.symbol}
-            </div>
-          )}
-          {!valid && amount && num <= 0 && (
-            <div style={{ fontSize: 12, color: "#EF4444", marginTop: 6 }}>
-              Перевод должен быть больше 0 {cm.symbol}
-            </div>
-          )}
-        </div>
-
-        <div style={{ fontSize: 12, color: C.muted, marginBottom: 24 }}>Без комиссии · мгновенно</div>
-
-        <div data-press onClick={() => valid && onNext({ from, to, amount: num })} style={{
-          backgroundColor: valid ? C.accentDark : C.faint,
-          borderRadius: 12, padding: "15px 0", textAlign: "center",
-          cursor: valid ? "pointer" : "default",
-          transition: "background-color 0.15s",
-        }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: valid ? C.accent : C.muted }}>Перевести</span>
-        </div>
-      </div>
-    </ScreenShell>
-  );
-}
-
-function TransferConfirmScreen({ C, payload, onBack, onConfirm }) {
-  const { from, to, amount } = payload;
-  const rows = [
-    { label: "Списать со счёта", value: `${from.name} · ${from.number}` },
-    { label: "Зачислить на счёт", value: `${to.name} · ${to.number}` },
-    { label: "Сумма", value: `${fmtFull(amount)} $` },
-    { label: "Комиссия", value: "Без комиссии" },
-  ];
-  return (
-    <ScreenShell C={C} title="Подтверждение" onBack={onBack}>
-      <div style={{ padding: "4px 20px 110px" }}>
-        <div style={{ textAlign: "center", margin: "12px 0 28px" }}>
-          <div style={{ fontSize: 13, color: C.muted, fontWeight: 500, marginBottom: 8 }}>Перевод между счетами</div>
-          <div style={{ fontSize: 36, fontWeight: 800, color: C.text, letterSpacing: -1, fontFeatureSettings: "'tnum'" }}>
-            {fmtFull(amount)} <span style={{ fontSize: 20, color: C.muted }}>$</span>
-          </div>
-        </div>
-        <div style={{
-          backgroundColor: C.card, borderRadius: 12,
-          border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 24,
-        }}>
-          {rows.map((r, i) => (
-            <div key={i} style={{
-              display: "flex", justifyContent: "space-between", alignItems: "center",
-              padding: "13px 16px", gap: 12,
-              borderBottom: i < rows.length - 1 ? `1px solid ${C.divider}` : "none",
-            }}>
-              <span style={{ fontSize: 13, color: C.muted, flexShrink: 0 }}>{r.label}</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: C.text, textAlign: "right" }}>{r.value}</span>
-            </div>
-          ))}
-        </div>
-        <div data-press onClick={onConfirm} style={{
-          backgroundColor: C.accentDark, borderRadius: 12, padding: "15px 0",
-          textAlign: "center", cursor: "pointer",
-        }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>Подтвердить</span>
-        </div>
-      </div>
-    </ScreenShell>
-  );
-}
-
-function TransferResultScreen({ C, payload, onDone }) {
-  const { to, amount } = payload;
-  return (
-    <ScreenShell C={C} title="">
-      <div style={{
-        display: "flex", flexDirection: "column", alignItems: "center",
-        padding: "48px 40px 110px", textAlign: "center",
-      }}>
-        <div style={{
-          width: 88, height: 88, borderRadius: "50%",
-          backgroundColor: "rgba(34,197,94,0.12)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          marginBottom: 24,
-        }}>
-          <div style={{
-            width: 60, height: 60, borderRadius: "50%",
-            backgroundColor: "#22C55E",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <Check size={30} color="#fff" strokeWidth={3} />
-          </div>
-        </div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: C.text, marginBottom: 8 }}>Успешно</div>
-        <div style={{ fontSize: 14, color: C.sub, lineHeight: 1.5, marginBottom: 4 }}>
-          Перевод выполнен
-        </div>
-        <div style={{ fontSize: 28, fontWeight: 800, color: C.text, fontFeatureSettings: "'tnum'", margin: "12px 0 4px" }}>
-          {fmtFull(amount)} <span style={{ fontSize: 17, color: C.muted }}>$</span>
-        </div>
-        <div style={{ fontSize: 13, color: C.muted, marginBottom: 40 }}>
-          на {to.name} · {to.number}
-        </div>
-        <div data-press onClick={onDone} style={{
-          backgroundColor: C.accentDark, borderRadius: 12, padding: "15px 0",
-          textAlign: "center", cursor: "pointer", alignSelf: "stretch",
-        }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>Готово</span>
-        </div>
-      </div>
-    </ScreenShell>
   );
 }
 
@@ -6979,6 +6792,17 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
   const economyLine = kind !== "own" ? "Комиссия 0% · до 5 минут"
     : cross ? "Конвертация по курсу банка" : "Без комиссии · мгновенно";
 
+  // Свап сторон (прод: isCanSwapProducts) — только если оба направления разрешены флагами обеих сторон.
+  const canSwap = kind === "own" && !!debitProduct && !sameProduct
+    && productAsSource(target, debitProduct).ok && productAsTarget(debitProduct, target).ok;
+  const swapSides = () => {
+    if (!canSwap) return;
+    const oldTargetId = target.id, oldCreditCur = (credit || {}).currency;
+    setTargetId(debitProduct.id);
+    setCreditSel(debit.currency);
+    setDebitSel(`${oldTargetId}::${oldCreditCur}`);
+  };
+
   const sectionLabel = (t) => <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6 }}>{t}</div>;
 
   return (
@@ -7028,10 +6852,22 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
           </div>
         )}
 
-        {/* Тихая стрелка-поток */}
-        <div style={{ textAlign: "center", padding: "6px 0" }}>
-          <ArrowDown size={15} color={C.muted} strokeWidth={2} />
-        </div>
+        {/* Между юнитами: свап по прод-флагу transferSwap (доступен, если оба направления разрешены) */}
+        {featureFlags && featureFlags.transferSwap && kind === "own" ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: "6px 0" }}>
+            <div data-press={canSwap ? true : undefined} onClick={swapSides} style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 18,
+              backgroundColor: C.faint, cursor: canSwap ? "pointer" : "default", opacity: canSwap ? 1 : 0.45,
+            }}>
+              <ArrowUpDown size={13} color={C.text} strokeWidth={2.2} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>Поменять местами</span>
+            </div>
+          </div>
+        ) : (
+          <div style={{ textAlign: "center", padding: "6px 0" }}>
+            <ArrowDown size={15} color={C.muted} strokeWidth={2} />
+          </div>
+        )}
 
         {/* Куда: юнит «продукт + счёт» */}
         {sectionLabel("Куда")}
@@ -7208,6 +7044,32 @@ export default function FreedomV6() {
   const [activeTab, setActiveTab] = useState("products");
   const [navStack, setNavStack] = useState([]);
   const pushScreen = (s) => setNavStack(prev => [...prev, s]);
+
+  // Входы в универсальный экран «Между счетами» (единая молекула вместо старого TransferOwn).
+  const prodScore = (p) => Math.max(...p.accounts.map(a => convertToKZT(a.amount, a.currency)), 0);
+  const openTransferHub = () => {
+    // Из хаба «Платежи»: «Откуда» = продукт с самым большим балансом, «Куда» = следующий по объёму.
+    const prods = buildProducts(manyCur, includeBlocked);
+    const sources = prods.filter(p => productAsSource(p, null).ok).sort((a, b) => prodScore(b) - prodScore(a));
+    const src = sources[0];
+    const dst = prods.filter(p => p.id !== (src || {}).id && productAsTarget(p, src).ok)
+      .sort((a, b) => prodScore(b) - prodScore(a))[0];
+    if (!src || !dst) return;
+    pushScreen({ type: "topupAmount", card: { id: dst.id }, source: { kind: "own", srcCard: { id: src.id } } });
+  };
+  const openTransferFrom = (srcId) => {
+    // С экрана продукта («Перевести»): источник — этот продукт, цель — крупнейший подходящий.
+    const prods = buildProducts(manyCur, includeBlocked);
+    const src = prods.find(p => p.id === srcId);
+    const dst = prods.filter(p => p.id !== srcId && productAsTarget(p, src).ok)
+      .sort((a, b) => prodScore(b) - prodScore(a))[0];
+    if (!dst) return;
+    pushScreen({ type: "topupAmount", card: { id: dst.id }, source: { kind: "own", srcCard: { id: srcId } } });
+  };
+  const openExchange = (cardId) => {
+    // «Обменять» с экрана карты: одна карта с обеих сторон → режим «Обмен валют».
+    pushScreen({ type: "topupAmount", card: { id: cardId }, source: { kind: "own", srcCard: { id: cardId } } });
+  };
   const popScreen = () => setNavStack(prev => prev.slice(0, -1));
   // Real app launches locked (AuthPin) — any 4-digit code unlocks the prototype
   const [locked, setLocked] = useState(true);
@@ -7312,7 +7174,7 @@ export default function FreedomV6() {
       {activeTab === "payments" && (
         <PaymentsScreen C={C} featureFlags={featureFlags}
           onOpenStub={() => {}}
-          onTransferOwn={() => pushScreen({ type: "transferOwn" })}
+          onTransferOwn={openTransferHub}
           onRequestMoney={() => pushScreen({ type: "requestCreate" })}
           onPhoneTransfer={() => pushScreen({ type: "phoneTransfer" })}
           onConversion={() => pushScreen({ type: "conversion" })}
@@ -7339,7 +7201,8 @@ export default function FreedomV6() {
         if (s.type === "product") return (
           <ProductDetailsScreen key={i} card={s.card} C={C} featureFlags={featureFlags}
             onBack={popScreen}
-            onTransfer={() => pushScreen({ type: "transferOwn" })}
+            onTransfer={() => openTransferFrom(s.card.id)}
+            onExchange={() => openExchange(s.card.id)}
             onOpenTransaction={(tx) => pushScreen({ type: "transaction", tx })}
             onOpenLimits={() => pushScreen({ type: "cardLimits", card: s.card })}
             onOpenPinChange={() => pushScreen({ type: "pinChange" })}
@@ -7416,23 +7279,6 @@ export default function FreedomV6() {
         );
         if (s.type === "qrScanner") return (
           <QrScannerScreen key={i} onBack={popScreen} />
-        );
-        if (s.type === "transferOwn") return (
-          <TransferOwnScreen key={i} C={C} featureFlags={featureFlags}
-            onBack={popScreen}
-            onNext={(payload) => pushScreen({ type: "transferConfirm", payload })}
-          />
-        );
-        if (s.type === "transferConfirm") return (
-          <TransferConfirmScreen key={i} C={C} payload={s.payload}
-            onBack={popScreen}
-            onConfirm={() => pushScreen({ type: "transferResult", payload: s.payload })}
-          />
-        );
-        if (s.type === "transferResult") return (
-          <TransferResultScreen key={i} C={C} payload={s.payload}
-            onDone={() => setNavStack([])}
-          />
         );
         if (s.type === "total") return (
           <ProductsTotalScreen key={i} C={C}
@@ -7535,7 +7381,7 @@ export default function FreedomV6() {
           <AccountDetailsScreen key={i} account={s.account} C={C}
             onBack={popScreen}
             onOpenRequisites={() => pushScreen({ type: "requisites" })}
-            onTransfer={() => pushScreen({ type: "transferOwn" })}
+            onTransfer={() => openTransferFrom(`acc-${s.account.id}`)}
             onOpenTransaction={(tx) => pushScreen({ type: "transaction", tx })}
           />
         );

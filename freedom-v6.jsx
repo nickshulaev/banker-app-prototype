@@ -2857,10 +2857,17 @@ function StatisticsScreen({ C, displayCurrency, showInternalCats, onOpenTransact
   // убирает коллизии — операция видна только у своей карты/счёта. null = все продукты.
   const [prodFilter, setProdFilter] = useState(null);
   const [prodSheetOpen, setProdSheetOpen] = useState(false);
-  const prodOptions = [
-    ...CARD_PRODUCTS.flatMap(g => g.cards.filter(c => !c.blocked).map(c => ({ id: c.id, name: c.name, kind: "card", sub: `•• ${c.last4}`, color: c.color }))),
-    ...ACCOUNTS_LIST.map(a => ({ id: `acc-${a.id}`, name: a.name, kind: "account", sub: `${a.number.slice(0, 4)}…${a.number.replace(/\s/g, "").slice(-4)}`, color: "#475569" })),
-  ];
+  // Опции пикера — из единой модели продуктов, по убыванию баланса; суммы в отчётной валюте.
+  const prodOptions = buildProducts(false, false)
+    .filter(p => p.kind === "card" || p.kind === "account")
+    .map(p => ({
+      id: p.id, name: p.name, kind: p.kind,
+      sub: p.last4 ? `•• ${p.last4}` : (p.mask || ""),
+      color: p.color,
+      totalKZT: p.accounts.reduce((s, a) => s + convertToKZT(a.amount, a.currency), 0),
+    }))
+    .sort((a, b) => b.totalKZT - a.totalKZT);
+  const allTotalKZT = prodOptions.reduce((s, o) => s + o.totalKZT, 0);
   const prodSel = prodFilter ? prodOptions.find(o => o.id === prodFilter) : null;
 
   // Период: month = текущий месяц моков (июль 2026), year = всё, range = пресет из шита.
@@ -2956,6 +2963,9 @@ function StatisticsScreen({ C, displayCurrency, showInternalCats, onOpenTransact
               {prodSel ? prodSel.sub : "Статистика по всем продуктам"}
             </div>
           </div>
+          <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+            {fmtFull(convertTo(prodSel ? prodSel.totalKZT : allTotalKZT, dc))} <span style={{ fontSize: 10.5, color: C.muted }}>{dcMeta.symbol}</span>
+          </span>
           <div style={{ width: 22, height: 22, borderRadius: 6, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <ChevronsUpDown size={13} color={C.muted} strokeWidth={2} />
           </div>
@@ -3217,11 +3227,17 @@ function StatisticsScreen({ C, displayCurrency, showInternalCats, onOpenTransact
               display: "flex", alignItems: "center", gap: 12, padding: "12px 0", cursor: "pointer",
               borderBottom: i < prodOptions.length - 1 ? `1px solid ${C.divider}` : "none",
             }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                {o.kind === "card" ? <CreditCard size={15} color={C.text} strokeWidth={2} /> : <Landmark size={15} color={C.text} strokeWidth={2} />}
+              <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: o.color || C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                {o.kind === "card" ? <CreditCard size={15} color="#fff" strokeWidth={2} /> : <Landmark size={15} color="#fff" strokeWidth={2} />}
               </div>
-              <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o.name}</span>
-              {prodFilter === o.id && <Check size={17} color={C.accentDark} strokeWidth={2.4} />}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o.name}</div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'" }}>{o.sub}</div>
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                {fmtFull(convertTo(o.totalKZT, dc))} <span style={{ fontSize: 10.5, color: C.muted }}>{dcMeta.symbol}</span>
+              </span>
+              {prodFilter === o.id && <Check size={17} color={C.accentDark} strokeWidth={2.4} style={{ flexShrink: 0 }} />}
             </div>
           ))}
         </BottomSheetModal>

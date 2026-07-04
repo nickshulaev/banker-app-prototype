@@ -2362,9 +2362,9 @@ function BottomTabBar({ active, onChange, C }) {
       {[
         { key: "products", Icon: Wallet, label: "Продукты" },
         { key: "statistics", Icon: BarChart3, label: "Статистика" },
-        { key: "payments", Icon: ArrowLeftRight, label: "Переводы" },
+        { key: "payments", Icon: ArrowLeftRight, label: "Перевести" },
         { key: "investments", Icon: TrendingUp, label: "Инвестиции" },
-        { key: "chats", Icon: MessageCircle, label: "Чаты" },
+        { key: "chats", Icon: MessageCircle, label: "Поддержка" },
       ].map(tab => {
         const isActive = active === tab.key;
         return (
@@ -6306,7 +6306,7 @@ function ChatsScreen({ C, featureFlags, onOpenThread }) {
     }}>
       <StatusBar C={C} />
       <div style={{ padding: "8px 20px 0" }}>
-        <div style={{ fontSize: 24, fontWeight: 800, color: C.text, letterSpacing: -0.5, marginBottom: 14 }}>Чаты</div>
+        <div style={{ fontSize: 24, fontWeight: 800, color: C.text, letterSpacing: -0.5, marginBottom: 14 }}>Поддержка</div>
         {!featureFlags.chat ? (
           <div style={{ textAlign: "center", padding: "80px 30px", fontSize: 13, color: C.muted, lineHeight: 1.5 }}>
             Чат отключён фичефлагом `chat` — в реальном приложении здесь была бы вкладка контактов

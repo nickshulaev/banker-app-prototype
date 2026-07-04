@@ -613,10 +613,14 @@ const TRANSACTIONS = [
   { id: 7, name: "Покупка USD за RUB", category: "Обмен валют", amount: -100000.00, currency: "RUB", counter: "+ 1 254,71 $", date: "2026-07-03", time: "Вчера, 12:40", Icon: ArrowLeftRight, color: "#F59E0B", legFrom: "own", legTo: "own" },
   { id: 8, name: "SWIFT · Wells Fargo N.A.", category: "SWIFT-перевод", amount: -1000.00, currency: "USD", date: "2026-07-03", time: "Вчера, 11:02", Icon: Globe, color: "#06B6D4", legFrom: "own", legTo: "ext" },
   { id: 4, name: "Helios", category: "АЗС", amount: -12500.00, currency: "KZT", date: "2026-07-03", time: "Вчера, 09:41", Icon: Fuel, color: "#3B82F6", legFrom: "own", legTo: "ext" },
+  { id: 15, name: "Yandex Go", category: "Транспорт", amount: -6540.00, currency: "KZT", date: "2026-06-21", time: "21 июня, 19:05", Icon: Bus, color: "#F59E0B", legFrom: "own", legTo: "ext" },
+  { id: 14, name: "Booking.com", category: "Путешествия", amount: -320.00, currency: "EUR", date: "2026-06-18", time: "18 июня, 22:40", Icon: Plane, color: "#3B82F6", legFrom: "own", legTo: "ext" },
   { id: 5, name: "Beeline", category: "Мобильная связь", amount: -3490.00, currency: "KZT", date: "2026-06-10", time: "10 июня, 16:20", Icon: Smartphone, color: "#8B5CF6", legFrom: "own", legTo: "ext" },
   { id: 9, name: "Пополнение депозита «КОПИЛКА»", category: "Пополнение депозита", amount: -75000.00, currency: "KZT", date: "2026-06-10", time: "10 июня, 12:05", Icon: PiggyBank, color: "#0EA5E9", legFrom: null, legTo: "own", systemInternal: true },
   { id: 10, name: "Проценты по депозиту", category: "Проценты", amount: 4120.00, currency: "KZT", date: "2026-06-10", time: "10 июня, 09:00", Icon: PiggyBank, color: "#16A34A", legFrom: null, legTo: "own" },
   { id: 11, name: "Пополнение брокерского счёта", category: "Брокерский счёт", amount: -500.00, currency: "USD", date: "2026-06-10", time: "10 июня, 08:30", Icon: TrendingUp, color: "#F59E0B", legFrom: "own", legTo: null },
+  { id: 13, name: "Arbat Fit · абонемент", category: "Спорт", amount: -45000.00, currency: "KZT", date: "2026-06-07", time: "7 июня, 08:15", Icon: Zap, color: "#8B5CF6", legFrom: "own", legTo: "ext" },
+  { id: 12, name: "Зарплата · Freedom Holding", category: "Пополнение", amount: 850000.00, currency: "KZT", date: "2026-06-05", time: "5 июня, 10:00", Icon: ArrowDownLeft, color: "#22C55E", users: 2, legFrom: "ext", legTo: "own" },
 ];
 
 /* Курсы НА ДАТУ операции (KZT за единицу): тотал считается по историческому курсу
@@ -624,7 +628,11 @@ const TRANSACTIONS = [
 const RATES_HISTORY = {
   "2026-07-04": { KZT: 1, USD: 512.4, EUR: 578.1, RUB: 6.42, CNY: 71.2 },
   "2026-07-03": { KZT: 1, USD: 509.8, EUR: 575.3, RUB: 6.37, CNY: 70.8 },
+  "2026-06-21": { KZT: 1, USD: 503.5, EUR: 571.6, RUB: 6.28, CNY: 70.1 },
+  "2026-06-18": { KZT: 1, USD: 501.2, EUR: 569.8, RUB: 6.25, CNY: 69.8 },
   "2026-06-10": { KZT: 1, USD: 498.0, EUR: 566.9, RUB: 6.21, CNY: 69.4 },
+  "2026-06-07": { KZT: 1, USD: 496.5, EUR: 565.0, RUB: 6.19, CNY: 69.2 },
+  "2026-06-05": { KZT: 1, USD: 495.8, EUR: 564.2, RUB: 6.18, CNY: 69.1 },
 };
 
 /* Классификатор internal/external (§4 целевой модели, приоритет сверху вниз):
@@ -927,7 +935,7 @@ function CurrencyPicker({ current, currencies, onSelect, onClose, C }) {
    BOTTOM SHEET — Constructor
    ═══════════════════════════════════════════════ */
 
-function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrder, setBlockOrder, emptyState, setEmptyState, featureFlags, setFeatureFlags, onb, setOnb, stressLong, setStressLong, manyCur, setManyCur, showUnavailable, setShowUnavailable, includeBlocked, setIncludeBlocked, C }) {
+function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrder, setBlockOrder, emptyState, setEmptyState, featureFlags, setFeatureFlags, onb, setOnb, stressLong, setStressLong, manyCur, setManyCur, showUnavailable, setShowUnavailable, includeBlocked, setIncludeBlocked, showInternalCats, setShowInternalCats, C }) {
   const isDark = C.bg === '#0E0F0C';
   const [subView, setSubView] = useState(null); // null | "picker" — вложенный экран конструктора
   const themes = [
@@ -1130,6 +1138,22 @@ function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrd
             </div>
           </div>
           <ChevronRight size={16} color={C.muted} strokeWidth={1.8} />
+        </div>
+
+        {/* Статистика — демо-режим целевой модели тоталов */}
+        <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>Статистика</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", marginBottom: 16, borderBottom: `1px solid ${C.divider}` }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Внутренние в категориях</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 1 }}>«Как было бы»: между своими в списке расходов, без вклада в тотал</div>
+          </div>
+          <div onClick={() => setShowInternalCats(v => !v)} style={{
+            width: 44, height: 24, borderRadius: 12,
+            backgroundColor: showInternalCats ? C.accentDark : (isDark ? "rgba(255,255,255,0.15)" : "#D1D5DB"),
+            position: "relative", cursor: "pointer", flexShrink: 0, transition: "background-color 0.2s",
+          }}>
+            <div style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: "#fff", position: "absolute", top: 2, left: showInternalCats ? 22 : 2, transition: "left 0.2s" }} />
+          </div>
         </div>
 
         {/* Онбординг — пре-авторизационный флоу (изолированный, см. onboarding.jsx) */}
@@ -2825,21 +2849,29 @@ function StubScreen({ C, title, note }) {
    («Статистика», «Движение средств», «Категории расходов»)
    ═══════════════════════════════════════════════ */
 
-function StatisticsScreen({ C, displayCurrency, onOpenTransaction }) {
+function StatisticsScreen({ C, displayCurrency, showInternalCats, onOpenTransaction }) {
   const [period, setPeriod] = useState("month");
+  const [rangePreset, setRangePreset] = useState("2026-06"); // пресет чипа «Период»
+  const [periodSheetOpen, setPeriodSheetOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const [hiddenCats, setHiddenCats] = useState([]);
   const [catFilter, setCatFilter] = useState(null); // явный фильтр по категории (null = все)
   const isDark = C.bg === '#0E0F0C';
-  const dc = displayCurrency || "KZT";
+  // Отчётная валюта — выбирается прямо на экране; дефолт — валюта приложения.
+  const [statCur, setStatCur] = useState(displayCurrency || "KZT");
+  const dc = statCur;
   const dcMeta = CURRENCY_META[dc] || { symbol: dc };
   // Сумма операции в отчётной валюте ПО КУРСУ НА ДАТУ операции (не на момент запроса).
   const inDC = (t) => convertOnDate(Math.abs(t.amount), t.currency, t.date, dc);
 
+  // Период: month = текущий месяц моков (июль 2026), year = всё, range = пресет из шита.
+  const periodPrefix = period === "month" ? "2026-07" : period === "range" ? rangePreset : null;
+  const base = periodPrefix ? TRANSACTIONS.filter(t => t.date.startsWith(periodPrefix)) : TRANSACTIONS;
+
   /* Целевая модель тотала: операция пересекла границу «всех денег клиента в банке» →
      полная сумма в тотале; не пересекла (между своими, конвертация) → вклад 0,
      gross уходит в «Перемещено» (moved_total). Один источник для сумм и счётчиков. */
-  const filtered = catFilter ? TRANSACTIONS.filter(t => t.category === catFilter) : TRANSACTIONS;
+  const filtered = catFilter ? base.filter(t => t.category === catFilter) : base;
   const external = filtered.filter(t => !txIsInternal(t));
   const internal = filtered.filter(t => txIsInternal(t));
   const income = external.filter(t => t.amount > 0).reduce((s, t) => s + inDC(t), 0);
@@ -2847,18 +2879,23 @@ function StatisticsScreen({ C, displayCurrency, onOpenTransaction }) {
   const movedTotal = internal.reduce((s, t) => s + inDC(t), 0);
   const filterIsInternal = catFilter && filtered.length > 0 && filtered.every(t => txIsInternal(t));
 
-  // Категории расходов — только внешние оттоки, в отчётной валюте по курсу на дату.
+  // Категории расходов — внешние оттоки периода; счётчик операций из того же массива, что и суммы.
+  // Дебаг-режим «показать внутренние»: internal-категории видимы, но с бейджем и без вклада в тотал.
   const byCategory = {};
-  TRANSACTIONS.filter(t => t.amount < 0 && !txIsInternal(t)).forEach(t => {
-    if (!byCategory[t.category]) byCategory[t.category] = { sum: 0, Icon: t.Icon, color: t.color };
+  base.filter(t => t.amount < 0 && (!txIsInternal(t) || showInternalCats)).forEach(t => {
+    const internalTx = txIsInternal(t);
+    if (!byCategory[t.category]) byCategory[t.category] = { sum: 0, count: 0, Icon: t.Icon, color: t.color, internal: internalTx };
     byCategory[t.category].sum += inDC(t);
+    byCategory[t.category].count += 1;
   });
   const allCategories = Object.entries(byCategory).sort((a, b) => b[1].sum - a[1].sum);
   const categories = allCategories.filter(([name]) => !hiddenCats.includes(name));
   const maxCat = categories.length ? categories[0][1].sum : 1;
+  const opsLabel = (n) => `${n} ${n === 1 ? "операция" : n <= 4 ? "операции" : "операций"}`;
 
-  // Чипы фильтра: все категории фида в порядке появления (внутренние — тоже, кейс «не голый ноль»).
-  const filterCats = TRANSACTIONS.map(t => t.category).filter((v, i, a) => a.indexOf(v) === i);
+  // Чипы фильтра: категории периода в порядке появления (внутренние — тоже, кейс «не голый ноль»).
+  const filterCats = base.map(t => t.category).filter((v, i, a) => a.indexOf(v) === i);
+  const pickPeriod = (k) => { setPeriod(k); setCatFilter(null); };
 
   return (
     <div style={{
@@ -2869,16 +2906,30 @@ function StatisticsScreen({ C, displayCurrency, onOpenTransaction }) {
     }}>
       <StatusBar C={C} />
       <div style={{ padding: "8px 20px 0" }}>
-        <div style={{ fontSize: 24, fontWeight: 800, color: C.text, letterSpacing: -0.5, marginBottom: 14 }}>Статистика</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <div style={{ fontSize: 24, fontWeight: 800, color: C.text, letterSpacing: -0.5 }}>Статистика</div>
+          {/* Отчётная валюта тотала — локальный выбор экрана */}
+          <div style={{ display: "flex", backgroundColor: C.faint, borderRadius: 14, padding: 2 }}>
+            {["KZT", "USD", "EUR", "RUB"].map(cur => (
+              <div key={cur} data-press onClick={() => setStatCur(cur)} style={{
+                padding: "5px 9px", borderRadius: 12, cursor: "pointer",
+                fontSize: 11, fontWeight: 700,
+                backgroundColor: statCur === cur ? C.card : "transparent",
+                boxShadow: statCur === cur ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                color: statCur === cur ? C.text : C.muted,
+              }}>{cur}</div>
+            ))}
+          </div>
+        </div>
 
-        {/* Период (real transactionFilters.periodSheet) */}
+        {/* Период (real transactionFilters.periodSheet): month = июль 2026, year = всё, range = пресет */}
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
           {[
             { key: "month", label: "За месяц" },
             { key: "year", label: "За год" },
-            { key: "range", label: "Период" },
+            { key: "range", label: period === "range" ? ({ "2026-06": "Июнь", "2026-07": "Июль" })[rangePreset] : "Период" },
           ].map(p => (
-            <div key={p.key} data-press onClick={() => setPeriod(p.key)} style={{
+            <div key={p.key} data-press onClick={() => p.key === "range" ? setPeriodSheetOpen(true) : pickPeriod(p.key)} style={{
               padding: "7px 14px", borderRadius: 18, cursor: "pointer",
               fontSize: 13, fontWeight: 600,
               backgroundColor: period === p.key ? C.accentDark : C.faint,
@@ -2945,6 +2996,9 @@ function StatisticsScreen({ C, displayCurrency, onOpenTransaction }) {
               </span>
             </div>
           )}
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 6, padding: "0 2px" }}>
+            Курс на дату каждой операции
+          </div>
         </div>
 
         {/* Категории расходов (real totalTransactionsDetails.navigationTitle) */}
@@ -2970,7 +3024,15 @@ function StatisticsScreen({ C, displayCurrency, onOpenTransaction }) {
                   }}>
                     <cat.Icon size={15} color={cat.color} strokeWidth={1.9} />
                   </div>
-                  <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.text }}>{name}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{name}</span>
+                      {cat.internal && (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: C.muted, backgroundColor: C.faint, borderRadius: 20, padding: "1px 7px", flexShrink: 0 }}>внутренняя</span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>{opsLabel(cat.count)}</div>
+                  </div>
                   <span style={{ fontSize: 14, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
                     {fmtFull(cat.sum)} <span style={{ fontSize: 11, color: C.muted }}>{dcMeta.symbol}</span>
                   </span>
@@ -3010,7 +3072,7 @@ function StatisticsScreen({ C, displayCurrency, onOpenTransaction }) {
               const internalTx = txIsInternal(t);
               const sym = (CURRENCY_META[t.currency] || {}).symbol || t.currency;
               return (
-                <div key={t.id} data-press onClick={() => onOpenTransaction?.(t)} style={{
+                <div key={t.id} data-press onClick={() => onOpenTransaction?.(t, dc)} style={{
                   display: "flex", alignItems: "center", gap: 12,
                   padding: "13px 16px", cursor: "pointer",
                   borderBottom: i < filtered.length - 1 ? `1px solid ${C.divider}` : "none",
@@ -3080,6 +3142,22 @@ function StatisticsScreen({ C, displayCurrency, onOpenTransaction }) {
               </div>
             );
           })}
+        </BottomSheetModal>
+      )}
+
+      {/* «Период» — простой выбор из пресетов (без календаря) */}
+      {periodSheetOpen && (
+        <BottomSheetModal C={C} onClose={() => setPeriodSheetOpen(false)}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 16 }}>Период</div>
+          {[{ key: "2026-06", label: "Июнь" }, { key: "2026-07", label: "Июль" }].map((p, i) => (
+            <div key={p.key} data-press onClick={() => { setRangePreset(p.key); pickPeriod("range"); setPeriodSheetOpen(false); }} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "13px 0", cursor: "pointer",
+              borderBottom: i === 0 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <span style={{ flex: 1, fontSize: 15, fontWeight: 600, color: C.text }}>{p.label} 2026</span>
+              {period === "range" && rangePreset === p.key && <Check size={17} color={C.accentDark} strokeWidth={2.4} />}
+            </div>
+          ))}
         </BottomSheetModal>
       )}
     </div>
@@ -3261,8 +3339,14 @@ function SuccessScreen({ C, title, message, amountStr, note, onDone }) {
    («Транзакция», Карта списания, «В шаблоны», «Разделить»)
    ═══════════════════════════════════════════════ */
 
-function TransactionDetailsScreen({ tx, C, featureFlags, onBack, onSplit, onAddTemplate }) {
+function TransactionDetailsScreen({ tx, C, featureFlags, reportCurrency, onBack, onSplit, onAddTemplate }) {
   const isExpense = tx.amount < 0;
+  // Вклад операции в тотал (целевая модель): internal → 0, external в чужой валюте → курс на дату.
+  const repCur = reportCurrency || "KZT";
+  const isInternal = tx.date ? txIsInternal(tx) : false;
+  const crossCur = tx.date && !isInternal && tx.currency !== repCur;
+  const repMeta = CURRENCY_META[repCur] || { symbol: repCur };
+  const dateFmt = tx.date ? tx.date.split("-").reverse().join(".") : "";
   return (
     <ScreenShell C={C} title="Транзакция" onBack={onBack}>
       <div style={{ padding: "4px 20px 110px" }}>
@@ -3294,6 +3378,25 @@ function TransactionDetailsScreen({ tx, C, featureFlags, onBack, onSplit, onAddT
             <span style={{ fontSize: 12, fontWeight: 600, color: "#16A34A" }}>Успешно</span>
           </div>
         </div>
+
+        {/* Вклад в тотал: внутренняя → 0, внешняя в чужой валюте → по курсу на дату операции */}
+        {isInternal && (
+          <div style={{
+            backgroundColor: C.faint, borderRadius: 12, padding: "12px 14px", marginBottom: 16,
+            display: "flex", alignItems: "center", gap: 10,
+          }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: C.muted, backgroundColor: C.card, borderRadius: 20, padding: "3px 9px", flexShrink: 0 }}>{tx.category}</span>
+            <span style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.4 }}>Не влияет на тотал — деньги остались в банке</span>
+          </div>
+        )}
+        {crossCur && (
+          <div style={{
+            backgroundColor: C.faint, borderRadius: 12, padding: "12px 14px", marginBottom: 16,
+            fontSize: 12.5, color: C.muted, lineHeight: 1.4, fontFeatureSettings: "'tnum'",
+          }}>
+            В тотале: {tx.amount > 0 ? "+" : "−"}{fmtFull(convertOnDate(Math.abs(tx.amount), tx.currency, tx.date, repCur))} {repMeta.symbol} по курсу на {dateFmt}
+          </div>
+        )}
 
         {/* Details rows — real transactionDetails labels */}
         <div style={{
@@ -7710,6 +7813,7 @@ export default function FreedomV6() {
   const [manyCur, setManyCur] = useState(false); // стресс: до 8 валютных счетов на карте
   const [showUnavailable, setShowUnavailable] = useState(true); // недоступные продукты: серым vs скрыть
   const [includeBlocked, setIncludeBlocked] = useState(true); // наличие заблокированной карты в пикерах
+  const [showInternalCats, setShowInternalCats] = useState(false); // дебаг: внутренние категории в «Категориях расходов»
   // Bottom sheets: {type:'promo',promo} | {type:'topup'} | {type:'logout'}
   const [sheet, setSheet] = useState(null);
 
@@ -7762,6 +7866,7 @@ export default function FreedomV6() {
           manyCur={manyCur} setManyCur={setManyCur}
           showUnavailable={showUnavailable} setShowUnavailable={setShowUnavailable}
           includeBlocked={includeBlocked} setIncludeBlocked={setIncludeBlocked}
+          showInternalCats={showInternalCats} setShowInternalCats={setShowInternalCats}
           C={C}
         />
       )}
@@ -7822,8 +7927,8 @@ export default function FreedomV6() {
         />
       )}
       {activeTab === "statistics" && (
-        <StatisticsScreen C={C} displayCurrency={displayCurrency}
-          onOpenTransaction={(tx) => pushScreen({ type: "transaction", tx })}
+        <StatisticsScreen C={C} displayCurrency={displayCurrency} showInternalCats={showInternalCats}
+          onOpenTransaction={(tx, repCur) => pushScreen({ type: "transaction", tx, reportCur: repCur })}
         />
       )}
       {activeTab === "chats" && (
@@ -7978,7 +8083,7 @@ export default function FreedomV6() {
           />
         );
         if (s.type === "transaction") return (
-          <TransactionDetailsScreen key={i} tx={s.tx} C={C} featureFlags={featureFlags}
+          <TransactionDetailsScreen key={i} tx={s.tx} C={C} featureFlags={featureFlags} reportCurrency={s.reportCur || displayCurrency}
             onBack={popScreen}
             onSplit={(tx) => pushScreen({ type: "splitMain", tx })}
             onAddTemplate={() => pushScreen({ type: "templateCreated" })}

@@ -70,7 +70,7 @@ const CARD_PRODUCTS = [
         breakdown: [
           { currency: "KZT", amount: 35251706.16 },
           { currency: "USD", amount: 113324.68 },
-          { currency: "KRW", amount: 30268.06 },
+          { currency: "CNY", amount: 30268.06 },
         ], color: "#84CC16", visual: "pickle", fcBalance: 409.18,
       },
       { id: "invest-prestige", name: "Invest Prestige Card", sub: "D75003 — Freedom24", last4: "0011", type: "invest",
@@ -88,6 +88,11 @@ const CARD_PRODUCTS = [
           { currency: "KZT", amount: 528.06 },
           { currency: "TRY", amount: 420.23 },
         ], color: "#F472B6", visual: "harvey", fcBalance: 287.42,
+      },
+      { id: "blocked-card", name: "Travel Card", last4: "7799", type: "deposit", blocked: true,
+        flags: { withdrawalAllowed: false, replenishAllowed: false },
+        primaryBalance: 1250.00, primaryCurrency: "USD",
+        breakdown: [{ currency: "USD", amount: 1250.00 }], color: "#94A3B8", visual: "fresh", fcBalance: 0,
       },
       { id: "tfos", name: "Инвесткарта TFOS", sub: "ZA #1466005 — TFOS", last4: "6536", type: "invest",
         primaryBalance: 634520.27, primaryCurrency: "USD",
@@ -172,10 +177,9 @@ const CURRENCY_META = {
   CNY: { symbol: "¥", flag: "🇨🇳", name: "Юань" },
   TRY: { symbol: "₺", flag: "🇹🇷", name: "Лира" },
   AED: { symbol: "د.إ", flag: "🇦🇪", name: "Дирхам" },
-  KRW: { symbol: "₩", flag: "🇰🇷", name: "Вона" },
 };
 
-const RATES_TO_KZT = { KZT: 1, USD: 455.0, EUR: 495.0, RUB: 5.1, CNY: 64.0, TRY: 12.5, AED: 124.0, KRW: 0.33 };
+const RATES_TO_KZT = { KZT: 1, USD: 455.0, EUR: 495.0, RUB: 5.1, CNY: 64.0, TRY: 12.5, AED: 124.0 };
 
 /* ═══════════════════════════════════════════════
    ПИКЕР ПРОДУКТА — логика из протокола встречи 25.06.2026
@@ -217,6 +221,102 @@ function resolveCreditAccount(card, debitCurrency) {
     if (hit) return { ...hit, mono: false };
   }
   return { ...subs[0], mono: false };
+}
+
+/* ═══════════════════════════════════════════════
+   ЕДИНАЯ МОДЕЛЬ ПРОДУКТОВ — прод-паритет с TransferOwn:
+   пикер перевода собирается из пяти классов (карты, счета, депозиты,
+   кредиты, инвестиции), а не только из карт.
+   ═══════════════════════════════════════════════ */
+
+// Порядок групп в пикерах. dstOnly — класс существует только на стороне «Куда».
+const PRODUCT_GROUPS = [
+  { key: "deposit",     label: "Депозитные карты" },
+  { key: "invest",      label: "Инвест-карты" },
+  { key: "cifra",       label: "Цифра банк" },
+  { key: "account",     label: "Счета" },
+  { key: "depositProd", label: "Депозиты" },
+  { key: "credit",      label: "Кредиты", dstOnly: true },
+  { key: "broker",      label: "Брокерские счета", dstOnly: true },
+];
+
+// Нормализация всех классов к одному виду:
+// { id, kind, group, name, last4?, mask?, color, blocked?, minReplenish?, accounts[], flags{} }
+function buildProducts(manyCur) {
+  const out = [];
+  CARD_PRODUCTS.forEach(g => g.cards.forEach(c => out.push({
+    id: c.id, kind: "card", group: c.type || "deposit", name: c.name,
+    last4: c.last4, mask: null, color: c.color, blocked: !!c.blocked,
+    accounts: cardSubAccountsX(c, manyCur),
+    flags: {
+      withdrawalAllowed: !c.blocked, replenishAllowed: !c.blocked,
+      toCifra: (c.type || "deposit") !== "cifra", fromCifra: false,
+      ...(c.flags || {}),
+    },
+  })));
+  ACCOUNTS_LIST.forEach(a => out.push({
+    id: `acc-${a.id}`, kind: "account", group: "account", name: a.name,
+    last4: a.number.replace(/\s/g, "").slice(-4),
+    mask: `${a.number.slice(0, 4)}•••${a.number.replace(/\s/g, "").slice(-5)}`,
+    color: "#475569",
+    accounts: [{ currency: a.currency, amount: a.balance }],
+    flags: { withdrawalAllowed: true, replenishAllowed: true, toCifra: true, fromCifra: false },
+  }));
+  DEPOSITS.forEach(d => out.push({
+    id: `dep-${d.id}`, kind: "deposit", group: "depositProd",
+    name: `${d.name} · ${d.rate.toFixed(1)}%`, last4: null, mask: `Депозит до ${d.closingDate}`, color: "#0EA5E9",
+    accounts: [{ currency: d.currency, amount: d.balance }],
+    // Мок: у одного депозита минимальная сумма пополнения (прод: minReplenish)
+    minReplenish: d.id === 1 ? 1000 : null,
+    // Депозит — строго same-currency в обе стороны: без иерархии и конверсии.
+    flags: { withdrawalAllowed: true, replenishAllowed: true, sameCurrencyOnly: true, toCifra: false, fromCifra: false },
+  }));
+  CREDITS.forEach(cr => out.push({
+    id: `cr-${cr.id}`, kind: "credit", group: "credit",
+    name: cr.name, last4: null, mask: `Платёж до ${cr.payoffDate}`, color: "#EA580C",
+    accounts: [{ currency: cr.currency, amount: cr.monthly }],
+    // Кредит — только зачисление (сценарий «погашение»).
+    flags: { withdrawalAllowed: false, replenishAllowed: true, toCifra: false, fromCifra: false },
+  }));
+  BROKER_ACCOUNTS.forEach(g => g.accounts.forEach(a => out.push({
+    id: `br-${a.id.replace(/[^\w]/g, "")}`, kind: "broker", group: "broker",
+    name: `${g.group} · ${a.type}`, last4: null, mask: a.id, color: "#F59E0B",
+    accounts: [{ currency: a.currency, amount: a.balance }],
+    // Инвестиции — только зачисление; списание с брокера идёт через поручение ТН (TnOrderScreen).
+    flags: { withdrawalAllowed: false, replenishAllowed: true, toCifra: false, fromCifra: false },
+  })));
+  return out;
+}
+
+// Гейты пары «источник → цель» (прод-правила). Возвращают { ok, reason?, hide? }.
+function productAsSource(p, target) {
+  if (p.kind === "broker") return { ok: false, hide: true }; // инвестиции отфильтрованы из «Откуда» полностью
+  if (p.kind === "credit") return { ok: false, hide: true }; // кредиты — только на стороне «Куда»
+  if (p.blocked) return { ok: false, reason: "Карта заблокирована" };
+  if (!p.flags.withdrawalAllowed) return { ok: false, reason: "Только пополнение" };
+  if (target) {
+    const sC = p.group === "cifra", tC = target.group === "cifra";
+    if (sC && !tC && !target.flags.fromCifra) return { ok: false, reason: "Перевод из Цифры недоступен" };
+    if (!sC && tC && !p.flags.toCifra) return { ok: false, reason: "Недоступно для Цифра-карт" };
+    if (p.flags.sameCurrencyOnly && !target.accounts.some(a => a.currency === p.accounts[0].currency))
+      return { ok: false, reason: `Только счёт в ${p.accounts[0].currency}` };
+    if (target.flags.sameCurrencyOnly && !p.accounts.some(a => a.currency === target.accounts[0].currency && a.amount > 0))
+      return { ok: false, reason: `Только счёт в ${target.accounts[0].currency}` };
+  }
+  if (!p.accounts.some(a => a.amount > 0)) return { ok: false, reason: "Нет средств" };
+  return { ok: true };
+}
+function productAsTarget(p, source) {
+  if (p.blocked) return { ok: false, reason: "Карта заблокирована" };
+  if (!p.flags.replenishAllowed) return { ok: false, reason: "Только списание" };
+  if (source) {
+    const sC = source.group === "cifra", tC = p.group === "cifra";
+    if (sC && !tC && !p.flags.fromCifra) return { ok: false, reason: "Перевод из Цифры недоступен" };
+    if (!sC && tC && !source.flags.toCifra) return { ok: false, reason: "Недоступно для Цифра-карт" };
+    if (p.flags.sameCurrencyOnly && !source.accounts.some(a => a.currency === p.accounts[0].currency && a.amount > 0))
+      return { ok: false, reason: `Только счёт в ${p.accounts[0].currency}` };
+  }
+  return { ok: true };
 }
 
 function fmtCompact(n) {

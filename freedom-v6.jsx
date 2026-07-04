@@ -2858,10 +2858,10 @@ function StatisticsScreen({ C, displayCurrency, showInternalCats, onOpenTransact
   const [prodFilter, setProdFilter] = useState(null);
   const [prodSheetOpen, setProdSheetOpen] = useState(false);
   const prodOptions = [
-    ...CARD_PRODUCTS.flatMap(g => g.cards.filter(c => !c.blocked).map(c => ({ id: c.id, name: c.name, kind: "card" }))),
-    ...ACCOUNTS_LIST.map(a => ({ id: `acc-${a.id}`, name: a.name, kind: "account" })),
+    ...CARD_PRODUCTS.flatMap(g => g.cards.filter(c => !c.blocked).map(c => ({ id: c.id, name: c.name, kind: "card", sub: `•• ${c.last4}`, color: c.color }))),
+    ...ACCOUNTS_LIST.map(a => ({ id: `acc-${a.id}`, name: a.name, kind: "account", sub: `${a.number.slice(0, 4)}…${a.number.replace(/\s/g, "").slice(-4)}`, color: "#475569" })),
   ];
-  const prodName = prodFilter ? (prodOptions.find(o => o.id === prodFilter) || {}).name : null;
+  const prodSel = prodFilter ? prodOptions.find(o => o.id === prodFilter) : null;
 
   // Период: month = текущий месяц моков (июль 2026), year = всё, range = пресет из шита.
   const periodPrefix = period === "month" ? "2026-07" : period === "range" ? rangePreset : null;
@@ -2922,6 +2922,35 @@ function StatisticsScreen({ C, displayCurrency, showInternalCats, onOpenTransact
           </div>
         </div>
 
+        {/* Селектор продукта — контекст экрана (прод Card or Account), не фильтр-чип:
+            определяет, по какой карте или счёту смотрим статистику. */}
+        <div data-press onClick={() => setProdSheetOpen(true)} style={{
+          backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`,
+          padding: "11px 12px", display: "flex", alignItems: "center", gap: 10,
+          cursor: "pointer", marginBottom: 14,
+        }}>
+          <div style={{
+            width: 30, height: 30, borderRadius: 8,
+            backgroundColor: prodSel ? prodSel.color : C.accentDark,
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          }}>
+            {prodSel
+              ? (prodSel.kind === "card" ? <CreditCard size={14} color="#fff" strokeWidth={2} /> : <Landmark size={14} color="#fff" strokeWidth={2} />)
+              : <Wallet size={14} color={C.accent} strokeWidth={2} />}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {prodSel ? prodSel.name : "Все карты и счета"}
+            </div>
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'" }}>
+              {prodSel ? prodSel.sub : "Статистика по всем продуктам"}
+            </div>
+          </div>
+          <div style={{ width: 22, height: 22, borderRadius: 6, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <ChevronsUpDown size={13} color={C.muted} strokeWidth={2} />
+          </div>
+        </div>
+
         {/* Фильтры (прод transactionFilters: Period · Card or Account): month = июль 2026, year = всё */}
         <div style={{ display: "flex", gap: 8, marginBottom: 20, overflowX: "auto", scrollbarWidth: "none" }}>
           {[
@@ -2937,17 +2966,6 @@ function StatisticsScreen({ C, displayCurrency, showInternalCats, onOpenTransact
               transition: "all 0.15s",
             }}>{p.label}</div>
           ))}
-          <div data-press onClick={() => setProdSheetOpen(true)} style={{
-            flexShrink: 0, display: "flex", alignItems: "center", gap: 5,
-            padding: "7px 14px", borderRadius: 18, cursor: "pointer",
-            fontSize: 13, fontWeight: 600,
-            backgroundColor: prodFilter ? C.accentDark : C.faint,
-            color: prodFilter ? C.accent : C.sub,
-            transition: "all 0.15s",
-          }}>
-            <span style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prodName || "Карта или счёт"}</span>
-            <ChevronDown size={13} strokeWidth={2.2} />
-          </div>
         </div>
 
         {/* Движение средств (real navigationCashFlowTitle) — только внешние операции.

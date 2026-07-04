@@ -6433,6 +6433,12 @@ const TOKENIZED_CARDS = [
 
 // Шторка «Пополнить» (прод-состав, улучшенный): весь выбор источника происходит здесь.
 // Свои карты раскрываются в валютные счета, чужие — в токенизированные; дальше один экран суммы.
+// Группы-источники, свёрнутые в аккордеон в шторке пополнения (редкий кейс — не разводим хлам).
+const COLLAPSED_SRC_GROUPS = {
+  account: { Icon: Landmark, color: "#475569", count: (n) => `${n} ${n === 1 ? "счёт" : n <= 4 ? "счёта" : "счетов"}` },
+  depositProd: { Icon: PiggyBank, color: "#0EA5E9", count: (n) => `${n} ${n === 1 ? "депозит" : n <= 4 ? "депозита" : "депозитов"}` },
+};
+
 function TopUpSheetContent({ C, card, displayCurrency, manyCur, showUnavailable, includeBlocked, onPickOwn, onPickExternal, onPickVariant }) {
   const dc = displayCurrency || "KZT";
   const dcMeta = CURRENCY_META[dc] || { symbol: dc };
@@ -6451,9 +6457,9 @@ function TopUpSheetContent({ C, card, displayCurrency, manyCur, showUnavailable,
     products.filter(p => p.group === g.key && p.id !== card.id).forEach(p => {
       const av = productAsSource(p, targetProduct);
       if (av.hide) return;
-      if (av.ok) rows.push({ g: g.label, p, reason: null });
+      if (av.ok) rows.push({ g: g.label, gk: g.key, p, reason: null });
       else if (showUnavailable) {
-        if (greyShown < 2) { rows.push({ g: g.label, p, reason: av.reason }); greyShown++; }
+        if (greyShown < 2) { rows.push({ g: g.label, gk: g.key, p, reason: av.reason }); greyShown++; }
         else hiddenRows.push({ p, reason: av.reason });
       }
     });
@@ -6461,15 +6467,17 @@ function TopUpSheetContent({ C, card, displayCurrency, manyCur, showUnavailable,
   const grouped = [];
   rows.forEach(r => {
     let grp = grouped.find(x => x.label === r.g);
-    if (!grp) { grp = { label: r.g, items: [] }; grouped.push(grp); }
+    if (!grp) { grp = { label: r.g, key: r.gk, items: [] }; grouped.push(grp); }
     grp.items.push(r);
   });
-  // Бейдж «по объёму» — на доступном продукте с самым крупным счётом.
+  // Бейдж «по объёму» — на доступном продукте с самым крупным счётом (карты; свёрнутые группы не считаем).
   const maxAcc = (p) => Math.max(...p.accounts.map(a => convertToKZT(a.amount, a.currency)), 0);
-  const availProds = rows.filter(r => !r.reason).map(r => r.p);
+  const availProds = rows.filter(r => !r.reason && !COLLAPSED_SRC_GROUPS[r.gk]).map(r => r.p);
   const topProd = availProds.length ? availProds.reduce((mx, p) => (maxAcc(p) > maxAcc(mx) ? p : mx), availProds[0]) : null;
   const [otherOpen, setOtherOpen] = useState(false);
   const [hiddenOpen, setHiddenOpen] = useState(false);
+  // Счета и депозиты — редкий источник: свёрнутый аккордеон (как «С карты другого банка»)
+  const [srcGroupOpen, setSrcGroupOpen] = useState({});
 
   const label = (text) => <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, margin: "16px 0 6px" }}>{text}</div>;
 
@@ -6492,45 +6500,79 @@ function TopUpSheetContent({ C, card, displayCurrency, manyCur, showUnavailable,
         <ChevronRight size={15} color={C.muted} strokeWidth={1.8} />
       </div>
 
-      {/* Продукты-источники: 5 классов; недоступные — серым с причиной */}
-      {grouped.map(g => (
-        <div key={g.label}>
-          {label(g.label)}
-          <div style={{ backgroundColor: C.bg, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
-            {g.items.map(({ p, reason }, ni) => {
-              const Icon = PRODUCT_KIND_ICON[p.kind] || CreditCard;
-              const totalKZT = p.accounts.reduce((t2, a) => t2 + convertToKZT(a.amount, a.currency), 0);
-              const availCnt = p.accounts.filter(a => a.amount > 0).length;
-              return (
-                <div key={p.id} data-press={reason ? undefined : true} onClick={() => !reason && onPickOwn(p)} style={{
-                  display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
-                  cursor: reason ? "default" : "pointer", opacity: reason ? 0.45 : 1,
-                  borderBottom: ni < g.items.length - 1 ? `1px solid ${C.divider}` : "none",
-                }}>
-                  <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: p.color || C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <Icon size={17} color="#fff" strokeWidth={2} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
-                    <div style={{ fontSize: 12, color: reason ? "#B45309" : C.muted, marginTop: 2, fontFeatureSettings: "'tnum'", display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {reason || `${p.last4 ? `•• ${p.last4} · ` : ""}${availCnt < p.accounts.length ? `доступно ${availCnt} из ${p.accounts.length}` : plural(p.accounts.length)}`}
-                      </span>
-                      {!reason && topProd && p.id === topProd.id && (
-                        <span style={{ fontSize: 10, fontWeight: 700, color: C.accentDark, backgroundColor: C.accentSoft, borderRadius: 20, padding: "1px 7px", flexShrink: 0 }}>по объёму</span>
-                      )}
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
-                    {fmtFull(convertTo(totalKZT, dc))} <span style={{ fontSize: 11, color: C.muted }}>{dcMeta.symbol}</span>
-                  </div>
-                  {!reason && <ChevronRight size={15} color={C.muted} strokeWidth={1.8} style={{ marginLeft: 4, flexShrink: 0 }} />}
+      {/* Продукты-источники: 5 классов; недоступные — серым с причиной.
+          Счета и депозиты — редкий источник: свёрнутый аккордеон в стиле «С карты другого банка». */}
+      {grouped.map(g => {
+        const renderRow = ({ p, reason }, ni, arr) => {
+          const Icon = PRODUCT_KIND_ICON[p.kind] || CreditCard;
+          const totalKZT = p.accounts.reduce((t2, a) => t2 + convertToKZT(a.amount, a.currency), 0);
+          const availCnt = p.accounts.filter(a => a.amount > 0).length;
+          return (
+            <div key={p.id} data-press={reason ? undefined : true} onClick={() => !reason && onPickOwn(p)} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+              cursor: reason ? "default" : "pointer", opacity: reason ? 0.45 : 1,
+              borderBottom: ni < arr.length - 1 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: p.color || C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Icon size={17} color="#fff" strokeWidth={2} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
+                <div style={{ fontSize: 12, color: reason ? "#B45309" : C.muted, marginTop: 2, fontFeatureSettings: "'tnum'", display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {reason || `${p.last4 ? `•• ${p.last4} · ` : ""}${availCnt < p.accounts.length ? `доступно ${availCnt} из ${p.accounts.length}` : plural(p.accounts.length)}`}
+                  </span>
+                  {!reason && topProd && p.id === topProd.id && (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: C.accentDark, backgroundColor: C.accentSoft, borderRadius: 20, padding: "1px 7px", flexShrink: 0 }}>по объёму</span>
+                  )}
                 </div>
-              );
-            })}
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                {fmtFull(convertTo(totalKZT, dc))} <span style={{ fontSize: 11, color: C.muted }}>{dcMeta.symbol}</span>
+              </div>
+              {!reason && <ChevronRight size={15} color={C.muted} strokeWidth={1.8} style={{ marginLeft: 4, flexShrink: 0 }} />}
+            </div>
+          );
+        };
+        const cfg = COLLAPSED_SRC_GROUPS[g.key];
+        if (cfg) {
+          const open = !!srcGroupOpen[g.key];
+          const sumKZT = g.items.filter(x => !x.reason)
+            .reduce((t2, x) => t2 + x.p.accounts.reduce((s, a) => s + convertToKZT(a.amount, a.currency), 0), 0);
+          return (
+            <div key={g.label}>
+              <div data-press onClick={() => setSrcGroupOpen(o => ({ ...o, [g.key]: !o[g.key] }))} style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "12px 0", cursor: "pointer",
+                borderBottom: open ? "none" : `1px solid ${C.divider}`,
+              }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: `${cfg.color}14`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <cfg.Icon size={18} color={cfg.color} strokeWidth={1.9} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{g.label}</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>
+                    {cfg.count(g.items.length)} · {fmtFull(convertTo(sumKZT, dc))} {dcMeta.symbol}
+                  </div>
+                </div>
+                <ChevronDown size={15} color={C.muted} strokeWidth={1.8} style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+              </div>
+              {open && (
+                <div style={{ borderLeft: `3px solid ${cfg.color}`, backgroundColor: C.faint, borderRadius: "0 8px 8px 0", marginBottom: 4 }}>
+                  {g.items.map(renderRow)}
+                </div>
+              )}
+            </div>
+          );
+        }
+        return (
+          <div key={g.label}>
+            {label(g.label)}
+            <div style={{ backgroundColor: C.bg, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+              {g.items.map(renderRow)}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {/* Внешние способы (прод-состав: чужая карта, реквизиты, брокер, крипта) */}
       {label("Другие способы")}

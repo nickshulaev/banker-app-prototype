@@ -6881,6 +6881,14 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
   const [creditSel, setCreditSel] = useState(null); // валюта зачисления; null = стартовый авто-подбор
   const [amount, setAmount] = useState("");
   const [amountSide, setAmountSide] = useState("debit"); // сумма по умолчанию — в валюте СПИСАНИЯ
+  // Новая карта другого банка (external без токена): PAN + срок + CVV (прод TransferCard)
+  const [extPan, setExtPan] = useState("");
+  const [extExp, setExtExp] = useState("");
+  const [extCvv, setExtCvv] = useState("");
+  const needExtForm = kind === "external" && !tok;
+  const extPanDigits = extPan.replace(/\D/g, "");
+  const extFormOk = !needExtForm
+    || (extPanDigits.length === 16 && extExp.replace(/\D/g, "").length === 4 && extCvv.length === 3);
 
   // Источники: счета продуктов, прошедших гейт источника; по объёму.
   const ownSources = products.flatMap(p => {
@@ -6973,7 +6981,7 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
   const depositMismatch = kind === "own" && target.flags.sameCurrencyOnly && debit && debit.currency !== target.accounts[0].currency;
   const minFail = target.minReplenish && creditAmount > 0 && creditAmount < target.minReplenish;
   const valid = num > 0 && !!credit && !creditErrorText && !depositMismatch && !minFail
-    && (balance == null || debitEquiv <= balance);
+    && extFormOk && (balance == null || debitEquiv <= balance);
 
   const focusSide = (side) => {
     if ((side === "credit") === inCredit) return;
@@ -6982,7 +6990,11 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
   };
 
   const extTitle = kind === "external" ? (tok ? tok.bank : "Карта другого банка") : "Apple Pay";
-  const extSub = kind === "external" ? (tok ? `${tok.network} •• ${tok.last4}` : "Visa или Mastercard") : "Картой из Wallet";
+  const extNet = extPanDigits[0] === "4" ? "VISA" : extPanDigits[0] === "5" ? "Mastercard" : null;
+  const extSub = kind === "external"
+    ? (tok ? `${tok.network} •• ${tok.last4}`
+      : extPanDigits.length === 16 && extNet ? `${extNet} •• ${extPanDigits.slice(-4)}` : "Visa или Mastercard")
+    : "Картой из Wallet";
   const confirm = () => valid && onConfirm({
     debit: kind === "own"
       ? { name: `${debit.prodName} · ${debit.currency}`, currency: debitCur, sub: `•• ${debit.last4 || "····"}` }
@@ -7047,6 +7059,34 @@ function TopUpAmountScreen({ C, card, source, displayCurrency, stressLong, manyC
               <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{extSub}</div>
             </div>
             <span data-press onClick={onChangeSource} style={{ fontSize: 13, fontWeight: 600, color: C.accentDark, cursor: "pointer", flexShrink: 0 }}>Изменить</span>
+          </div>
+        )}
+        {/* Новая карта другого банка: данные карты списания (прод TransferCard: PAN / ММ/ГГ / CVV) */}
+        {needExtForm && (
+          <div style={{ marginTop: 8, backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+            <div style={{ padding: "12px 14px", borderBottom: `1px solid ${C.divider}` }}>
+              <input value={extPan} inputMode="numeric" placeholder="Номер карты"
+                onChange={e => {
+                  const d = e.target.value.replace(/\D/g, "").slice(0, 16);
+                  setExtPan(d.replace(/(\d{4})(?=\d)/g, "$1 "));
+                }}
+                style={{ width: "100%", border: "none", outline: "none", background: "transparent", fontSize: 15, color: C.text, fontFamily: "inherit", fontFeatureSettings: "'tnum'" }} />
+            </div>
+            <div style={{ display: "flex" }}>
+              <div style={{ flex: 1, padding: "12px 14px", borderRight: `1px solid ${C.divider}` }}>
+                <input value={extExp} inputMode="numeric" placeholder="ММ/ГГ"
+                  onChange={e => {
+                    const d = e.target.value.replace(/\D/g, "").slice(0, 4);
+                    setExtExp(d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d);
+                  }}
+                  style={{ width: "100%", border: "none", outline: "none", background: "transparent", fontSize: 15, color: C.text, fontFamily: "inherit", fontFeatureSettings: "'tnum'" }} />
+              </div>
+              <div style={{ flex: 1, padding: "12px 14px" }}>
+                <input value={extCvv} inputMode="numeric" placeholder="CVV" type="password"
+                  onChange={e => setExtCvv(e.target.value.replace(/\D/g, "").slice(0, 3))}
+                  style={{ width: "100%", border: "none", outline: "none", background: "transparent", fontSize: 15, color: C.text, fontFamily: "inherit", fontFeatureSettings: "'tnum'" }} />
+              </div>
+            </div>
           </div>
         )}
         {depositMismatch && (

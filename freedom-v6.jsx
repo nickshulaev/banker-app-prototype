@@ -8258,7 +8258,7 @@ export default function FreedomV6() {
   const [showInternalCats, setShowInternalCats] = useState(false); // дебаг: внутренние категории в «Категориях расходов»
   // Моновалютный флоу переводов — дефолт; мультивалютный (прод) — за дебаг-тумблером.
   const [multiFlow, setMultiFlow] = useState(false);
-  const [monoVariant, setMonoVariant] = useState("context"); // context = валюта сверху | amount = валюта в сумме
+  const [monoVariant, setMonoVariant] = useState("amount"); // amount = валюта в сумме (выбор Ника) | context = валюта сверху
   const [openedAccounts, setOpenedAccounts] = useState({}); // счета, открытые из флоу: { productId: [cur] }
   // Bottom sheets: {type:'promo',promo} | {type:'topup'} | {type:'logout'}
   const [sheet, setSheet] = useState(null);

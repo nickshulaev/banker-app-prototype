@@ -410,6 +410,13 @@ const EXEC_COLORS = {
   cardShadow: "none",
 };
 
+/* Карты, открытые близким (executive-форк): держатель + месячный лимит. */
+const FAMILY_CARDS = [
+  { id: "fam-1", holder: "Айгерим", relation: "супруга", initials: "АТ", cardName: "Supercard", last4: "4412", limit: 500000, spent: 213400, currency: "KZT", color: "#D7C08A" },
+  { id: "fam-2", holder: "Айсултан", relation: "сын", initials: "АШ", cardName: "Junior Card", last4: "0917", limit: 150000, spent: 89200, currency: "KZT", color: "#8FA98F" },
+  { id: "fam-3", holder: "Марат", relation: "водитель", initials: "МК", cardName: "Expense Card", last4: "7788", limit: 300000, spent: 41000, currency: "KZT", color: "#7D8AA5" },
+];
+
 /* ═══════════════════════════════════════════════
    BLOCKS
    ═══════════════════════════════════════════════ */
@@ -7198,6 +7205,249 @@ function CardAccountPicker({ C, displayCurrency, products, counterpart, showUnav
 }
 
 /* ═══════════════════════════════════════════════
+   EXECUTIVE HOME — радикальный премиум-лейаут форка
+   Капитал → быстрые действия → свои карты (карусель-металл) →
+   карты близких (лимиты) → Travel → последние операции.
+   ═══════════════════════════════════════════════ */
+function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, onAvatarClick, onOpenTotal, onTransfer, onExchange, onTopUp, onOpenCard, onOpenFamily, onOpenEsim, onOpenAviata, onOpenTransaction, onOpenAllTransactions, onManager }) {
+  const dc = displayCurrency || "EUR";
+  const dcMeta = CURRENCY_META[dc] || { symbol: dc };
+  const capital = convertTo(totalInKZT, dc);
+  const secLabel = (t, action, onAction) => (
+    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", margin: "26px 0 10px" }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: "0.09em", textTransform: "uppercase" }}>{t}</span>
+      {action && <span data-press onClick={onAction} style={{ fontSize: 12, fontWeight: 600, color: C.accentFg, cursor: "pointer" }}>{action}</span>}
+    </div>
+  );
+  const fmtLim = (n) => fmtCompact(n);
+
+  return (
+    <div style={{
+      maxWidth: 430, margin: "0 auto", minHeight: "100dvh", backgroundColor: C.bg,
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', system-ui, sans-serif",
+      overflowX: "clip", paddingBottom: 96,
+    }}>
+      <StatusBar C={C} />
+      <div style={{ padding: "6px 20px 0" }}>
+        {/* Хедер: аватар (дебаг) · приветствие · менеджер */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div data-press onClick={onAvatarClick} style={{
+            width: 40, height: 40, borderRadius: "50%", backgroundColor: C.accentSoft,
+            border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0,
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: C.accentFg }}>НШ</span>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11, color: C.muted }}>Freedom Private</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: C.text, letterSpacing: -0.2 }}>Никита</div>
+          </div>
+          <div data-press onClick={onManager} style={{
+            width: 38, height: 38, borderRadius: "50%", backgroundColor: C.faint,
+            display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0,
+          }}>
+            <MessageCircle size={17} color={C.accentFg} strokeWidth={1.9} />
+          </div>
+        </div>
+
+        {/* Капитал — тонкий крупный */}
+        <div data-press onClick={onOpenTotal} style={{ padding: "30px 0 4px", cursor: "pointer" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: "0.09em", textTransform: "uppercase", marginBottom: 8 }}>Капитал</div>
+          <div style={{ fontSize: 44, fontWeight: 300, color: C.text, letterSpacing: -1.5, fontFeatureSettings: "'tnum'", lineHeight: 1 }}>
+            {fmtInt(capital)} <span style={{ fontSize: 26, color: C.muted, fontWeight: 300 }}>{dcMeta.symbol}</span>
+          </div>
+          <div style={{ fontSize: 12.5, color: C.accentFg, marginTop: 8, fontFeatureSettings: "'tnum'" }}>+2,4% за месяц</div>
+        </div>
+
+        {/* Быстрые действия — тонкие золотые */}
+        <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+          {[
+            { t: "Перевести", on: onTransfer },
+            { t: "Обменять", on: onExchange },
+            { t: "Пополнить", on: onTopUp },
+          ].map(a => (
+            <div key={a.t} data-press onClick={a.on} style={{
+              flex: 1, textAlign: "center", padding: "11px 0", borderRadius: 12,
+              border: `1px solid ${C.accentFg}44`, cursor: "pointer",
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.accentFg }}>{a.t}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Свои карты — карусель металла */}
+        {secLabel("Мои карты")}
+        <div style={{ display: "flex", gap: 12, overflowX: "auto", scrollbarWidth: "none", margin: "0 -20px", padding: "2px 20px 6px" }}>
+          {cards.map(card => (
+            <div key={card.id} data-press onClick={() => onOpenCard(card)} style={{
+              flexShrink: 0, width: 240, height: 148, borderRadius: 18, cursor: "pointer",
+              background: "linear-gradient(135deg, #1E1E24 0%, #17171B 55%, #232329 100%)",
+              border: `1px solid ${C.border}`, padding: "16px 18px",
+              display: "flex", flexDirection: "column", justifyContent: "space-between",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: C.accentFg, letterSpacing: "0.14em", textTransform: "uppercase" }}>Freedom Private</span>
+                <div style={{ width: 26, height: 18, borderRadius: 4, background: `linear-gradient(135deg, ${C.accentFg} 0%, #B39B62 100%)`, opacity: 0.9 }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.name}</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                  <span style={{ fontSize: 12, color: C.muted, fontFeatureSettings: "'tnum'" }}>•••• {card.last4}</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
+                    {fmtCompact(convertTo(cardSubAccounts(card).reduce((t2, a) => t2 + convertToKZT(a.amount, a.currency), 0), dc))} {dcMeta.symbol}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Карты близких — держатель + месячный лимит */}
+        {secLabel("Карты близких", "Открыть ещё")}
+        <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+          {FAMILY_CARDS.map((fc, i) => {
+            const pct = Math.min(100, Math.round(fc.spent / fc.limit * 100));
+            return (
+              <div key={fc.id} data-press onClick={() => onOpenFamily(fc)} style={{
+                padding: "13px 16px", cursor: "pointer",
+                borderBottom: i < FAMILY_CARDS.length - 1 ? `1px solid ${C.divider}` : "none",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: "50%", backgroundColor: C.accentSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: C.accentFg }}>{fc.initials}</span>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{fc.holder} <span style={{ color: C.muted, fontWeight: 500 }}>· {fc.relation}</span></div>
+                    <div style={{ fontSize: 11.5, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'" }}>{fc.cardName} •• {fc.last4}</div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>{fmtLim(fc.spent)} ₸</div>
+                    <div style={{ fontSize: 10.5, color: C.muted, fontFeatureSettings: "'tnum'" }}>из {fmtLim(fc.limit)}</div>
+                  </div>
+                </div>
+                <div style={{ marginTop: 9, marginLeft: 50, height: 3, borderRadius: 2, backgroundColor: C.faint, overflow: "hidden" }}>
+                  <div style={{ width: `${pct}%`, height: "100%", backgroundColor: C.accentFg, borderRadius: 2, opacity: 0.85 }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Travel — ядро сервисной части */}
+        {secLabel("Тревел")}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {[
+            { t: "Авиабилеты", s: "Поиск и покупка", Icon: Plane, on: onOpenAviata },
+            { t: "eSIM", s: "Интернет в поездках", Icon: Smartphone, on: onOpenEsim },
+            { t: "Lounge", s: "Залы ожидания", Icon: Sofa, soon: true },
+            { t: "Fast Track", s: "Без очередей", Icon: Zap, soon: true },
+          ].map(sv => (
+            <div key={sv.t} data-press={sv.soon ? undefined : true} onClick={sv.soon ? undefined : sv.on} style={{
+              backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`,
+              padding: "13px 14px", cursor: sv.soon ? "default" : "pointer", opacity: sv.soon ? 0.55 : 1,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <sv.Icon size={17} color={C.accentFg} strokeWidth={1.9} />
+                {sv.soon && <span style={{ fontSize: 9.5, fontWeight: 700, color: C.muted, backgroundColor: C.faint, borderRadius: 8, padding: "2px 7px" }}>скоро</span>}
+              </div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text }}>{sv.t}</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{sv.s}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Последние операции */}
+        {secLabel("Операции", "Все", onOpenAllTransactions)}
+        <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+          {TRANSACTIONS.slice(0, 3).map((t, i) => (
+            <div key={t.id} data-press onClick={() => onOpenTransaction(t)} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", cursor: "pointer",
+              borderBottom: i < 2 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <div style={{ width: 34, height: 34, borderRadius: "50%", backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <t.Icon size={15} color={C.accentFg} strokeWidth={1.9} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>{t.time}</div>
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 700, fontFeatureSettings: "'tnum'", color: t.amount > 0 ? "#7FB77E" : C.text, flexShrink: 0 }}>
+                {t.amount > 0 ? "+" : ""}{fmtFull(t.amount)} {(CURRENCY_META[t.currency] || {}).symbol || "₸"}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Карта близкого: лимит, прогресс, заморозка (локально в экране — прототип). */
+function FamilyCardScreen({ C, fc, onBack }) {
+  const [limit, setLimit] = useState(fc.limit);
+  const [frozen, setFrozen] = useState(false);
+  const [limitOpen, setLimitOpen] = useState(false);
+  const pct = Math.min(100, Math.round(fc.spent / limit * 100));
+  return (
+    <ScreenShell C={C} title={`${fc.holder} · ${fc.relation}`} onBack={onBack}>
+      <div style={{ padding: "4px 20px 110px" }}>
+        <div style={{
+          borderRadius: 18, background: "linear-gradient(135deg, #1E1E24 0%, #17171B 55%, #232329 100%)",
+          border: `1px solid ${C.border}`, padding: "18px", marginBottom: 18, opacity: frozen ? 0.5 : 1,
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 26 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: C.accentFg, letterSpacing: "0.14em", textTransform: "uppercase" }}>Freedom Private</span>
+            {frozen && <span style={{ fontSize: 10, fontWeight: 700, color: C.text, backgroundColor: C.faint, borderRadius: 8, padding: "3px 8px" }}>Заморожена</span>}
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 4 }}>{fc.cardName}</div>
+          <div style={{ fontSize: 12, color: C.muted, fontFeatureSettings: "'tnum'" }}>•••• {fc.last4}</div>
+        </div>
+
+        <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: "15px 16px", marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+            <span style={{ fontSize: 12, color: C.muted }}>Потрачено в июле</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>{fmtFull(fc.spent)} ₸</span>
+          </div>
+          <div style={{ height: 4, borderRadius: 2, backgroundColor: C.faint, overflow: "hidden", marginBottom: 8 }}>
+            <div style={{ width: `${pct}%`, height: "100%", backgroundColor: C.accentFg, borderRadius: 2 }} />
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 11.5, color: C.muted }}>Лимит на месяц</span>
+            <span style={{ fontSize: 11.5, color: C.muted, fontFeatureSettings: "'tnum'" }}>{fmtFull(limit)} ₸</span>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+          <div data-press onClick={() => setLimitOpen(true)} style={{ flex: 1, textAlign: "center", padding: "13px 0", borderRadius: 12, border: `1px solid ${C.accentFg}44`, cursor: "pointer" }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: C.accentFg }}>Изменить лимит</span>
+          </div>
+          <div data-press onClick={() => setFrozen(f => !f)} style={{ flex: 1, textAlign: "center", padding: "13px 0", borderRadius: 12, border: `1px solid ${frozen ? C.accentFg : C.border}`, cursor: "pointer" }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: frozen ? C.accentFg : C.text }}>{frozen ? "Разморозить" : "Заморозить"}</span>
+          </div>
+        </div>
+        <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.5 }}>
+          Карта привязана к вашему счёту. Владелец видит только свой лимит — балансы и операции остальных счетов ему недоступны.
+        </div>
+      </div>
+
+      {limitOpen && (
+        <BottomSheetModal C={C} onClose={() => setLimitOpen(false)}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 16 }}>Лимит на месяц</div>
+          {[150000, 300000, 500000, 1000000].map((v, i) => (
+            <div key={v} data-press onClick={() => { setLimit(v); setLimitOpen(false); }} style={{
+              display: "flex", alignItems: "center", padding: "13px 0", cursor: "pointer",
+              borderBottom: i < 3 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <span style={{ flex: 1, fontSize: 15, fontWeight: 600, color: C.text, fontFeatureSettings: "'tnum'" }}>{fmtFull(v)} ₸</span>
+              {limit === v && <Check size={17} color={C.accentFg} strokeWidth={2.4} />}
+            </div>
+          ))}
+        </BottomSheetModal>
+      )}
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    МОНОВАЛЮТНЫЙ ПЕРЕВОД (дефолтный флоу)
    Концепция: счета остаются сущностью, но выбирается ВАЛЮТА операции
    (дефолт EUR) — счёт под картой резолвится сам. Нет счёта → предлагаем
@@ -8313,7 +8563,33 @@ export default function FreedomV6() {
           C={C}
         />
       )}
-      {activeTab === "products" && (
+      {activeTab === "products" && theme === "exec" && (
+        <ExecHomeScreen C={C} displayCurrency={displayCurrency} totalInKZT={totalInKZT}
+          cards={activeCardProducts.flatMap(g => g.cards).filter(c => !c.blocked)}
+          onAvatarClick={() => setDebugOpen(true)}
+          onOpenTotal={() => pushScreen({ type: "total" })}
+          onTransfer={openTransferHub}
+          onExchange={() => {
+            const prods = buildProducts(manyCur, includeBlocked);
+            const card = prods.filter(pr => pr.kind === "card" && pr.accounts.length > 1 && !pr.blocked)
+              .sort((a, b) => prodScore(b) - prodScore(a))[0];
+            if (card) openExchange(card.id);
+          }}
+          onTopUp={() => {
+            const prods = buildProducts(manyCur, includeBlocked);
+            const dst = prods.filter(pr => pr.kind === "card" && !pr.blocked).sort((a, b) => prodScore(b) - prodScore(a))[0];
+            if (dst) pushScreen({ type: "monoTransfer", dstId: dst.id });
+          }}
+          onOpenCard={(card) => pushScreen({ type: "product", card })}
+          onOpenFamily={(fc) => pushScreen({ type: "familyCard", fc })}
+          onOpenEsim={() => pushScreen({ type: "esim" })}
+          onOpenAviata={() => pushScreen({ type: "aviata" })}
+          onOpenTransaction={(tx) => pushScreen({ type: "transaction", tx })}
+          onOpenAllTransactions={() => pushScreen({ type: "allTransactions" })}
+          onManager={() => setActiveTab("chats")}
+        />
+      )}
+      {activeTab === "products" && theme !== "exec" && (
         <MainScreen
           onAvatarClick={() => setDebugOpen(true)}
           displayCurrency={displayCurrency} setDisplayCurrency={setDisplayCurrency}
@@ -8465,6 +8741,9 @@ export default function FreedomV6() {
               },
             })}
           />
+        );
+        if (s.type === "familyCard") return (
+          <FamilyCardScreen key={i} C={C} fc={s.fc} onBack={popScreen} />
         );
         if (s.type === "servicesList") return (
           <ScreenShell key={i} C={C} title="Оплата услуг" onBack={popScreen}>

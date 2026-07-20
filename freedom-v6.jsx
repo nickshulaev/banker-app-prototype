@@ -394,6 +394,22 @@ const DARK_COLORS = {
   cardShadow: "none",
 };
 
+const EXEC_COLORS = {
+  bg: "#0C0C0E",
+  card: "#16161A",
+  text: "#F5F2EA",
+  sub: "rgba(245,242,234,0.72)",
+  muted: "rgba(245,242,234,0.45)",
+  faint: "rgba(245,242,234,0.05)",
+  border: "rgba(245,242,234,0.09)",
+  divider: "rgba(245,242,234,0.06)",
+  accent: "#16130B",
+  accentDark: "#D7C08A",
+  accentFg: "#D7C08A",
+  accentSoft: "rgba(215,192,138,0.14)",
+  cardShadow: "none",
+};
+
 /* ═══════════════════════════════════════════════
    BLOCKS
    ═══════════════════════════════════════════════ */
@@ -943,6 +959,7 @@ function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrd
   const themes = [
     { key: "stripe", label: "Light", desc: "Светлая" },
     { key: "dark", label: "Dark", desc: "Тёмная" },
+    { key: "exec", label: "Executive", desc: "Премиум" },
   ];
 
   const [dragIndex, setDragIndex] = useState(null);
@@ -1528,7 +1545,7 @@ function MainScreen({
       {/* ═══ BALANCE ═══ */}
       {blockVis.balance && (
       <div style={{ order: blockOrder.indexOf("balance"), padding: "32px 20px 24px", textAlign: "center" }}>
-        <div style={{ fontSize: 13, color: C.muted, fontWeight: 500, marginBottom: 10 }}>Общий баланс</div>
+        <div style={{ fontSize: 13, color: C.muted, fontWeight: 500, marginBottom: 10 }}>Капитал</div>
         <div>
           <div data-press onClick={() => onOpenTotal?.()} style={{
             fontSize: 40, fontWeight: 700, color: C.text,
@@ -2381,7 +2398,7 @@ function BottomTabBar({ active, onChange, C }) {
         { key: "statistics", Icon: BarChart3, label: "Статистика" },
         { key: "payments", Icon: ArrowLeftRight, label: "Перевести" },
         { key: "investments", Icon: TrendingUp, label: "Инвестиции" },
-        { key: "chats", Icon: MessageCircle, label: "Поддержка" },
+        { key: "chats", Icon: MessageCircle, label: "Менеджер" },
       ].map(tab => {
         const isActive = active === tab.key;
         return (
@@ -6323,7 +6340,7 @@ function ChatsScreen({ C, featureFlags, onOpenThread }) {
     }}>
       <StatusBar C={C} />
       <div style={{ padding: "8px 20px 0" }}>
-        <div style={{ fontSize: 24, fontWeight: 800, color: C.text, letterSpacing: -0.5, marginBottom: 14 }}>Поддержка</div>
+        <div style={{ fontSize: 24, fontWeight: 800, color: C.text, letterSpacing: -0.5, marginBottom: 14 }}>Ваш менеджер</div>
         {!featureFlags.chat ? (
           <div style={{ textAlign: "center", padding: "80px 30px", fontSize: 13, color: C.muted, lineHeight: 1.5 }}>
             Чат отключён фичефлагом `chat` — в реальном приложении здесь была бы вкладка контактов
@@ -6346,7 +6363,7 @@ function ChatsScreen({ C, featureFlags, onOpenThread }) {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Поддержка Freedom</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Алишер · личный менеджер</span>
                   <span style={{ fontSize: 11, color: C.muted }}>09:31</span>
                 </div>
                 <div style={{ fontSize: 12, color: C.muted, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -6400,7 +6417,7 @@ function ChatThreadScreen({ C, onBack }) {
           <span style={{ fontSize: 13, fontWeight: 800, color: C.accent }}>F</span>
         </div>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Поддержка Freedom</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Алишер · личный менеджер</div>
           <div style={{ fontSize: 11, color: "#16A34A" }}>онлайн</div>
         </div>
       </div>
@@ -8133,11 +8150,13 @@ export default function FreedomV6() {
   const [displayCurrency, setDisplayCurrency] = useState("EUR");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [productTab, setProductTab] = useState("bank");
-  const [theme, setTheme] = useState("stripe");
+  const [theme, setTheme] = useState("exec"); // executive-форк: премиум-тема по умолчанию
   const [debugOpen, setDebugOpen] = useState(false);
   const [emptyState, setEmptyState] = useState(false);
+  // Executive-форк: супер-апп нагрузка выключена по умолчанию (Travel — остаётся).
+  const EXEC_HIDDEN_BLOCKS = ["requests", "promo", "news", "cta"];
   const [blockVis, setBlockVis] = useState(
-    BLOCK_LABELS.reduce((acc, b) => ({ ...acc, [b.key]: true }), {})
+    BLOCK_LABELS.reduce((acc, b) => ({ ...acc, [b.key]: !EXEC_HIDDEN_BLOCKS.includes(b.key) }), {})
   );
   const [blockOrder, setBlockOrder] = useState(BLOCK_LABELS.map(b => b.key));
   const [featureFlags, setFeatureFlags] = useState(
@@ -8258,7 +8277,7 @@ export default function FreedomV6() {
     return sum;
   }, [emptyState]);
 
-  const C = theme === "dark" ? DARK_COLORS : LIGHT_COLORS;
+  const C = theme === "exec" ? EXEC_COLORS : theme === "dark" ? DARK_COLORS : LIGHT_COLORS;
 
   useEffect(() => {
     document.body.style.backgroundColor = C.bg;

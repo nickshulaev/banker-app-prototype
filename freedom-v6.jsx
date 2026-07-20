@@ -2389,7 +2389,7 @@ function MainScreen({
    BOTTOM TAB BAR — real HomeTab: products / statistics / payments / chat
    ═══════════════════════════════════════════════ */
 
-function BottomTabBar({ active, onChange, C, hidePayments }) {
+function BottomTabBar({ active, onChange, C }) {
   return (
     <div style={{
       position: "fixed", bottom: 0, left: 0, right: 0,
@@ -2406,7 +2406,7 @@ function BottomTabBar({ active, onChange, C, hidePayments }) {
         { key: "payments", Icon: ArrowLeftRight, label: "Перевести" },
         { key: "investments", Icon: TrendingUp, label: "Инвестиции" },
         { key: "chats", Icon: MessageCircle, label: "Менеджер" },
-      ].filter(tab => !(hidePayments && tab.key === "payments")).map(tab => {
+      ].map(tab => {
         const isActive = active === tab.key;
         return (
           <div key={tab.key} data-press onClick={() => onChange(tab.key)} style={{
@@ -2446,7 +2446,7 @@ function BottomTabBar({ active, onChange, C, hidePayments }) {
    «Другим» (По номеру телефона / На карту другого банка / По номеру счета / SWIFT) → Оплата услуг.
    selectedProduct = вход «Перевести» с продукта: пункты фильтруются его transferAllowedSettings
    (прод checkTransferAllowedSettingsForSelectedProduct), заголовок «Отправить». */
-function PaymentsScreen({ C, featureFlags, selectedProduct, embedded, onOpenStub, onTemplates, onTransferOwn, onRequestMoney, onClientTransfer, onFromOtherBank, onBrokerRefill, onPhoneTransfer, onToOtherCard, onConversion, onQrScan, onSwift, onIban, onMobilePay, onOpenCategory, onOpenTemplate, onServices }) {
+function PaymentsScreen({ C, featureFlags, selectedProduct, embedded, onOpenStub, onTemplates, onTransferOwn, onTopUpOwn, onRequestMoney, onClientTransfer, onFromOtherBank, onCifraIn, onCryptoIn, onBrokerRefill, onPhoneTransfer, onToOtherCard, onConversion, onQrScan, onSwift, onIban, onMobilePay, onOpenCategory, onOpenTemplate, onServices }) {
   // Гейт настроек выбранного продукта: без продукта — всё разрешено (как в проде).
   const sp = (path) => !selectedProduct ? true : selectedProduct.flags[path] === true;
   // «На свой брокерский счет» — если есть инвестиции с replenishAllowed; сабтайтл с receptions.
@@ -2513,6 +2513,20 @@ function PaymentsScreen({ C, featureFlags, selectedProduct, embedded, onOpenStub
           </div>
         </div>
 
+        {/* Пополнить — человеческие маршруты входящих денег (не только отправка) */}
+        {sp("replenishAllowed") && (
+          <Section title="Пополнить">
+            <Row Icon={Plus} color="#22C55E" title="Мою карту или счёт" subtitle="Между своими продуктами" onClick={onTopUpOwn} />
+            {featureFlags.p2pFromCard && selectedProduct?.group !== "cifra" && (
+              <Row Icon={ArrowDownLeft} color="#3B82F6" title="С карты другого банка" subtitle="В Тенге, Долларах и Евро" onClick={onFromOtherBank} />
+            )}
+            <Row Icon={Landmark} color="#0EA5E9" title="Из Цифра Банка" subtitle="По реквизитам — мгновенно" onClick={onCifraIn} />
+            {featureFlags.digitalAssets && (
+              <Row Icon={Wallet} color="#8B5CF6" title="Криптой" subtitle="USDT и BTC через Digital assets" onClick={onCryptoIn} last />
+            )}
+          </Section>
+        )}
+
         {/* Внутри Банка (getToClientBank; не для Цифра-продукта) */}
         {selectedProduct?.group !== "cifra" && withinBlocks.length > 0 && (
           <div style={{ marginBottom: 24 }}>
@@ -2548,9 +2562,6 @@ function PaymentsScreen({ C, featureFlags, selectedProduct, embedded, onOpenStub
         {/* Себе (ownTransfersSection) */}
         <Section title="Себе">
           <Row Icon={Repeat} color="#22C55E" title="Между счетами" subtitle="Карты, Кредиты, Депозиты" onClick={onTransferOwn} />
-          {featureFlags.p2pFromCard && selectedProduct?.group !== "cifra" && (
-            <Row Icon={ArrowDownLeft} color="#3B82F6" title="С карты другого банка" subtitle="В Тенге, Долларах и Евро" onClick={onFromOtherBank} />
-          )}
           {featureFlags.conversionRates && (
             <Row Icon={ArrowLeftRight} color="#F59E0B" title="Обмен валюты" subtitle="Конвертация по курсу" onClick={onConversion} />
           )}
@@ -2880,7 +2891,7 @@ function StubScreen({ C, title, note }) {
    («Статистика», «Движение средств», «Категории расходов»)
    ═══════════════════════════════════════════════ */
 
-function StatisticsScreen({ C, displayCurrency, showInternalCats, onOpenTransaction }) {
+function StatisticsScreen({ C, displayCurrency, showInternalCats, requireProduct, onOpenTransaction }) {
   const [period, setPeriod] = useState("month");
   const [rangePreset, setRangePreset] = useState("2026-06"); // пресет чипа «Период»
   const [periodSheetOpen, setPeriodSheetOpen] = useState(false);
@@ -2910,12 +2921,14 @@ function StatisticsScreen({ C, displayCurrency, showInternalCats, onOpenTransact
     }))
     .sort((a, b) => b.totalKZT - a.totalKZT);
   const allTotalKZT = prodOptions.reduce((s, o) => s + o.totalKZT, 0);
-  const prodSel = prodFilter ? prodOptions.find(o => o.id === prodFilter) : null;
+  // Обязательный выбор продукта (exec): агрегат по трём юрлицам нечестен — режима «все» нет.
+  const effProdFilter = prodFilter || (requireProduct ? (prodOptions[0] || {}).id : null);
+  const prodSel = effProdFilter ? prodOptions.find(o => o.id === effProdFilter) : null;
 
   // Период: month = текущий месяц моков (июль 2026), year = всё, range = пресет из шита.
   const periodPrefix = period === "month" ? "2026-07" : period === "range" ? rangePreset : null;
   const base = (periodPrefix ? TRANSACTIONS.filter(t => t.date.startsWith(periodPrefix)) : TRANSACTIONS)
-    .filter(t => !prodFilter || t.srcProd === prodFilter || t.dstProd === prodFilter);
+    .filter(t => !effProdFilter || t.srcProd === effProdFilter || t.dstProd === effProdFilter);
 
   /* Целевая модель тотала: граница ОТНОСИТЕЛЬНА выбранного скоупа.
      Все продукты → граница = портфель: между своими 0, gross → «Перемещено».
@@ -2923,11 +2936,11 @@ function StatisticsScreen({ C, displayCurrency, showInternalCats, onOpenTransact
      (у цели приток), «внутренним» остаётся лишь не пересёкшее границу
      продукта (обмен валют внутри одной карты). Инвариант: per-product
      вклады внутренних переводов взаимно гасятся → сходится с портфельным нулём. */
-  const inScopeInternal = (t) => prodFilter
-    ? (t.srcProd === prodFilter && t.dstProd === prodFilter)
+  const inScopeInternal = (t) => effProdFilter
+    ? (t.srcProd === effProdFilter && t.dstProd === effProdFilter)
     : txIsInternal(t);
   // Сумма со знаком в скоупе: запись хранит знак стороны-источника; для продукта-цели — приток.
-  const scopeSigned = (t) => (prodFilter && t.dstProd === prodFilter && t.srcProd !== prodFilter)
+  const scopeSigned = (t) => (effProdFilter && t.dstProd === effProdFilter && t.srcProd !== effProdFilter)
     ? Math.abs(t.amount) : t.amount;
 
   const filtered = catFilter ? base.filter(t => t.category === catFilter) : base;
@@ -3257,13 +3270,15 @@ function StatisticsScreen({ C, displayCurrency, showInternalCats, onOpenTransact
       {prodSheetOpen && (
         <BottomSheetModal C={C} onClose={() => setProdSheetOpen(false)}>
           <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 16 }}>Карта или счёт</div>
-          <div data-press onClick={() => { setProdFilter(null); setCatFilter(null); setProdSheetOpen(false); }} style={{
-            display: "flex", alignItems: "center", gap: 12, padding: "12px 0", cursor: "pointer",
-            borderBottom: `1px solid ${C.divider}`,
-          }}>
-            <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: C.text }}>Все карты и счета</span>
-            {!prodFilter && <Check size={17} color={C.accentDark} strokeWidth={2.4} />}
-          </div>
+          {!requireProduct && (
+            <div data-press onClick={() => { setProdFilter(null); setCatFilter(null); setProdSheetOpen(false); }} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "12px 0", cursor: "pointer",
+              borderBottom: `1px solid ${C.divider}`,
+            }}>
+              <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: C.text }}>Все карты и счета</span>
+              {!effProdFilter && <Check size={17} color={C.accentDark} strokeWidth={2.4} />}
+            </div>
+          )}
           {prodOptions.map((o, i) => (
             <div key={o.id} data-press onClick={() => { setProdFilter(o.id); setCatFilter(null); setProdSheetOpen(false); }} style={{
               display: "flex", alignItems: "center", gap: 12, padding: "12px 0", cursor: "pointer",
@@ -3279,7 +3294,7 @@ function StatisticsScreen({ C, displayCurrency, showInternalCats, onOpenTransact
               <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
                 {fmtFull(convertTo(o.totalKZT, dc))} <span style={{ fontSize: 10.5, color: C.muted }}>{dcMeta.symbol}</span>
               </span>
-              {prodFilter === o.id && <Check size={17} color={C.accentDark} strokeWidth={2.4} style={{ flexShrink: 0 }} />}
+              {effProdFilter === o.id && <Check size={17} color={C.accentDark} strokeWidth={2.4} style={{ flexShrink: 0 }} />}
             </div>
           ))}
         </BottomSheetModal>
@@ -8713,6 +8728,9 @@ export default function FreedomV6() {
           onServices={() => pushScreen({ type: "servicesList" })}
           onTemplates={() => pushScreen({ type: "cardTransfer" })}
           onTransferOwn={openTransferHub}
+          onTopUpOwn={() => pushScreen({ type: "monoTransfer" })}
+          onCifraIn={() => pushScreen({ type: "cifraIn" })}
+          onCryptoIn={() => pushScreen({ type: "stub", title: "Пополнение криптой", note: "USDT и BTC заводятся через Digital assets (Tradernet) и конвертируются на счёт карты. Флоу в прототип не включён." })}
           onRequestMoney={() => pushScreen({ type: "requestCreate" })}
           onClientTransfer={() => pushScreen({ type: "transferClient", segment: "contact" })}
           onFromOtherBank={openFromOtherBank}
@@ -8729,7 +8747,7 @@ export default function FreedomV6() {
         />
       )}
       {activeTab === "statistics" && (
-        <StatisticsScreen C={C} displayCurrency={displayCurrency} showInternalCats={showInternalCats}
+        <StatisticsScreen C={C} displayCurrency={displayCurrency} showInternalCats={showInternalCats} requireProduct={theme === "exec"}
           onOpenTransaction={(tx, repCur, scope) => pushScreen({ type: "transaction", tx, reportCur: repCur, scope })}
         />
       )}
@@ -8856,6 +8874,45 @@ export default function FreedomV6() {
             </div>
           </ScreenShell>
         );
+        if (s.type === "cifraIn") return (
+          <ScreenShell key={i} C={C} title="Из Цифра Банка" onBack={popScreen}>
+            <div style={{ padding: "4px 20px 110px" }}>
+              <div style={{ backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: "14px 16px", marginBottom: 14 }}>
+                {[
+                  "Откройте приложение Цифра Банк",
+                  "Переводы → По номеру телефона",
+                  "Укажите номер +7 707 555 12 34 — карта зачисления подставится сама",
+                ].map((step, si) => (
+                  <div key={si} style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: si < 2 ? 12 : 0 }}>
+                    <div style={{ width: 22, height: 22, borderRadius: "50%", backgroundColor: C.accentSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: C.accentFg || C.accentDark }}>{si + 1}</span>
+                    </div>
+                    <span style={{ fontSize: 13.5, color: C.text, lineHeight: 1.45 }}>{step}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 12 }}>
+                {[
+                  { label: "Телефон", value: "+7 707 555 12 34" },
+                  { label: "Номер карты", value: "4400 4300 1122 0088" },
+                  { label: "Счёт (IBAN)", value: "KZ81 ALM3 X562 0014 5USD" },
+                ].map((r2, ri, arr2) => (
+                  <div key={ri} data-press style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
+                    padding: "13px 16px", cursor: "pointer",
+                    borderBottom: ri < arr2.length - 1 ? `1px solid ${C.divider}` : "none",
+                  }}>
+                    <span style={{ fontSize: 13, color: C.muted, flexShrink: 0 }}>{r2.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: C.text, fontFeatureSettings: "'tnum'" }}>{r2.value}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.5 }}>
+                Зачисление мгновенное. Комиссия на стороне Цифра Банка — по его тарифам.
+              </div>
+            </div>
+          </ScreenShell>
+        );
         if (s.type === "stub") return (
           <ScreenShell key={i} C={C} title={s.title} onBack={popScreen}>
             <div style={{ padding: "48px 40px", textAlign: "center" }}>
@@ -8876,6 +8933,9 @@ export default function FreedomV6() {
               onServices={() => pushScreen({ type: "servicesList" })}
               onTemplates={() => pushScreen({ type: "cardTransfer" })}
               onTransferOwn={() => openTransferFrom(s.productId)}
+              onTopUpOwn={() => pushScreen({ type: "monoTransfer", dstId: s.productId })}
+              onCifraIn={() => pushScreen({ type: "cifraIn" })}
+              onCryptoIn={() => pushScreen({ type: "stub", title: "Пополнение криптой", note: "USDT и BTC заводятся через Digital assets (Tradernet) и конвертируются на счёт карты. Флоу в прототип не включён." })}
               onRequestMoney={() => pushScreen({ type: "requestCreate" })}
               onClientTransfer={() => pushScreen({ type: "transferClient", segment: "contact" })}
               onFromOtherBank={openFromOtherBank}
@@ -9335,7 +9395,7 @@ export default function FreedomV6() {
       <BottomTabBar
         active={activeTab}
         onChange={(k) => { setActiveTab(k); setNavStack([]); }}
-        C={C} hidePayments={theme === "exec"}
+        C={C}
       />
       {/* Bottom sheets: promo (real MarketingBannerSheet), top-up, logout */}
       {sheet?.type === "promo" && (

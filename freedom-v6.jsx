@@ -2389,7 +2389,7 @@ function MainScreen({
    BOTTOM TAB BAR — real HomeTab: products / statistics / payments / chat
    ═══════════════════════════════════════════════ */
 
-function BottomTabBar({ active, onChange, C }) {
+function BottomTabBar({ active, onChange, C, hidePayments }) {
   return (
     <div style={{
       position: "fixed", bottom: 0, left: 0, right: 0,
@@ -2406,7 +2406,7 @@ function BottomTabBar({ active, onChange, C }) {
         { key: "payments", Icon: ArrowLeftRight, label: "Перевести" },
         { key: "investments", Icon: TrendingUp, label: "Инвестиции" },
         { key: "chats", Icon: MessageCircle, label: "Менеджер" },
-      ].map(tab => {
+      ].filter(tab => !(hidePayments && tab.key === "payments")).map(tab => {
         const isActive = active === tab.key;
         return (
           <div key={tab.key} data-press onClick={() => onChange(tab.key)} style={{
@@ -7209,7 +7209,7 @@ function CardAccountPicker({ C, displayCurrency, products, counterpart, showUnav
    Капитал → быстрые действия → свои карты (карусель-металл) →
    карты близких (лимиты) → Travel → последние операции.
    ═══════════════════════════════════════════════ */
-function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposits, credits, brokerGroups, onAvatarClick, onOpenTotal, onTransfer, onExchange, onTopUp, onOpenCard, onOpenFamily, onOpenAccount, onOpenDeposit, onOpenCredit, onOpenBroker, onOpenEsim, onOpenAviata, onOpenTransaction, onOpenAllTransactions, onManager }) {
+function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposits, credits, brokerGroups, onAvatarClick, onOpenTotal, onOpenCard, onOpenFamily, onOpenAccount, onOpenDeposit, onOpenCredit, onOpenBroker, onOpenEsim, onOpenAviata, onOpenTransaction, onOpenAllTransactions, onManager }) {
   const [prodTab, setProdTab] = useState("bank");
   const dc = displayCurrency || "EUR";
   const dcMeta = CURRENCY_META[dc] || { symbol: dc };
@@ -7259,18 +7259,25 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
           <div style={{ fontSize: 12.5, color: C.accentFg, marginTop: 8, fontFeatureSettings: "'tnum'" }}>+2,4% за месяц</div>
         </div>
 
-        {/* Быстрые действия — тонкие золотые */}
-        <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+        {/* Travel — ядро сервисной части */}
+        {secLabel("Тревел")}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {[
-            { t: "Перевести", on: onTransfer },
-            { t: "Обменять", on: onExchange },
-            { t: "Пополнить", on: onTopUp },
-          ].map(a => (
-            <div key={a.t} data-press onClick={a.on} style={{
-              flex: 1, textAlign: "center", padding: "11px 0", borderRadius: 12,
-              border: `1px solid ${C.accentFg}44`, cursor: "pointer",
+            { t: "Авиабилеты", s: "Поиск и покупка", Icon: Plane, on: onOpenAviata },
+            { t: "eSIM", s: "Интернет в поездках", Icon: Smartphone, on: onOpenEsim },
+            { t: "Lounge", s: "Залы ожидания", Icon: Sofa, soon: true },
+            { t: "Fast Track", s: "Без очередей", Icon: Zap, soon: true },
+          ].map(sv => (
+            <div key={sv.t} data-press={sv.soon ? undefined : true} onClick={sv.soon ? undefined : sv.on} style={{
+              backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`,
+              padding: "13px 14px", cursor: sv.soon ? "default" : "pointer", opacity: sv.soon ? 0.55 : 1,
             }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: C.accentFg }}>{a.t}</span>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <sv.Icon size={17} color={C.accentFg} strokeWidth={1.9} />
+                {sv.soon && <span style={{ fontSize: 9.5, fontWeight: 700, color: C.muted, backgroundColor: C.faint, borderRadius: 8, padding: "2px 7px" }}>скоро</span>}
+              </div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text }}>{sv.t}</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{sv.s}</div>
             </div>
           ))}
         </div>
@@ -7433,29 +7440,6 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
                   </span>
                 </div>
               ))}
-            </div>
-          ))}
-        </div>
-
-        {/* Travel — ядро сервисной части */}
-        {secLabel("Тревел")}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          {[
-            { t: "Авиабилеты", s: "Поиск и покупка", Icon: Plane, on: onOpenAviata },
-            { t: "eSIM", s: "Интернет в поездках", Icon: Smartphone, on: onOpenEsim },
-            { t: "Lounge", s: "Залы ожидания", Icon: Sofa, soon: true },
-            { t: "Fast Track", s: "Без очередей", Icon: Zap, soon: true },
-          ].map(sv => (
-            <div key={sv.t} data-press={sv.soon ? undefined : true} onClick={sv.soon ? undefined : sv.on} style={{
-              backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`,
-              padding: "13px 14px", cursor: sv.soon ? "default" : "pointer", opacity: sv.soon ? 0.55 : 1,
-            }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                <sv.Icon size={17} color={C.accentFg} strokeWidth={1.9} />
-                {sv.soon && <span style={{ fontSize: 9.5, fontWeight: 700, color: C.muted, backgroundColor: C.faint, borderRadius: 8, padding: "2px 7px" }}>скоро</span>}
-              </div>
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text }}>{sv.t}</div>
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{sv.s}</div>
             </div>
           ))}
         </div>
@@ -8678,18 +8662,6 @@ export default function FreedomV6() {
           onOpenBroker={(account) => pushScreen({ type: "brokerDetails", account })}
           onAvatarClick={() => setDebugOpen(true)}
           onOpenTotal={() => pushScreen({ type: "total" })}
-          onTransfer={openTransferHub}
-          onExchange={() => {
-            const prods = buildProducts(manyCur, includeBlocked);
-            const card = prods.filter(pr => pr.kind === "card" && pr.accounts.length > 1 && !pr.blocked)
-              .sort((a, b) => prodScore(b) - prodScore(a))[0];
-            if (card) openExchange(card.id);
-          }}
-          onTopUp={() => {
-            const prods = buildProducts(manyCur, includeBlocked);
-            const dst = prods.filter(pr => pr.kind === "card" && !pr.blocked).sort((a, b) => prodScore(b) - prodScore(a))[0];
-            if (dst) pushScreen({ type: "monoTransfer", dstId: dst.id });
-          }}
           onOpenCard={(card) => pushScreen({ type: "product", card })}
           onOpenFamily={(fc) => pushScreen({ type: "familyCard", fc })}
           onOpenEsim={() => pushScreen({ type: "esim" })}
@@ -9363,7 +9335,7 @@ export default function FreedomV6() {
       <BottomTabBar
         active={activeTab}
         onChange={(k) => { setActiveTab(k); setNavStack([]); }}
-        C={C}
+        C={C} hidePayments={theme === "exec"}
       />
       {/* Bottom sheets: promo (real MarketingBannerSheet), top-up, logout */}
       {sheet?.type === "promo" && (

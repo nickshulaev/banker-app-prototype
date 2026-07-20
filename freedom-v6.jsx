@@ -7190,7 +7190,7 @@ function CardAccountPicker({ C, displayCurrency, products, counterpart, showUnav
    ═══════════════════════════════════════════════ */
 const MONO_CURRENCIES = ["EUR", "KZT", "USD", "RUB", "CNY"];
 // Какие валютные счета карта может открыть (Цифра — только KZT/RUB).
-const CARD_OPENABLE = { deposit: MONO_CURRENCIES, invest: MONO_CURRENCIES, cifra: ["KZT", "RUB"] };
+const CARD_OPENABLE = { deposit: MONO_CURRENCIES, invest: ["EUR", "KZT", "USD", "CNY"], cifra: ["KZT", "RUB"] };
 
 // Резолв продукта в валюте операции: счёт | можно открыть | причина недоступности.
 function monoResolve(p, opCur, openedAccounts) {
@@ -7340,7 +7340,11 @@ function MonoTransferScreen({ C, dstId, srcId, manyCur, includeBlocked, openedAc
         </div>
         {openSide === side && (
           <div style={{ margin: "0 12px 10px", backgroundColor: C.bg, borderRadius: 10, border: `1px solid ${C.border}`, overflow: "hidden" }}>
-            {(side === "src" ? srcPool : dstPool).map((cand, i, arr) => renderRow(cand, side, i === arr.length - 1))}
+            {/* Продукты с фиксированной валютой (счета/депозиты/кредиты/брокер) в чужой валюте скрыты;
+                карты видимы всегда: баланс | «Открыть» | недоступна с причиной */}
+            {(side === "src" ? srcPool : dstPool)
+              .filter(cand => cand.kind === "card" || monoResolve(cand, opCur, openedAccounts).acc)
+              .map((cand, i, arr) => renderRow(cand, side, i === arr.length - 1))}
           </div>
         )}
       </div>

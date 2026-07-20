@@ -7302,60 +7302,39 @@ function MonoTransferScreen({ C, dstId, srcId, manyCur, includeBlocked, openedAc
     );
   };
 
-  // Закрытый юнит стороны: карта + баланс | CTA «Открыть счёт» | причина.
-  const renderUnit = (p, r, side) => {
+  // Компактная строка стороны в общем блоке (Revolut-паттерн): Из | В.
+  const renderSideRow = (p, r, side) => {
     const Icon = p ? (PRODUCT_KIND_ICON[p.kind] || CreditCard) : CreditCard;
+    const active = openSide === side;
     return (
-      <div style={{ backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`, overflow: "hidden" }}>
-        <div data-press onClick={() => { setOpenSide(o => o === side ? null : side); setCurOpen(false); }}
-          style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 12px", cursor: "pointer" }}>
-          <div style={{ width: 26, height: 26, borderRadius: 7, backgroundColor: (p || {}).color || C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Icon size={13} color="#fff" strokeWidth={2} />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {p ? p.name : "Выберите продукт"}
-            </div>
-            {p && (
-              <div style={{ fontSize: 10.5, color: r.acc ? C.muted : "#B45309", marginTop: 1, fontFeatureSettings: "'tnum'" }}>
-                {r.acc ? (p.last4 ? `•• ${p.last4}` : (p.mask || "")) : r.canOpen ? `Нет счёта в ${opCur}` : r.reason}
-              </div>
-            )}
-          </div>
-          {p && r.acc && (
-            <span style={{ fontSize: 13, fontWeight: 700, color: overBalance && side === "src" ? "#EF4444" : C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
-              {fmtFull(r.acc.amount)} <span style={{ fontSize: 10.5, color: C.muted }}>{cm.symbol}</span>
-            </span>
-          )}
-          {p && r.canOpen && (
-            <div data-press onClick={(e) => { e.stopPropagation(); setConfirmOpen({ p, side }); }} style={{
-              backgroundColor: C.accentSoft, borderRadius: 9, padding: "6px 11px", cursor: "pointer", flexShrink: 0,
-            }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: C.accentDark }}>Открыть счёт</span>
-            </div>
-          )}
-          <div style={{ width: 22, height: 22, borderRadius: 6, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <ChevronsUpDown size={13} color={C.muted} strokeWidth={2} />
-          </div>
+      <div data-press onClick={() => { setOpenSide(o => o === side ? null : side); setCurOpen(false); }}
+        style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "12px 12px", cursor: "pointer",
+          backgroundColor: active ? C.faint : "transparent", transition: "background-color 0.15s",
+        }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: C.muted, width: 20, flexShrink: 0 }}>{side === "src" ? "Из" : "В"}</span>
+        <div style={{ width: 24, height: 24, borderRadius: 7, backgroundColor: (p || {}).color || C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Icon size={12} color="#fff" strokeWidth={2} />
         </div>
-        {openSide === side && (
-          <div style={{ margin: "0 12px 10px", backgroundColor: C.bg, borderRadius: 10, border: `1px solid ${C.border}`, overflow: "hidden" }}>
-            {/* Группы как в остальных пикерах. Продукты с фиксированной валютой (счета/депозиты/
-                кредиты/брокер) в чужой валюте скрыты; карты видимы всегда: баланс | «Открыть» | недоступна */}
-            {PRODUCT_GROUPS.map(g => {
-              const pool = (side === "src" ? srcPool : dstPool)
-                .filter(cand => cand.group === g.key)
-                .filter(cand => cand.kind === "card" || monoResolve(cand, opCur, openedAccounts).acc);
-              if (!pool.length) return null;
-              return (
-                <div key={g.key}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, padding: "9px 12px 4px", letterSpacing: "0.05em", textTransform: "uppercase" }}>{g.label}</div>
-                  {pool.map((cand, i) => renderRow(cand, side, i === pool.length - 1))}
-                </div>
-              );
-            })}
+        <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {p ? p.name : "Выберите продукт"}
+        </span>
+        {p && r.acc && (
+          <span style={{ fontSize: 12, fontWeight: 600, color: overBalance && side === "src" ? "#EF4444" : C.muted, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+            {fmtFull(r.acc.amount)} {cm.symbol}
+          </span>
+        )}
+        {p && !r.acc && r.canOpen && (
+          <div data-press onClick={(e) => { e.stopPropagation(); setConfirmOpen({ p, side }); }} style={{
+            backgroundColor: C.accentSoft, borderRadius: 9, padding: "4px 9px", cursor: "pointer", flexShrink: 0,
+          }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: C.accentDark }}>Открыть счёт</span>
           </div>
         )}
+        {p && !r.acc && !r.canOpen && (
+          <span style={{ fontSize: 11, color: "#B45309", flexShrink: 0, maxWidth: 130, textAlign: "right" }}>{r.reason}</span>
+        )}
+        <ChevronDown size={13} color={C.muted} strokeWidth={2} style={{ flexShrink: 0, transform: active ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
       </div>
     );
   };
@@ -7363,64 +7342,79 @@ function MonoTransferScreen({ C, dstId, srcId, manyCur, includeBlocked, openedAc
   return (
     <ScreenShell C={C} title="Между счетами" onBack={onBack}>
       <div style={{ padding: "4px 20px 110px" }}>
-        {/* Сумма с валютной пилюлей — первая (единственный вариант, выбор Ника) */}
-        {(
-          <div style={{ marginBottom: 16 }}>
-            <div style={{
-              backgroundColor: C.card, borderRadius: 14, border: `1.5px solid ${overBalance || minFail ? "#EF4444" : C.border}`,
-              padding: "14px 12px 14px 16px", display: "flex", alignItems: "center", gap: 8,
-            }}>
-              <input value={amount} autoFocus
-                onChange={e => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
-                inputMode="decimal" placeholder="0"
-                style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 28, fontWeight: 800, color: C.text, fontFamily: "inherit", fontFeatureSettings: "'tnum'", minWidth: 0 }} />
-              <div data-press onClick={() => { setCurOpen(o => !o); setOpenSide(null); }} style={{
-                display: "flex", alignItems: "center", gap: 4, backgroundColor: C.faint, borderRadius: 10, padding: "8px 12px", cursor: "pointer", flexShrink: 0,
+        {/* Стороны — компактный блок сверху: Из / В */}
+        <div style={{ backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+          {renderSideRow(srcP, srcR, "src")}
+          <div style={{ height: 1, backgroundColor: C.divider, marginLeft: 44 }} />
+          {renderSideRow(dstP, dstR, "dst")}
+        </div>
+        {openSide && (
+          <div style={{ marginTop: 6, backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+            {/* Группы как в остальных пикерах. Продукты с фиксированной валютой (счета/депозиты/
+                кредиты/брокер) в чужой валюте скрыты; карты видимы всегда: баланс | «Открыть» | недоступна */}
+            {PRODUCT_GROUPS.map(g => {
+              const pool = (openSide === "src" ? srcPool : dstPool)
+                .filter(cand => cand.group === g.key)
+                .filter(cand => cand.kind === "card" || monoResolve(cand, opCur, openedAccounts).acc);
+              if (!pool.length) return null;
+              return (
+                <div key={g.key}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, padding: "9px 12px 4px", letterSpacing: "0.05em", textTransform: "uppercase" }}>{g.label}</div>
+                  {pool.map((cand, i) => renderRow(cand, openSide, i === pool.length - 1))}
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {!pair.ok && (
+          <div style={{ fontSize: 12, color: "#EF4444", marginTop: 8, textAlign: "center" }}>{pair.reason}</div>
+        )}
+
+        {/* Hero-сумма по центру; валюта — кликабельная пилюля рядом */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "36px 0 6px" }}>
+          <input value={amount} autoFocus
+            onChange={e => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
+            inputMode="decimal" placeholder="0"
+            style={{
+              width: `${Math.max(1, (amount || "0").length)}ch`, maxWidth: "62%",
+              border: "none", outline: "none", background: "transparent",
+              fontSize: 46, fontWeight: 800, color: overBalance || minFail ? "#EF4444" : C.text,
+              fontFamily: "inherit", fontFeatureSettings: "'tnum'", textAlign: "center", padding: 0,
+            }} />
+          <div data-press onClick={() => { setCurOpen(o => !o); setOpenSide(null); }} style={{
+            display: "flex", alignItems: "center", gap: 4, backgroundColor: C.faint,
+            borderRadius: 12, padding: "9px 13px", cursor: "pointer", flexShrink: 0,
+          }}>
+            <span style={{ fontSize: 21, fontWeight: 800, color: C.text }}>{cm.symbol}</span>
+            <ChevronDown size={15} color={C.muted} strokeWidth={2.2} style={{ transform: curOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+          </div>
+        </div>
+        {curOpen && (
+          <div style={{ maxWidth: 300, margin: "6px auto 0", backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+            {MONO_CURRENCIES.map((cur, i) => (
+              <div key={cur} data-press onClick={() => { setOpCur(cur); setCurOpen(false); }} style={{
+                display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", cursor: "pointer",
+                borderBottom: i < MONO_CURRENCIES.length - 1 ? `1px solid ${C.divider}` : "none",
               }}>
-                <span style={{ fontSize: 14, fontWeight: 800, color: C.text }}>{opCur}</span>
-                <ChevronDown size={13} color={C.muted} strokeWidth={2.2} style={{ transform: curOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+                <span style={{ fontSize: 15 }}>{(CURRENCY_META[cur] || {}).flag}</span>
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.text }}>{cur} · {(CURRENCY_META[cur] || {}).name}</span>
+                {opCur === cur && <Check size={15} color={C.accentDark} strokeWidth={2.4} />}
               </div>
-            </div>
-            {curOpen && (
-              <div style={{ marginTop: 6, backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
-                {MONO_CURRENCIES.map((cur, i) => (
-                  <div key={cur} data-press onClick={() => { setOpCur(cur); setCurOpen(false); }} style={{
-                    display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", cursor: "pointer",
-                    borderBottom: i < MONO_CURRENCIES.length - 1 ? `1px solid ${C.divider}` : "none",
-                  }}>
-                    <span style={{ fontSize: 15 }}>{(CURRENCY_META[cur] || {}).flag}</span>
-                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.text }}>{cur} · {(CURRENCY_META[cur] || {}).name}</span>
-                    {opCur === cur && <Check size={15} color={C.accentDark} strokeWidth={2.4} />}
-                  </div>
-                ))}
-              </div>
-            )}
+            ))}
           </div>
         )}
 
-        {label("Откуда")}
-        {renderUnit(srcP, srcR, "src")}
-        <div style={{ display: "flex", justifyContent: "center", padding: "6px 0" }}>
-          <ArrowDown size={15} color={C.muted} strokeWidth={2} />
-        </div>
-        {label("Куда")}
-        {renderUnit(dstP, dstR, "dst")}
-        {!pair.ok && (
-          <div style={{ fontSize: 12, color: "#EF4444", marginTop: 6 }}>{pair.reason}</div>
-        )}
-
+        {/* Баланс источника · MAX — мелко под суммой */}
         {srcR.acc && (
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
-            <div data-press onClick={() => setAmount((srcR.acc.amount || 0).toFixed(2))} style={{ backgroundColor: C.faint, borderRadius: 10, padding: "7px 11px", cursor: "pointer" }}>
-              <span style={{ fontSize: 12, fontWeight: 800, color: C.accentDark, letterSpacing: "0.03em" }}>MAX</span>
-            </div>
+          <div style={{ textAlign: "center", fontSize: 12.5, color: C.muted, marginTop: 4, fontFeatureSettings: "'tnum'" }}>
+            Баланс: {fmtFull(srcR.acc.amount)} {cm.symbol} · <span data-press onClick={() => setAmount((srcR.acc.amount || 0).toFixed(2))} style={{ color: C.accentDark, fontWeight: 800, cursor: "pointer", letterSpacing: "0.03em" }}>MAX</span>
           </div>
         )}
         {overBalance && (
-          <div style={{ fontSize: 12, color: "#EF4444", marginTop: 6 }}>Недостаточно средств на счёте списания</div>
+          <div style={{ fontSize: 12, color: "#EF4444", marginTop: 6, textAlign: "center" }}>Недостаточно средств на счёте списания</div>
         )}
         {minFail && (
-          <div style={{ fontSize: 12, color: "#EF4444", marginTop: 6 }}>
+          <div style={{ fontSize: 12, color: "#EF4444", marginTop: 6, textAlign: "center" }}>
             Минимальное пополнение — {fmtFull(dstP.minReplenish)} {cm.symbol}
           </div>
         )}
@@ -7428,7 +7422,7 @@ function MonoTransferScreen({ C, dstId, srcId, manyCur, includeBlocked, openedAc
         {/* Нет средств в валюте операции, но есть в других → заметный мост в конверсию */}
         {srcP && srcR.acc && (srcR.acc.amount || 0) <= 0 && srcP.accounts.some(a => a.currency !== opCur && a.amount > 0) && (
           <div data-press onClick={() => onExchange?.(srcP)} style={{
-            marginTop: 10, backgroundColor: C.accentSoft, borderRadius: 12, padding: "11px 14px",
+            marginTop: 14, backgroundColor: C.accentSoft, borderRadius: 12, padding: "11px 14px",
             display: "flex", alignItems: "center", gap: 10, cursor: "pointer",
           }}>
             <ArrowLeftRight size={15} color={C.accentDark} strokeWidth={2.2} />
@@ -7439,7 +7433,7 @@ function MonoTransferScreen({ C, dstId, srcId, manyCur, includeBlocked, openedAc
           </div>
         )}
 
-        <div style={{ fontSize: 12, color: C.muted, margin: "8px 0 24px" }}>
+        <div style={{ fontSize: 12, color: C.muted, margin: "26px 0 20px", textAlign: "center" }}>
           Без комиссии · мгновенно · одна валюта
         </div>
 

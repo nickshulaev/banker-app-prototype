@@ -7340,11 +7340,20 @@ function MonoTransferScreen({ C, dstId, srcId, manyCur, includeBlocked, openedAc
         </div>
         {openSide === side && (
           <div style={{ margin: "0 12px 10px", backgroundColor: C.bg, borderRadius: 10, border: `1px solid ${C.border}`, overflow: "hidden" }}>
-            {/* Продукты с фиксированной валютой (счета/депозиты/кредиты/брокер) в чужой валюте скрыты;
-                карты видимы всегда: баланс | «Открыть» | недоступна с причиной */}
-            {(side === "src" ? srcPool : dstPool)
-              .filter(cand => cand.kind === "card" || monoResolve(cand, opCur, openedAccounts).acc)
-              .map((cand, i, arr) => renderRow(cand, side, i === arr.length - 1))}
+            {/* Группы как в остальных пикерах. Продукты с фиксированной валютой (счета/депозиты/
+                кредиты/брокер) в чужой валюте скрыты; карты видимы всегда: баланс | «Открыть» | недоступна */}
+            {PRODUCT_GROUPS.map(g => {
+              const pool = (side === "src" ? srcPool : dstPool)
+                .filter(cand => cand.group === g.key)
+                .filter(cand => cand.kind === "card" || monoResolve(cand, opCur, openedAccounts).acc);
+              if (!pool.length) return null;
+              return (
+                <div key={g.key}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, padding: "9px 12px 4px", letterSpacing: "0.05em", textTransform: "uppercase" }}>{g.label}</div>
+                  {pool.map((cand, i) => renderRow(cand, side, i === pool.length - 1))}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

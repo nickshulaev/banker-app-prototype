@@ -937,7 +937,7 @@ function CurrencyPicker({ current, currencies, onSelect, onClose, C }) {
    BOTTOM SHEET — Constructor
    ═══════════════════════════════════════════════ */
 
-function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrder, setBlockOrder, emptyState, setEmptyState, featureFlags, setFeatureFlags, onb, setOnb, stressLong, setStressLong, manyCur, setManyCur, showUnavailable, setShowUnavailable, includeBlocked, setIncludeBlocked, showInternalCats, setShowInternalCats, multiFlow, setMultiFlow, monoVariant, setMonoVariant, C }) {
+function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrder, setBlockOrder, emptyState, setEmptyState, featureFlags, setFeatureFlags, onb, setOnb, stressLong, setStressLong, manyCur, setManyCur, showUnavailable, setShowUnavailable, includeBlocked, setIncludeBlocked, showInternalCats, setShowInternalCats, multiFlow, setMultiFlow, C }) {
   const isDark = C.bg === '#0E0F0C';
   const [subView, setSubView] = useState(null); // null | "picker" — вложенный экран конструктора
   const themes = [
@@ -1157,22 +1157,7 @@ function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrd
             <div style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: "#fff", position: "absolute", top: 2, left: multiFlow ? 22 : 2, transition: "left 0.2s" }} />
           </div>
         </div>
-        {!multiFlow && (
-          <div style={{ padding: "12px 0", marginBottom: 16, borderBottom: `1px solid ${C.divider}` }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 8 }}>Вариант моновалютного экрана</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              {[{ k: "context", t: "Валюта сверху" }, { k: "amount", t: "Валюта в сумме" }].map(v => (
-                <div key={v.k} data-press onClick={() => setMonoVariant(v.k)} style={{
-                  flex: 1, textAlign: "center", padding: "9px 0", borderRadius: 10, cursor: "pointer",
-                  backgroundColor: monoVariant === v.k ? C.accentDark : C.faint,
-                }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: monoVariant === v.k ? C.accent : C.sub }}>{v.t}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        {multiFlow && <div style={{ marginBottom: 16 }} />}
+        <div style={{ marginBottom: 16 }} />
 
         {/* Статистика — демо-режим целевой модели тоталов */}
         <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>Статистика</div>
@@ -7224,7 +7209,7 @@ function monoResolve(p, opCur, openedAccounts) {
   return { reason: `Брокерский счёт в ${own}` };
 }
 
-function MonoTransferScreen({ C, variant, dstId, srcId, manyCur, includeBlocked, openedAccounts, onOpenAccount, onBack, onConfirm }) {
+function MonoTransferScreen({ C, dstId, srcId, manyCur, includeBlocked, openedAccounts, onOpenAccount, onExchange, onBack, onConfirm }) {
   const products = buildProducts(manyCur, includeBlocked);
   const find = (id) => products.find(p => p.id === id) || null;
   // Дефолт валюты — EUR; фиксированная цель без EUR и без права открыть → её родная валюта.
@@ -7365,23 +7350,8 @@ function MonoTransferScreen({ C, variant, dstId, srcId, manyCur, includeBlocked,
   return (
     <ScreenShell C={C} title="Между счетами" onBack={onBack}>
       <div style={{ padding: "4px 20px 110px" }}>
-        {/* Вариант "context": валюта операции — сегмент сверху */}
-        {variant !== "amount" && (
-          <div style={{ display: "flex", backgroundColor: C.faint, borderRadius: 12, padding: 3, marginBottom: 16 }}>
-            {MONO_CURRENCIES.map(cur => (
-              <div key={cur} data-press onClick={() => setOpCur(cur)} style={{
-                flex: 1, textAlign: "center", padding: "8px 0", borderRadius: 10, cursor: "pointer",
-                backgroundColor: opCur === cur ? C.card : "transparent",
-                boxShadow: opCur === cur ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
-              }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: opCur === cur ? C.text : C.muted }}>{cur}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Вариант "amount": сумма с валютной пилюлей — первая */}
-        {variant === "amount" && (
+        {/* Сумма с валютной пилюлей — первая (единственный вариант, выбор Ника) */}
+        {(
           <div style={{ marginBottom: 16 }}>
             <div style={{
               backgroundColor: C.card, borderRadius: 14, border: `1.5px solid ${overBalance || minFail ? "#EF4444" : C.border}`,
@@ -7426,30 +7396,7 @@ function MonoTransferScreen({ C, variant, dstId, srcId, manyCur, includeBlocked,
           <div style={{ fontSize: 12, color: "#EF4444", marginTop: 6 }}>{pair.reason}</div>
         )}
 
-        {/* Сумма (вариант "context"): валюта уже задана контекстом — символ статичен */}
-        {variant !== "amount" && (
-          <div style={{ marginTop: 16 }}>
-            {label("Сумма")}
-            <div style={{
-              backgroundColor: C.card, borderRadius: 12, border: `1.5px solid ${overBalance || minFail ? "#EF4444" : C.border}`,
-              padding: "12px 12px 12px 16px", display: "flex", alignItems: "center", gap: 8,
-            }}>
-              <input value={amount}
-                onChange={e => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
-                inputMode="decimal" placeholder="0"
-                style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 26, fontWeight: 800, color: C.text, fontFamily: "inherit", fontFeatureSettings: "'tnum'", minWidth: 0 }} />
-              {srcR.acc && (
-                <div data-press onClick={() => setAmount((srcR.acc.amount || 0).toFixed(2))} style={{ backgroundColor: C.faint, borderRadius: 10, padding: "8px 11px", cursor: "pointer", flexShrink: 0 }}>
-                  <span style={{ fontSize: 12, fontWeight: 800, color: C.accentDark, letterSpacing: "0.03em" }}>MAX</span>
-                </div>
-              )}
-              <div style={{ backgroundColor: C.faint, borderRadius: 10, padding: "8px 12px", flexShrink: 0 }}>
-                <span style={{ fontSize: 17, fontWeight: 800, color: C.text }}>{cm.symbol}</span>
-              </div>
-            </div>
-          </div>
-        )}
-        {variant === "amount" && srcR.acc && (
+        {srcR.acc && (
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
             <div data-press onClick={() => setAmount((srcR.acc.amount || 0).toFixed(2))} style={{ backgroundColor: C.faint, borderRadius: 10, padding: "7px 11px", cursor: "pointer" }}>
               <span style={{ fontSize: 12, fontWeight: 800, color: C.accentDark, letterSpacing: "0.03em" }}>MAX</span>
@@ -7464,6 +7411,21 @@ function MonoTransferScreen({ C, variant, dstId, srcId, manyCur, includeBlocked,
             Минимальное пополнение — {fmtFull(dstP.minReplenish)} {cm.symbol}
           </div>
         )}
+
+        {/* Нет средств в валюте операции, но есть в других → заметный мост в конверсию */}
+        {srcP && srcR.acc && (srcR.acc.amount || 0) <= 0 && srcP.accounts.some(a => a.currency !== opCur && a.amount > 0) && (
+          <div data-press onClick={() => onExchange?.(srcP)} style={{
+            marginTop: 10, backgroundColor: C.accentSoft, borderRadius: 12, padding: "11px 14px",
+            display: "flex", alignItems: "center", gap: 10, cursor: "pointer",
+          }}>
+            <ArrowLeftRight size={15} color={C.accentDark} strokeWidth={2.2} />
+            <div style={{ flex: 1, fontSize: 12.5, color: C.text, lineHeight: 1.4 }}>
+              На «{srcP.name}» нет средств в {opCur} — обменяйте валюту по курсу
+            </div>
+            <ChevronRight size={14} color={C.accentDark} strokeWidth={2} />
+          </div>
+        )}
+
         <div style={{ fontSize: 12, color: C.muted, margin: "8px 0 24px" }}>
           Без комиссии · мгновенно · одна валюта
         </div>
@@ -7474,8 +7436,17 @@ function MonoTransferScreen({ C, variant, dstId, srcId, manyCur, includeBlocked,
           cursor: valid ? "pointer" : "default",
         }}>
           <span style={{ fontSize: 15, fontWeight: 700, color: valid ? C.accent : C.muted }}>
-            {variant === "amount" && num > 0 ? `Перевести ${fmtFull(num)} ${cm.symbol}` : "Перевести"}
+            {num > 0 ? `Перевести ${fmtFull(num)} ${cm.symbol}` : "Перевести"}
           </span>
+        </div>
+
+        {/* Мост в конверсию: перевод здесь строго одновалютный, обмен — отдельный сценарий */}
+        <div data-press onClick={() => onExchange?.(srcP)} style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          padding: "14px 0 0", cursor: "pointer",
+        }}>
+          <ArrowLeftRight size={13} color={C.accentDark} strokeWidth={2.2} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: C.accentDark }}>Нужна другая валюта? Обменять по курсу</span>
         </div>
       </div>
 
@@ -8258,7 +8229,6 @@ export default function FreedomV6() {
   const [showInternalCats, setShowInternalCats] = useState(false); // дебаг: внутренние категории в «Категориях расходов»
   // Моновалютный флоу переводов — дефолт; мультивалютный (прод) — за дебаг-тумблером.
   const [multiFlow, setMultiFlow] = useState(false);
-  const [monoVariant, setMonoVariant] = useState("amount"); // amount = валюта в сумме (выбор Ника) | context = валюта сверху
   const [openedAccounts, setOpenedAccounts] = useState({}); // счета, открытые из флоу: { productId: [cur] }
   // Bottom sheets: {type:'promo',promo} | {type:'topup'} | {type:'logout'}
   const [sheet, setSheet] = useState(null);
@@ -8313,7 +8283,7 @@ export default function FreedomV6() {
           showUnavailable={showUnavailable} setShowUnavailable={setShowUnavailable}
           includeBlocked={includeBlocked} setIncludeBlocked={setIncludeBlocked}
           showInternalCats={showInternalCats} setShowInternalCats={setShowInternalCats}
-          multiFlow={multiFlow} setMultiFlow={setMultiFlow} monoVariant={monoVariant} setMonoVariant={setMonoVariant}
+          multiFlow={multiFlow} setMultiFlow={setMultiFlow}
           C={C}
         />
       )}
@@ -8430,9 +8400,16 @@ export default function FreedomV6() {
           />
         );
         if (s.type === "monoTransfer") return (
-          <MonoTransferScreen key={i} C={C} variant={monoVariant} dstId={s.dstId} srcId={s.srcId}
+          <MonoTransferScreen key={i} C={C} dstId={s.dstId} srcId={s.srcId}
             manyCur={manyCur} includeBlocked={includeBlocked}
             openedAccounts={openedAccounts}
+            onExchange={(srcP) => {
+              const prods = buildProducts(manyCur, includeBlocked);
+              const card = srcP && srcP.kind === "card" ? srcP
+                : prods.filter(p => p.kind === "card" && p.accounts.length > 1 && !p.blocked)
+                    .sort((a, b) => prodScore(b) - prodScore(a))[0];
+              if (card) openExchange(card.id);
+            }}
             onOpenAccount={(pid, cur) => setOpenedAccounts(prev => ({ ...prev, [pid]: [...(prev[pid] || []), cur] }))}
             onBack={popScreen}
             onConfirm={({ srcP, dstP, opCur, num }) => pushScreen({

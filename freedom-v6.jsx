@@ -7209,7 +7209,8 @@ function CardAccountPicker({ C, displayCurrency, products, counterpart, showUnav
    Капитал → быстрые действия → свои карты (карусель-металл) →
    карты близких (лимиты) → Travel → последние операции.
    ═══════════════════════════════════════════════ */
-function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, onAvatarClick, onOpenTotal, onTransfer, onExchange, onTopUp, onOpenCard, onOpenFamily, onOpenEsim, onOpenAviata, onOpenTransaction, onOpenAllTransactions, onManager }) {
+function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposits, credits, brokerGroups, onAvatarClick, onOpenTotal, onTransfer, onExchange, onTopUp, onOpenCard, onOpenFamily, onOpenAccount, onOpenDeposit, onOpenCredit, onOpenBroker, onOpenEsim, onOpenAviata, onOpenTransaction, onOpenAllTransactions, onManager }) {
+  const [prodTab, setProdTab] = useState("bank");
   const dc = displayCurrency || "EUR";
   const dcMeta = CURRENCY_META[dc] || { symbol: dc };
   const capital = convertTo(totalInKZT, dc);
@@ -7301,35 +7302,142 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, onAvatarClick, 
           ))}
         </div>
 
-        {/* Карты близких — держатель + месячный лимит */}
-        {secLabel("Карты близких", "Открыть ещё")}
-        <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: "hidden" }}>
-          {FAMILY_CARDS.map((fc, i) => {
+        {/* Карты близких — мини-карты каруселью (второй класс карт) */}
+        {secLabel("Карты близких")}
+        <div style={{ display: "flex", gap: 10, overflowX: "auto", scrollbarWidth: "none", margin: "0 -20px", padding: "2px 20px 6px" }}>
+          {FAMILY_CARDS.map(fc => {
             const pct = Math.min(100, Math.round(fc.spent / fc.limit * 100));
             return (
               <div key={fc.id} data-press onClick={() => onOpenFamily(fc)} style={{
-                padding: "13px 16px", cursor: "pointer",
-                borderBottom: i < FAMILY_CARDS.length - 1 ? `1px solid ${C.divider}` : "none",
+                flexShrink: 0, width: 172, borderRadius: 16, cursor: "pointer",
+                background: "linear-gradient(135deg, #1E1E24 0%, #17171B 60%, #232329 100%)",
+                border: `1px solid ${C.border}`, padding: "13px 14px",
               }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: "50%", backgroundColor: C.accentSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: C.accentFg }}>{fc.initials}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                  <div style={{ width: 26, height: 26, borderRadius: "50%", backgroundColor: `${fc.color}2E`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: fc.color }}>{fc.initials}</span>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{fc.holder} <span style={{ color: C.muted, fontWeight: 500 }}>· {fc.relation}</span></div>
-                    <div style={{ fontSize: 11.5, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'" }}>{fc.cardName} •• {fc.last4}</div>
-                  </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ fontSize: 12.5, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>{fmtLim(fc.spent)} ₸</div>
-                    <div style={{ fontSize: 10.5, color: C.muted, fontFeatureSettings: "'tnum'" }}>из {fmtLim(fc.limit)}</div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fc.holder}</div>
+                    <div style={{ fontSize: 10, color: C.muted }}>{fc.relation}</div>
                   </div>
                 </div>
-                <div style={{ marginTop: 9, marginLeft: 50, height: 3, borderRadius: 2, backgroundColor: C.faint, overflow: "hidden" }}>
-                  <div style={{ width: `${pct}%`, height: "100%", backgroundColor: C.accentFg, borderRadius: 2, opacity: 0.85 }} />
+                <div style={{ height: 3, borderRadius: 2, backgroundColor: C.faint, overflow: "hidden", marginBottom: 7 }}>
+                  <div style={{ width: `${pct}%`, height: "100%", backgroundColor: fc.color, borderRadius: 2 }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                  <span style={{ fontSize: 10.5, color: C.muted, fontFeatureSettings: "'tnum'" }}>•• {fc.last4}</span>
+                  <span style={{ fontSize: 10.5, color: C.muted, fontFeatureSettings: "'tnum'" }}>
+                    <span style={{ color: C.text, fontWeight: 700 }}>{fmtLim(fc.spent)}</span> / {fmtLim(fc.limit)} ₸
+                  </span>
                 </div>
               </div>
             );
           })}
+          <div data-press style={{
+            flexShrink: 0, width: 86, borderRadius: 16, cursor: "pointer",
+            border: `1.5px dashed ${C.accentFg}55`, display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center", gap: 6,
+          }}>
+            <Plus size={18} color={C.accentFg} strokeWidth={2} />
+            <span style={{ fontSize: 10.5, fontWeight: 600, color: C.accentFg, textAlign: "center" }}>Открыть</span>
+          </div>
+        </div>
+
+        {/* Продукты — Банк / Депозиты / Брокер */}
+        {secLabel("Продукты")}
+        <div style={{ display: "flex", backgroundColor: C.faint, borderRadius: 12, padding: 3, marginBottom: 10 }}>
+          {[
+            { k: "bank", t: `Банк · ${accounts.length + credits.length}` },
+            { k: "deposits", t: `Депозиты · ${deposits.length}` },
+            { k: "broker", t: `Брокер · ${brokerGroups.reduce((n, g) => n + g.accounts.length, 0)}` },
+          ].map(tb => (
+            <div key={tb.k} data-press onClick={() => setProdTab(tb.k)} style={{
+              flex: 1, textAlign: "center", padding: "8px 0", borderRadius: 10, cursor: "pointer",
+              backgroundColor: prodTab === tb.k ? C.card : "transparent",
+            }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: prodTab === tb.k ? C.text : C.muted }}>{tb.t}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+          {prodTab === "bank" && (
+            <>
+              {accounts.map((a, i) => (
+                <div key={a.id} data-press onClick={() => onOpenAccount(a)} style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", cursor: "pointer",
+                  borderBottom: i < accounts.length - 1 || credits.length ? `1px solid ${C.divider}` : "none",
+                }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Landmark size={15} color={C.accentFg} strokeWidth={1.9} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</div>
+                    <div style={{ fontSize: 11, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'" }}>{a.number.slice(0, 4)}…{a.number.replace(/\s/g, "").slice(-4)}</div>
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                    {fmtFull(a.balance)} {(CURRENCY_META[a.currency] || {}).symbol}
+                  </span>
+                </div>
+              ))}
+              {credits.map((cr, i) => (
+                <div key={cr.id} data-press onClick={() => onOpenCredit(cr)} style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", cursor: "pointer",
+                  borderBottom: i < credits.length - 1 ? `1px solid ${C.divider}` : "none",
+                }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Banknote size={15} color={C.accentFg} strokeWidth={1.9} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cr.name}</div>
+                    <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>Платёж до {cr.payoffDate}</div>
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                    {fmtFull(cr.monthly)} ₸
+                  </span>
+                </div>
+              ))}
+            </>
+          )}
+          {prodTab === "deposits" && deposits.map((d, i) => (
+            <div key={d.id} data-press onClick={() => onOpenDeposit(d)} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", cursor: "pointer",
+              borderBottom: i < deposits.length - 1 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <div style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <PiggyBank size={15} color={C.accentFg} strokeWidth={1.9} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>{d.rate.toFixed(1)}% · до {d.closingDate}</div>
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                {fmtFull(d.balance)} {(CURRENCY_META[d.currency] || {}).symbol}
+              </span>
+            </div>
+          ))}
+          {prodTab === "broker" && brokerGroups.map((g, gi) => (
+            <div key={g.group}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, padding: "10px 16px 4px", letterSpacing: "0.05em", textTransform: "uppercase" }}>{g.group}</div>
+              {g.accounts.map((a, i) => (
+                <div key={a.id} data-press onClick={() => onOpenBroker(a)} style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", cursor: "pointer",
+                  borderBottom: gi < brokerGroups.length - 1 || i < g.accounts.length - 1 ? `1px solid ${C.divider}` : "none",
+                }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <TrendingUp size={15} color={C.accentFg} strokeWidth={1.9} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: C.text }}>{a.type}</div>
+                    <div style={{ fontSize: 11, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'" }}>{a.id}</div>
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                    {fmtFull(a.balance)} {(CURRENCY_META[a.currency] || {}).symbol}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
 
         {/* Travel — ядро сервисной части */}
@@ -8566,6 +8674,11 @@ export default function FreedomV6() {
       {activeTab === "products" && theme === "exec" && (
         <ExecHomeScreen C={C} displayCurrency={displayCurrency} totalInKZT={totalInKZT}
           cards={activeCardProducts.flatMap(g => g.cards).filter(c => !c.blocked)}
+          accounts={activeAccounts} deposits={DEPOSITS} credits={activeCredits} brokerGroups={BROKER_ACCOUNTS}
+          onOpenAccount={(account) => pushScreen({ type: "accountDetails", account })}
+          onOpenDeposit={(deposit) => pushScreen({ type: "depositDetails", deposit })}
+          onOpenCredit={(credit) => pushScreen({ type: "creditDetails", credit })}
+          onOpenBroker={(account) => pushScreen({ type: "brokerDetails", account })}
           onAvatarClick={() => setDebugOpen(true)}
           onOpenTotal={() => pushScreen({ type: "total" })}
           onTransfer={openTransferHub}

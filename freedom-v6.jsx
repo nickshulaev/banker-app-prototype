@@ -412,9 +412,9 @@ const EXEC_COLORS = {
 
 /* Карты, открытые близким (executive-форк): держатель + месячный лимит. */
 const FAMILY_CARDS = [
-  { id: "fam-1", holder: "Айгерим", relation: "супруга", initials: "АТ", cardName: "Supercard", last4: "4412", limit: 500000, spent: 213400, currency: "KZT", color: "#D7C08A" },
-  { id: "fam-2", holder: "Айсултан", relation: "сын", initials: "АШ", cardName: "Junior Card", last4: "0917", limit: 150000, spent: 89200, currency: "KZT", color: "#8FA98F" },
-  { id: "fam-3", holder: "Марат", relation: "водитель", initials: "МК", cardName: "Expense Card", last4: "7788", limit: 300000, spent: 41000, currency: "KZT", color: "#7D8AA5" },
+  { id: "fam-1", name: "Мама", cardName: "Supercard", last4: "4412", limit: 500000, spent: 213400, currency: "KZT", color: "#D7C08A" },
+  { id: "fam-2", name: "Сын", cardName: "Junior Card", last4: "0917", limit: 150000, spent: 89200, currency: "KZT", color: "#8FA98F" },
+  { id: "fam-3", name: "Водитель", cardName: "Expense Card", last4: "7788", limit: 300000, spent: 41000, currency: "KZT", color: "#7D8AA5" },
 ];
 
 /* ═══════════════════════════════════════════════
@@ -7313,14 +7313,11 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
                 background: "linear-gradient(135deg, #1E1E24 0%, #17171B 60%, #232329 100%)",
                 border: `1px solid ${C.border}`, padding: "13px 14px",
               }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
                   <div style={{ width: 26, height: 26, borderRadius: "50%", backgroundColor: `${fc.color}2E`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: fc.color }}>{fc.initials}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: fc.color }}>{fc.name[0]}</span>
                   </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 12.5, fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fc.holder}</div>
-                    <div style={{ fontSize: 10, color: C.muted }}>{fc.relation}</div>
-                  </div>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fc.name}</div>
                 </div>
                 <div style={{ height: 3, borderRadius: 2, backgroundColor: C.faint, overflow: "hidden", marginBottom: 7 }}>
                   <div style={{ width: `${pct}%`, height: "100%", backgroundColor: fc.color, borderRadius: 2 }} />
@@ -7496,7 +7493,7 @@ function FamilyCardScreen({ C, fc, onBack }) {
   const [limitOpen, setLimitOpen] = useState(false);
   const pct = Math.min(100, Math.round(fc.spent / limit * 100));
   return (
-    <ScreenShell C={C} title={`${fc.holder} · ${fc.relation}`} onBack={onBack}>
+    <ScreenShell C={C} title={fc.name} onBack={onBack}>
       <div style={{ padding: "4px 20px 110px" }}>
         <div style={{
           borderRadius: 18, background: "linear-gradient(135deg, #1E1E24 0%, #17171B 55%, #232329 100%)",

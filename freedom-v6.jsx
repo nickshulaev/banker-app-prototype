@@ -7298,57 +7298,58 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
           ))}
         </div>
 
-        {/* Свои карты — wallet-стек: кромки с именем и балансом, тап поднимает карту,
-            тап по активной открывает её детали */}
+        {/* Свои карты — аккордеон на месте: порядок фиксированный, карта раскрывается
+            где лежит (взаимоисключающе); «Открыть →» в кромке раскрытой ведёт в детали */}
         {secLabel("Мои карты")}
-        {(() => {
-          const activeId = stackTopId || (cards[0] || {}).id;
-          const ordered = [...cards.filter(c2 => c2.id !== activeId), ...cards.filter(c2 => c2.id === activeId)];
-          const peek = 48, fullH = 172;
-          return (
-            <div style={{ position: "relative", height: fullH + (ordered.length - 1) * peek }}>
-              {ordered.map((card, j) => {
-                const isTop = card.id === activeId;
-                const total = convertTo(cardSubAccounts(card).reduce((t2, a) => t2 + convertToKZT(a.amount, a.currency), 0), dc);
-                return (
-                  <div key={card.id} data-press onClick={() => isTop ? onOpenCard(card) : setStackTopId(card.id)} style={{
-                    position: "absolute", left: 0, right: 0, top: j * peek, height: fullH,
-                    borderRadius: 18, cursor: "pointer", zIndex: j + 1,
-                    background: "linear-gradient(135deg, #1E1E24 0%, #17171B 55%, #232329 100%)",
-                    border: `1px solid ${C.border}`,
-                    boxShadow: j > 0 ? "0 -10px 24px rgba(0,0,0,0.45)" : "none",
-                    padding: "14px 18px",
-                    transition: "top 0.28s ease",
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                        <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: card.color, flexShrink: 0 }} />
-                        <span style={{ fontSize: 13, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.name}</span>
-                      </div>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
-                        {fmtCompact(total)} {dcMeta.symbol}
+        <div>
+          {cards.map((card, j) => {
+            const expandedId = stackTopId || (cards[0] || {}).id;
+            const isOpen = card.id === expandedId;
+            const first = j === 0, last = j === cards.length - 1;
+            const total = convertTo(cardSubAccounts(card).reduce((t2, a) => t2 + convertToKZT(a.amount, a.currency), 0), dc);
+            return (
+              <div key={card.id} data-press onClick={() => setStackTopId(isOpen ? "__none__" : card.id)} style={{
+                height: isOpen ? 168 : 47, overflow: "hidden", position: "relative",
+                borderRadius: isOpen ? 16 : `${first ? 14 : 0}px ${first ? 14 : 0}px ${last ? 14 : 0}px ${last ? 14 : 0}px`,
+                background: isOpen ? "linear-gradient(135deg, #1E1E24 0%, #17171B 55%, #232329 100%)" : C.card,
+                border: `1px solid ${isOpen ? `${C.accentFg}55` : C.border}`,
+                margin: isOpen ? "5px 0" : "0",
+                cursor: "pointer", padding: "0 16px",
+                transition: "height 0.24s ease, border-radius 0.24s ease, margin 0.24s ease",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 47, gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: card.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.name}</span>
+                  </div>
+                  {isOpen ? (
+                    <span data-press onClick={(e) => { e.stopPropagation(); onOpenCard(card); }} style={{
+                      fontSize: 12, fontWeight: 700, color: C.accentFg, cursor: "pointer", flexShrink: 0,
+                    }}>Открыть →</span>
+                  ) : (
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                      {fmtCompact(total)} {dcMeta.symbol}
+                    </span>
+                  )}
+                </div>
+                {isOpen && (
+                  <>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: C.accentFg, letterSpacing: "0.14em", textTransform: "uppercase" }}>Freedom Private</span>
+                      <div style={{ width: 26, height: 18, borderRadius: 4, background: `linear-gradient(135deg, ${C.accentFg} 0%, #B39B62 100%)`, opacity: 0.9 }} />
+                    </div>
+                    <div style={{ position: "absolute", left: 16, right: 16, bottom: 14, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                      <span style={{ fontSize: 12, color: C.muted, fontFeatureSettings: "'tnum'" }}>•••• {card.last4}</span>
+                      <span style={{ fontSize: 17, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
+                        {fmtFull(total)} {dcMeta.symbol}
                       </span>
                     </div>
-                    {isTop && (
-                      <>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 24 }}>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: C.accentFg, letterSpacing: "0.14em", textTransform: "uppercase" }}>Freedom Private</span>
-                          <div style={{ width: 26, height: 18, borderRadius: 4, background: `linear-gradient(135deg, ${C.accentFg} 0%, #B39B62 100%)`, opacity: 0.9 }} />
-                        </div>
-                        <div style={{ position: "absolute", left: 18, right: 18, bottom: 14, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                          <span style={{ fontSize: 12, color: C.muted, fontFeatureSettings: "'tnum'" }}>•••• {card.last4}</span>
-                          <span style={{ fontSize: 17, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
-                            {fmtFull(total)} {dcMeta.symbol}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })()}
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
 
         {/* Карты близких — мини-карты каруселью (второй класс карт) */}
         {secLabel("Карты близких")}

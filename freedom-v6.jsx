@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Search, Bell, Plus, ChevronRight, ChevronDown, ChevronsUpDown, X, ArrowLeftRight, ArrowUpDown, PiggyBank, Banknote, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid, Smartphone, Plane, Sofa, Zap, Phone, Globe, QrCode, Repeat, Send, Landmark, Tv, Bus, GraduationCap, Eye, EyeOff, ArrowLeft, ArrowDown, ArrowDownLeft, Snowflake, FileText, ShoppingCart, Utensils, Fuel, Wifi, Home, Ticket, Settings2, Check, User, Shield, LogOut, Palette } from "lucide-react";
+import { Search, Bell, Plus, ChevronRight, ChevronDown, ChevronsUpDown, X, ArrowLeftRight, ArrowUpDown, PiggyBank, Banknote, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid, Smartphone, Plane, Sofa, Zap, Phone, Globe, QrCode, Repeat, Send, Landmark, Tv, Bus, GraduationCap, Eye, EyeOff, ArrowLeft, ArrowDown, ArrowDownLeft, Snowflake, FileText, ShoppingCart, Utensils, Fuel, Wifi, Home, Ticket, Settings2, Check, User, Shield, LogOut, Palette, Users, HeartPulse, Siren, Building2, Scale } from "lucide-react";
 import OnboardingFlow, { ONB_START, ONB_GATES, ONB_PRESETS, ONB_STEPS, SUMSUB_PHASES, SUMSUB_PHASE_LABELS } from "./onboarding.jsx";
 
 /* ═══════════════════════════════════════════════
@@ -176,10 +176,11 @@ const CURRENCY_META = {
   RUB: { symbol: "₽", flag: "🇷🇺", name: "Рубль" },
   CNY: { symbol: "¥", flag: "🇨🇳", name: "Юань" },
   TRY: { symbol: "₺", flag: "🇹🇷", name: "Лира" },
+  GEL: { symbol: "₾", flag: "🇬🇪", name: "Лари" },
   AED: { symbol: "د.إ", flag: "🇦🇪", name: "Дирхам" },
 };
 
-const RATES_TO_KZT = { KZT: 1, USD: 455.0, EUR: 495.0, RUB: 5.1, CNY: 64.0, TRY: 12.5, AED: 124.0 };
+const RATES_TO_KZT = { KZT: 1, USD: 455.0, EUR: 495.0, RUB: 5.1, CNY: 64.0, TRY: 12.5, GEL: 167.0, AED: 124.0 };
 
 /* ═══════════════════════════════════════════════
    ПИКЕР ПРОДУКТА — логика из протокола встречи 25.06.2026
@@ -189,7 +190,7 @@ const RATES_TO_KZT = { KZT: 1, USD: 455.0, EUR: 495.0, RUB: 5.1, CNY: 64.0, TRY:
 
 // Иерархия валют для подстановки счёта зачисления.
 // КЗТ — главная валюта банка, остаётся приоритетной (решение со встречи).
-const CURRENCY_HIERARCHY = ["KZT", "USD", "EUR", "RUB", "CNY", "TRY", "AED"];
+const CURRENCY_HIERARCHY = ["KZT", "USD", "EUR", "RUB", "CNY", "TRY", "GEL", "AED"];
 
 // Развернуть карту в список её валютных суб-счетов.
 // breakdown содержит реальные счета по валютам; primary — только для моновалютной карты.
@@ -437,6 +438,97 @@ const FAMILY_TX = {
     { id: 3, name: "Magnum Cash&Carry", cat: "Продукты", amount: -4200, time: "11 июля", Icon: ShoppingCart },
   ],
 };
+
+/* ═══ EXEC: данные новых сервисов (соответствие деке «следующие ставки») ═══ */
+
+// Совместный счёт — общий бюджет поверх карт близких.
+const SHARED_ACCOUNT = {
+  id: "shared-1", name: "Общий счёт", currency: "EUR", balance: 4210.4,
+  members: [
+    { id: "me", name: "Никита", role: "Владелец", color: "#D7C08A" },
+    { id: "m2", name: "Супруга", role: "Полный доступ", color: "#8FA98F" },
+  ],
+  tx: [
+    { id: 1, who: "Супруга", name: "Аренда · Лиссабон", amount: -1450, time: "1 июля", Icon: Home },
+    { id: 2, who: "Никита", name: "Пополнение", amount: 2000, time: "1 июля", Icon: Plus },
+    { id: 3, who: "Супруга", name: "Colégio Planalto · школа", amount: -680, time: "28 июня", Icon: GraduationCap },
+  ],
+};
+
+// Внешние банки (мультибанк-агрегация, open banking).
+const EXT_BANKS = [
+  { id: "eb-1", name: "Revolut", short: "R", color: "#3B82F6", currency: "EUR", balance: 12400.55, synced: "5 мин назад" },
+  { id: "eb-2", name: "Kaspi Bank", short: "K", color: "#EF4444", currency: "KZT", balance: 830500, synced: "1 час назад" },
+];
+
+// Валютные автоправила.
+const AUTO_RULES_INITIAL = [
+  { id: "ar-1", from: "USD", to: "EUR", kind: "rate", threshold: "0,92", amount: 1000, on: true },
+  { id: "ar-2", from: "KZT", to: "USD", kind: "weekly", amount: 200000, on: false },
+];
+
+// Lounge и Fast Track.
+const LOUNGES = [
+  { id: "lg-1", airport: "Алматы · ALA", name: "Shanyrak Lounge", terminal: "Международный, 2 этаж", open: "круглосуточно" },
+  { id: "lg-2", airport: "Астана · NQZ", name: "Premium Lounge", terminal: "Терминал 1, зона вылета", open: "05:00–23:00" },
+  { id: "lg-3", airport: "Дубай · DXB", name: "Marhaba Lounge", terminal: "Terminal 3, Concourse B", open: "круглосуточно" },
+  { id: "lg-4", airport: "Стамбул · IST", name: "IGA Lounge", terminal: "International, Duty Free Sq.", open: "круглосуточно" },
+];
+const FASTTRACK_AIRPORTS = [
+  { id: "ft-1", airport: "Алматы · ALA", desc: "Паспортный контроль и досмотр без очереди" },
+  { id: "ft-2", airport: "Астана · NQZ", desc: "Отдельный коридор на вылете" },
+  { id: "ft-3", airport: "Ташкент · TAS", desc: "Встреча у трапа + ускоренный контроль" },
+];
+
+// Инвест-портфель (витрина поверх брокерских счетов; исполнение — SDK TraderNet).
+const PORTFOLIO = {
+  totalUSD: 486200, dayChangeUSD: 3120, dayChangePct: 0.65,
+  positions: [
+    { ticker: "AAPL", name: "Apple", valueUSD: 84300, changePct: 1.2 },
+    { ticker: "MSFT", name: "Microsoft", valueUSD: 71800, changePct: 0.4 },
+    { ticker: "FRHC", name: "Freedom Holding", valueUSD: 65400, changePct: 2.1 },
+    { ticker: "VOO", name: "Vanguard S&P 500", valueUSD: 118200, changePct: 0.5 },
+    { ticker: "TLT", name: "iShares 20+ Treasury", valueUSD: 52600, changePct: -0.3 },
+  ],
+  allocation: [
+    { k: "Акции", pct: 46 }, { k: "Фонды", pct: 35 }, { k: "Облигации", pct: 11 }, { k: "Кэш", pct: 8 },
+  ],
+  spark: [420, 428, 424, 431, 436, 433, 441, 446, 444, 452, 458, 455, 462, 468, 466, 471, 478, 476, 481, 486],
+};
+
+// Консьерж-запросы (сценарии чата менеджера).
+const CONCIERGE_KINDS = {
+  tax: {
+    title: "Налоговый помощник", intro: "Готовим декларации для резидентов третьих стран вместе с локальными партнёрами.",
+    fields: [
+      { label: "Страна налогового резидентства", options: ["Италия", "Израиль", "Армения", "Грузия", "Турция", "ОАЭ", "Другая"] },
+      { label: "Что нужно", options: ["Декларация за 2025 год", "Справка об остатках и доходах", "Консультация по CFC/КИК"] },
+    ],
+    note: "Менеджер соберёт выписки по всем счетам и передаст налоговому партнёру. Документы — в этом чате.",
+  },
+  relocation: {
+    title: "Релокация", intro: "Сопровождаем переезд: документы, счета, перевоз капитала.",
+    fields: [
+      { label: "Куда переезжаете", options: ["Португалия", "Испания", "ОАЭ", "Грузия", "Сербия", "Другая страна"] },
+      { label: "Этап", options: ["Только планирую", "Есть виза/ВНЖ — готовлю переезд", "Уже переехал — навожу порядок"] },
+    ],
+    note: "Чеклист под вашу страну: виза и ВНЖ, счета и карты, перевоз капитала, налоги первого года.",
+  },
+  lawyer: {
+    title: "Юрист", intro: "Нотариат, апостили, доверенности и переводы документов через границы.",
+    fields: [
+      { label: "Задача", options: ["Доверенность из-за рубежа", "Апостиль на документы", "Перевод + нотариус", "Другое"] },
+    ],
+    note: "Юридический партнёр свяжется в этом чате в течение часа.",
+  },
+};
+
+// Роли и доставка для выпуска карт.
+const FAMILY_ROLE_PRESETS = ["Мама", "Папа", "Сын", "Дочь", "Водитель", "Ассистент"];
+const CARD_DELIVERY = [
+  { id: "kz", label: "Казахстан", eta: "завтра", price: "бесплатно" },
+  { id: "world", label: "Любая страна мира", eta: "до 10 дней", price: "бесплатно" },
+];
 
 /* ═══════════════════════════════════════════════
    BLOCKS
@@ -2467,7 +2559,7 @@ function BottomTabBar({ active, onChange, C }) {
    «Другим» (По номеру телефона / На карту другого банка / По номеру счета / SWIFT) → Оплата услуг.
    selectedProduct = вход «Перевести» с продукта: пункты фильтруются его transferAllowedSettings
    (прод checkTransferAllowedSettingsForSelectedProduct), заголовок «Отправить». */
-function PaymentsScreen({ C, featureFlags, selectedProduct, embedded, onOpenStub, onTemplates, onTransferOwn, onTopUpOwn, onRequestMoney, onClientTransfer, onFromOtherBank, onCifraIn, onCryptoIn, onBrokerRefill, onPhoneTransfer, onToOtherCard, onConversion, onQrScan, onSwift, onIban, onMobilePay, onOpenCategory, onOpenTemplate, onServices }) {
+function PaymentsScreen({ C, featureFlags, selectedProduct, embedded, onOpenStub, onTemplates, onTransferOwn, onTopUpOwn, onRequestMoney, onClientTransfer, onFromOtherBank, onCifraIn, onCryptoIn, onBrokerRefill, onPhoneTransfer, onToOtherCard, onConversion, onAutoRules, onEducation, onQrScan, onSwift, onIban, onMobilePay, onOpenCategory, onOpenTemplate, onServices }) {
   // Гейт настроек выбранного продукта: без продукта — всё разрешено (как в проде).
   const sp = (path) => !selectedProduct ? true : selectedProduct.flags[path] === true;
   // «На свой брокерский счет» — если есть инвестиции с replenishAllowed; сабтайтл с receptions.
@@ -2586,6 +2678,9 @@ function PaymentsScreen({ C, featureFlags, selectedProduct, embedded, onOpenStub
           {featureFlags.conversionRates && (
             <Row Icon={ArrowLeftRight} color="#F59E0B" title="Обмен валюты" subtitle="Конвертация по курсу" onClick={onConversion} />
           )}
+          {onAutoRules && (
+            <Row Icon={Clock} color="#8B5CF6" title="Автоправила валют" subtitle="Покупка по целевому курсу или расписанию" onClick={onAutoRules} />
+          )}
           {sp("brokerRefill") && (
             <Row Icon={TrendingUp} color="#F59E0B" title="На свой брокерский счет" subtitle={`Брокер – ${brokerReceptions}`} onClick={onBrokerRefill} last />
           )}
@@ -2609,6 +2704,9 @@ function PaymentsScreen({ C, featureFlags, selectedProduct, embedded, onOpenStub
             )}
             {featureFlags.paySwift && sp("swift") && (
               <Row Icon={Globe} color="#06B6D4" title="Переводом SWIFT" subtitle="В любую страну" onClick={onSwift} />
+            )}
+            {onEducation && (
+              <Row Icon={GraduationCap} color="#22C55E" title="Обучение за рубежом" subtitle="Tuition fee + документы для визы" onClick={onEducation} />
             )}
             {featureFlags.crystal && sp("swift") && (
               <Row Icon={FileText} color="#0EA5E9" title="Валютные контракты" subtitle="Для переводов SWIFT"
@@ -3986,7 +4084,7 @@ function RequestInfoScreen({ request, C, onBack, onAccept, onReject }) {
    (sections and texts from settingsFlow.settings.*)
    ═══════════════════════════════════════════════ */
 
-function SettingsScreen({ C, onBack, onOpenNotifications, onOpenProfileInfo, onOpenSecurity, onOpenDevices, onOpenLanguage, onOpenCertificates, onOpenHelp, onOpenDecor, onOpenAbout, onOpenQr, onOpenAviata, onLogout }) {
+function SettingsScreen({ C, onBack, onOpenNotifications, onOpenProfileInfo, onOpenSecurity, onOpenDevices, onOpenLanguage, onOpenCertificates, onOpenHelp, onOpenDecor, onOpenAbout, onOpenQr, onOpenAviata, onOpenSubscription, onLogout }) {
   const [hideAmount, setHideAmount] = useState(false);
   const isDark = C.bg === '#0E0F0C';
 
@@ -4071,6 +4169,9 @@ function SettingsScreen({ C, onBack, onOpenNotifications, onOpenProfileInfo, onO
 
         {/* Сервисы */}
         <Section>
+          {onOpenSubscription && (
+            <Row Icon={Star} color="#D7C08A" title="Тариф Executive" subtitle="30 € в месяц · консьерж, лаунжи, metal" onClick={onOpenSubscription} />
+          )}
           <Row Icon={FileText} color="#0D9488" title="Заказ справок" subtitle="Для оформления визы и в налоговую" onClick={onOpenCertificates} />
           <Row Icon={Plane} color="#3B82F6" title="Путешествия" subtitle="Авиабилеты, горящие туры, пассажиры" onClick={onOpenAviata} last />
         </Section>
@@ -5343,6 +5444,7 @@ function CertificatesScreen({ C, featureFlags, onBack, onDone }) {
     ...(featureFlags.certificateOfAccounts ? [{ title: "Справка о наличии счёта", sub: "Для оформления визы и в налоговую" }] : []),
     { title: "Справка о доступном остатке", sub: "Актуальный остаток на счетах" },
     { title: "Выписка по счёту", sub: "Операции за выбранный период" },
+    { title: "Proof of funds для визы и ВНЖ", sub: "Формат посольств · источник средств · EN" },
   ];
   return (
     <ScreenShell C={C} title="Заказ справок" onBack={onBack}>
@@ -6373,7 +6475,7 @@ function TemplatePayScreen({ C, template, onBack, onConfirm }) {
    CHATS TAB — real chat flag (чат с банком)
    ═══════════════════════════════════════════════ */
 
-function ChatsScreen({ C, featureFlags, onOpenThread }) {
+function ChatsScreen({ C, featureFlags, onOpenThread, concierge }) {
   return (
     <div style={{
       maxWidth: 430, margin: "0 auto", minHeight: "100dvh",
@@ -6415,6 +6517,37 @@ function ChatsScreen({ C, featureFlags, onOpenThread }) {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Консьерж-сценарии: «бумажные» сервисы живут в чате менеджера */}
+        {featureFlags.chat && concierge && (
+          <>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: "0.09em", textTransform: "uppercase", margin: "24px 0 10px" }}>
+              Запросы консьержу
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {[
+                { t: "Справка для визы", s: "Proof of funds, выписки", Icon: FileText, on: concierge.certificates },
+                { t: "Налоги", s: "Декларации третьих стран", Icon: Landmark, on: concierge.tax },
+                { t: "Релокация", s: "Переезд под ключ", Icon: Globe, on: concierge.relocation },
+                { t: "Врач 24/7", s: "Телемедицина в поездке", Icon: HeartPulse, on: concierge.medical },
+                { t: "Юрист", s: "Апостили, доверенности", Icon: Scale, on: concierge.lawyer },
+                { t: "Билеты и отели", s: "Организуем поездку", Icon: Plane, on: concierge.travel },
+              ].map(q => (
+                <div key={q.t} data-press onClick={q.on} style={{
+                  backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`,
+                  padding: "13px 14px", cursor: "pointer",
+                }}>
+                  <q.Icon size={17} color={C.accentFg} strokeWidth={1.9} style={{ marginBottom: 8, display: "block" }} />
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text }}>{q.t}</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{q.s}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.5, marginTop: 14 }}>
+              Любой запрос уходит Алишеру — ответ в чате в течение 5 минут, 24/7.
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -7245,7 +7378,7 @@ function CardAccountPicker({ C, displayCurrency, products, counterpart, showUnav
    Капитал → быстрые действия → свои карты (карусель-металл) →
    карты близких (лимиты) → Travel → последние операции.
    ═══════════════════════════════════════════════ */
-function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposits, credits, brokerGroups, news, onAvatarClick, onOpenTotal, onOpenCard, onCardTopUp, onCardTransfer, onOpenFamily, onOpenAccount, onOpenDeposit, onOpenCredit, onOpenBroker, onOpenEsim, onOpenAviata, onOpenNews, onOpenNewsDetail, onOpenTransaction, onOpenAllTransactions, onManager }) {
+function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposits, credits, brokerGroups, news, onAvatarClick, onOpenProfile, onOpenTotal, onOpenCard, onCardTopUp, onCardTransfer, onOpenFamily, onOpenAccount, onOpenDeposit, onOpenCredit, onOpenBroker, onOpenEsim, onOpenAviata, onOpenLounge, onOpenFastTrack, onOpenMedical, onOpenSos, onNewCard, onNewFamilyCard, onOpenShared, onConnectBank, onOpenNews, onOpenNewsDetail, onOpenTransaction, onOpenAllTransactions, onManager }) {
   const [prodTab, setProdTab] = useState("bank");
   const [prodExpanded, setProdExpanded] = useState(false); // «Другие счета»: короткий список по умолчанию
   const [activeCardIdx, setActiveCardIdx] = useState(0); // активный слайд hero-карусели
@@ -7278,7 +7411,7 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
           }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: C.accentFg }}>НШ</span>
           </div>
-          <div style={{ flex: 1 }}>
+          <div data-press onClick={onOpenProfile} style={{ flex: 1, cursor: "pointer" }}>
             <div style={{ fontSize: 11, color: C.muted }}>Freedom Banker</div>
             <div style={{ fontSize: 16, fontWeight: 700, color: C.text, letterSpacing: -0.2 }}>Никита</div>
           </div>
@@ -7321,24 +7454,26 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
           </>
         )}
 
-        {/* Travel — ядро сервисной части */}
-        {secLabel("Тревел")}
+        {/* Travel + жизнь вне географии — ядро сервисной части */}
+        {secLabel("Тревел и сервисы")}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {[
             { t: "Авиабилеты", s: "Поиск и покупка", Icon: Plane, on: onOpenAviata },
             { t: "eSIM", s: "Интернет в поездках", Icon: Smartphone, on: onOpenEsim },
-            { t: "Lounge", s: "Залы ожидания", Icon: Sofa, soon: true },
-            { t: "Fast Track", s: "Без очередей", Icon: Zap, soon: true },
+            { t: "Lounge", s: "Залы ожидания", Icon: Sofa, on: onOpenLounge },
+            { t: "Fast Track", s: "Без очередей", Icon: Zap, on: onOpenFastTrack },
+            { t: "Медицина", s: "Врач 24/7 и страховка", Icon: HeartPulse, on: onOpenMedical },
+            { t: "SOS", s: "Экстренная помощь", Icon: Siren, sos: true, on: onOpenSos },
           ].map(sv => (
-            <div key={sv.t} data-press={sv.soon ? undefined : true} onClick={sv.soon ? undefined : sv.on} style={{
-              backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`,
-              padding: "13px 14px", cursor: sv.soon ? "default" : "pointer", opacity: sv.soon ? 0.55 : 1,
+            <div key={sv.t} data-press onClick={sv.on} style={{
+              backgroundColor: C.card, borderRadius: 14,
+              border: `1px solid ${sv.sos ? "rgba(239,107,107,0.35)" : C.border}`,
+              padding: "13px 14px", cursor: "pointer",
             }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                <sv.Icon size={17} color={C.accentFg} strokeWidth={1.9} />
-                {sv.soon && <span style={{ fontSize: 9.5, fontWeight: 700, color: C.muted, backgroundColor: C.faint, borderRadius: 8, padding: "2px 7px" }}>скоро</span>}
+                <sv.Icon size={17} color={sv.sos ? "#EF6B6B" : C.accentFg} strokeWidth={1.9} />
               </div>
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text }}>{sv.t}</div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: sv.sos ? "#EF6B6B" : C.text }}>{sv.t}</div>
               <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{sv.s}</div>
             </div>
           ))}
@@ -7413,13 +7548,14 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
                     </div>
                   );
                 })}
-                <div data-press style={{
+                <div data-press onClick={onNewCard} style={{
                   flexShrink: 0, width: "calc(100% - 44px)", scrollSnapAlign: "center", height: 204,
                   borderRadius: 18, border: `1.5px dashed ${C.accentFg}55`, cursor: "pointer",
                   display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
                 }}>
                   <Plus size={22} color={C.accentFg} strokeWidth={2} />
                   <span style={{ fontSize: 12.5, fontWeight: 600, color: C.accentFg }}>Новая карта</span>
+                  <span style={{ fontSize: 10.5, color: C.muted }}>Доставка в любую страну · 10 дней</span>
                 </div>
               </div>
               <div style={{ display: "flex", justifyContent: "center", gap: 4, margin: "8px 0 14px" }}>
@@ -7464,7 +7600,24 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
               </div>
             );
           })}
-          <div data-press style={{
+          {/* Совместный счёт — общий бюджет распределённой семьи */}
+          <div data-press onClick={onOpenShared} style={{
+            flexShrink: 0, width: 172, borderRadius: 16, cursor: "pointer",
+            background: "linear-gradient(135deg, #1E1E24 0%, #17171B 60%, #232329 100%)",
+            border: `1px solid ${C.border}`, padding: "13px 14px",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+              <div style={{ width: 26, height: 26, borderRadius: "50%", backgroundColor: `${C.accentFg}2E`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Users size={13} color={C.accentFg} strokeWidth={2} />
+              </div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text }}>Общий счёт</div>
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", marginBottom: 4 }}>
+              {fmtFull(SHARED_ACCOUNT.balance)} {(CURRENCY_META[SHARED_ACCOUNT.currency] || {}).symbol}
+            </div>
+            <div style={{ fontSize: 10.5, color: C.muted }}>Вы и Супруга</div>
+          </div>
+          <div data-press onClick={onNewFamilyCard} style={{
             flexShrink: 0, width: 86, borderRadius: 16, cursor: "pointer",
             border: `1.5px dashed ${C.accentFg}55`, display: "flex", flexDirection: "column",
             alignItems: "center", justifyContent: "center", gap: 6,
@@ -7484,6 +7637,7 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
             { k: "bank", t: `Банк · ${accounts.length + credits.length}` },
             { k: "deposits", t: `Депозиты · ${deposits.length}` },
             { k: "broker", t: `Брокер · ${brokerGroups.reduce((n, g) => n + g.accounts.length, 0)}` },
+            { k: "extbank", t: `Банки · ${EXT_BANKS.length}` },
           ].map(tb => (
             <div key={tb.k} data-press onClick={() => { setProdTab(tb.k); setProdExpanded(false); }} style={{
               flex: 1, textAlign: "center", padding: "8px 0", borderRadius: 10, cursor: "pointer",
@@ -7571,16 +7725,47 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
               ))}
             </div>
           ))}
-          {/* Развернуть / свернуть — короткий список по умолчанию */}
-          <div data-press onClick={() => setProdExpanded(v => !v)} style={{
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-            padding: "11px 0", cursor: "pointer", borderTop: `1px solid ${C.divider}`,
-          }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: C.accentFg }}>
-              {prodExpanded ? "Свернуть" : `Показать все · ${prodTab === "bank" ? accounts.length + credits.length : prodTab === "deposits" ? deposits.length : brokerGroups.reduce((n, g) => n + g.accounts.length, 0)}`}
-            </span>
-            <ChevronDown size={13} color={C.accentFg} strokeWidth={2.2} style={{ transform: prodExpanded ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
-          </div>
+          {/* Мультибанк: чужие банки через open banking — «весь капитал в одном экране» */}
+          {prodTab === "extbank" && (
+            <>
+              {EXT_BANKS.map((b, i) => (
+                <div key={b.id} style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
+                  borderBottom: `1px solid ${C.divider}`,
+                }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: `${b.color}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: b.color }}>{b.short}</span>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: C.text }}>{b.name}</div>
+                    <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>Open banking · {b.synced}</div>
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                    {fmtFull(b.balance)} {(CURRENCY_META[b.currency] || {}).symbol}
+                  </span>
+                </div>
+              ))}
+              <div data-press onClick={onConnectBank} style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                padding: "12px 0", cursor: "pointer",
+              }}>
+                <Plus size={13} color={C.accentFg} strokeWidth={2.2} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.accentFg }}>Подключить банк</span>
+              </div>
+            </>
+          )}
+          {/* Развернуть / свернуть — короткий список по умолчанию (не для мультибанка) */}
+          {prodTab !== "extbank" && (
+            <div data-press onClick={() => setProdExpanded(v => !v)} style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              padding: "11px 0", cursor: "pointer", borderTop: `1px solid ${C.divider}`,
+            }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.accentFg }}>
+                {prodExpanded ? "Свернуть" : `Показать все · ${prodTab === "bank" ? accounts.length + credits.length : prodTab === "deposits" ? deposits.length : brokerGroups.reduce((n, g) => n + g.accounts.length, 0)}`}
+              </span>
+              <ChevronDown size={13} color={C.accentFg} strokeWidth={2.2} style={{ transform: prodExpanded ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+            </div>
+          )}
         </div>
 
         {/* Последние операции */}
@@ -7792,6 +7977,747 @@ function FamilyCardScreen({ C, fc, onBack }) {
 }
 
 /* ═══════════════════════════════════════════════
+   EXEC: сервисы «следующих ставок» из деки
+   Lounge / Fast Track / Медицина / SOS / Портфель /
+   Выпуск карты (мировая доставка) / Совместный счёт /
+   Автоправила / Обучение / Консьерж-запросы / Тариф
+   ═══════════════════════════════════════════════ */
+
+function LoungeScreen({ C, onBack }) {
+  const [passFor, setPassFor] = useState(null); // lounge id → показать QR-пропуск
+  const lg = LOUNGES.find(l => l.id === passFor);
+  return (
+    <ScreenShell C={C} title="Lounge" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5, marginBottom: 16 }}>
+          4 прохода в месяц включены в тариф Executive. Пропуск — QR на этом экране, спутник — за 25 €.
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 8 }}>
+          {LOUNGES.map(l => (
+            <div key={l.id} style={{ backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: "14px 16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Sofa size={17} color={C.accentFg} strokeWidth={1.9} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{l.name}</div>
+                  <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>{l.airport} · {l.terminal}</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>{l.open}</div>
+                </div>
+                <div data-press onClick={() => setPassFor(passFor === l.id ? null : l.id)} style={{
+                  padding: "8px 12px", borderRadius: 10, backgroundColor: passFor === l.id ? C.accentDark : C.faint, cursor: "pointer", flexShrink: 0,
+                }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: passFor === l.id ? C.accent : C.accentFg }}>Пропуск</span>
+                </div>
+              </div>
+              {passFor === l.id && (
+                <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.divider}`, textAlign: "center" }}>
+                  <div style={{
+                    width: 148, height: 148, margin: "0 auto 10px", borderRadius: 12, backgroundColor: "#FFFFFF",
+                    padding: 10, display: "grid", gridTemplateColumns: "repeat(9, 1fr)", gap: 2,
+                  }}>
+                    {Array.from({ length: 81 }).map((_, qi) => (
+                      <div key={qi} style={{ backgroundColor: ((qi * 7 + (qi % 5) * 11 + l.id.length * qi) % 3) ? "#0C0C0E" : "#FFFFFF", borderRadius: 1 }} />
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Никита Шулаев · Executive</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Действует сегодня · осталось проходов: 3 из 4</div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+function FastTrackScreen({ C, onBack, onDone }) {
+  const [sel, setSel] = useState(FASTTRACK_AIRPORTS[0].id);
+  const a = FASTTRACK_AIRPORTS.find(x => x.id === sel);
+  return (
+    <ScreenShell C={C} title="Fast Track" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5, marginBottom: 16 }}>
+          Проход без очереди на вылете. Бронь привязывается к ближайшему рейсу из ваших билетов.
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+          {FASTTRACK_AIRPORTS.map(x => (
+            <div key={x.id} data-press onClick={() => setSel(x.id)} style={{
+              backgroundColor: C.card, borderRadius: 14, padding: "14px 16px",
+              border: `1.5px solid ${sel === x.id ? C.accentDark : C.border}`, cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 12,
+            }}>
+              <Zap size={17} color={C.accentFg} strokeWidth={1.9} style={{ flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{x.airport}</div>
+                <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>{x.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: "12px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
+          <Plane size={15} color={C.accentFg} strokeWidth={1.9} />
+          <div style={{ fontSize: 12.5, color: C.sub }}>Ближайший рейс: ALA → CDG · 24 июня, 09:40</div>
+        </div>
+        <div data-press onClick={() => onDone(a)} style={{ backgroundColor: C.accentDark, borderRadius: 12, padding: "15px 0", textAlign: "center", cursor: "pointer" }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>Забронировать · включено в тариф</span>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+function MedicalScreen({ C, onBack, onCall }) {
+  return (
+    <ScreenShell C={C} title="Медицина" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: "18px 16px", marginBottom: 12, textAlign: "center" }}>
+          <div style={{ width: 56, height: 56, borderRadius: 18, backgroundColor: C.accentSoft, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+            <HeartPulse size={24} color={C.accentFg} strokeWidth={1.9} />
+          </div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>Врач на связи 24/7</div>
+          <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5, margin: "6px 0 14px" }}>
+            Телемедицина на русском и английском из любой страны. Врач подключается за 10 минут.
+          </div>
+          <div data-press onClick={onCall} style={{ backgroundColor: C.accentDark, borderRadius: 12, padding: "14px 0", textAlign: "center", cursor: "pointer" }}>
+            <span style={{ fontSize: 14.5, fontWeight: 700, color: C.accent }}>Связаться с врачом</span>
+          </div>
+        </div>
+        <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: "15px 16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: C.text }}>Страховка путешественника</span>
+            <span style={{ fontSize: 10.5, fontWeight: 700, color: C.accentFg, backgroundColor: C.accentSoft, borderRadius: 8, padding: "3px 8px" }}>Активна</span>
+          </div>
+          {[
+            { label: "Полис", value: "FRB-TRV · 88 412 003" },
+            { label: "Покрытие", value: "до 100 000 € · весь мир" },
+            { label: "Включено", value: "экстренная помощь, стоматология" },
+            { label: "Действует", value: "до 12.03.2027" },
+          ].map((r, i, arr) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "10px 0", borderBottom: i < arr.length - 1 ? `1px solid ${C.divider}` : "none" }}>
+              <span style={{ fontSize: 12.5, color: C.muted, flexShrink: 0 }}>{r.label}</span>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: C.text, textAlign: "right" }}>{r.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+function SosScreen({ C, onBack, onManager, onMedical, onLawyer }) {
+  const [cardsBlocked, setCardsBlocked] = useState(false);
+  const [confirmBlock, setConfirmBlock] = useState(false);
+  return (
+    <ScreenShell C={C} title="SOS за границей" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5, marginBottom: 16 }}>
+          Что бы ни случилось — карта, документы, здоровье — консьерж берёт ситуацию на себя.
+        </div>
+        <div data-press onClick={() => cardsBlocked ? setCardsBlocked(false) : setConfirmBlock(true)} style={{
+          borderRadius: 14, border: `1.5px solid ${cardsBlocked ? C.border : "rgba(239,68,68,0.5)"}`,
+          backgroundColor: cardsBlocked ? C.card : "rgba(239,68,68,0.08)",
+          padding: "15px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, marginBottom: 10,
+        }}>
+          <Snowflake size={19} color={cardsBlocked ? C.accentFg : "#EF6B6B"} strokeWidth={2} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14.5, fontWeight: 700, color: cardsBlocked ? C.text : "#EF6B6B" }}>
+              {cardsBlocked ? "Карты заблокированы" : "Заблокировать все карты"}
+            </div>
+            <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>
+              {cardsBlocked ? "Нажмите, чтобы разблокировать" : "Мгновенно, включая карты близких"}
+            </div>
+          </div>
+        </div>
+        {[
+          { t: "Менеджер 24/7", s: "Алишер в чате — любые ситуации", Icon: MessageCircle, on: onManager },
+          { t: "Врач", s: "Телемедицина за 10 минут", Icon: HeartPulse, on: onMedical },
+          { t: "Юрист", s: "Полиция, документы, инциденты", Icon: Scale, on: onLawyer },
+        ].map((a, i) => (
+          <div key={i} data-press onClick={a.on} style={{
+            backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`,
+            padding: "15px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, marginBottom: 10,
+          }}>
+            <a.Icon size={18} color={C.accentFg} strokeWidth={1.9} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 700, color: C.text }}>{a.t}</div>
+              <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>{a.s}</div>
+            </div>
+            <ChevronRight size={15} color={C.muted} strokeWidth={1.8} />
+          </div>
+        ))}
+        <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.5, marginTop: 6 }}>
+          Экстренная замена карты доставляется в любую страну за 48 часов.
+        </div>
+      </div>
+      {confirmBlock && (
+        <BottomSheetModal C={C} onClose={() => setConfirmBlock(false)}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 8 }}>Заблокировать все карты?</div>
+          <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.55, marginBottom: 20 }}>
+            Все ваши карты и карты близких перестанут работать сразу. Разблокировать можно здесь же.
+          </div>
+          <div data-press onClick={() => { setCardsBlocked(true); setConfirmBlock(false); }} style={{ backgroundColor: "#EF4444", borderRadius: 12, padding: "15px 0", textAlign: "center", cursor: "pointer", marginBottom: 10 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>Заблокировать</span>
+          </div>
+          <div data-press onClick={() => setConfirmBlock(false)} style={{ backgroundColor: C.faint, borderRadius: 12, padding: "15px 0", textAlign: "center", cursor: "pointer" }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: C.text }}>Отмена</span>
+          </div>
+        </BottomSheetModal>
+      )}
+    </ScreenShell>
+  );
+}
+
+/* Портфель: витрина всех брокерских денег; сделки — в SDK TraderNet. */
+function PortfolioScreen({ C, onOpenTn }) {
+  const p = PORTFOLIO;
+  const min = Math.min(...p.spark), max = Math.max(...p.spark);
+  const pts = p.spark.map((v, i) => `${(i / (p.spark.length - 1) * 100).toFixed(1)},${(34 - (v - min) / (max - min) * 30).toFixed(1)}`).join(" ");
+  return (
+    <div style={{
+      maxWidth: 430, margin: "0 auto", minHeight: "100dvh", backgroundColor: C.bg,
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', system-ui, sans-serif",
+      overflowX: "clip", paddingBottom: 96,
+    }}>
+      <StatusBar C={C} />
+      <div style={{ padding: "8px 20px 0" }}>
+        <div style={{ fontSize: 24, fontWeight: 800, color: C.text, letterSpacing: -0.5, marginBottom: 14 }}>Инвестиции</div>
+        <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: "16px 16px 12px", marginBottom: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: "0.09em", textTransform: "uppercase", marginBottom: 8 }}>Весь портфель</div>
+          <div style={{ fontSize: 34, fontWeight: 300, color: C.text, letterSpacing: -1, fontFeatureSettings: "'tnum'", lineHeight: 1 }}>
+            {fmtInt(p.totalUSD)} <span style={{ fontSize: 20, color: C.muted, fontWeight: 300 }}>$</span>
+          </div>
+          <div style={{ fontSize: 12.5, color: "#7FB77E", margin: "8px 0 10px", fontFeatureSettings: "'tnum'" }}>
+            +{fmtFull(p.dayChangeUSD)} $ · +{p.dayChangePct.toFixed(2).replace(".", ",")}% за день
+          </div>
+          <svg viewBox="0 0 100 36" preserveAspectRatio="none" style={{ width: "100%", height: 44, display: "block" }}>
+            <polyline points={pts} fill="none" stroke={C.accentFg} strokeWidth="1.4" strokeLinejoin="round" strokeLinecap="round" opacity="0.9" />
+          </svg>
+        </div>
+        <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: "15px 16px", marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 12 }}>Распределение</div>
+          <div style={{ display: "flex", height: 6, borderRadius: 3, overflow: "hidden", marginBottom: 10 }}>
+            {p.allocation.map((a, i) => (
+              <div key={a.k} style={{ width: `${a.pct}%`, backgroundColor: C.accentFg, opacity: 1 - i * 0.22 }} />
+            ))}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 14px" }}>
+            {p.allocation.map((a, i) => (
+              <span key={a.k} style={{ fontSize: 11.5, color: C.sub, fontFeatureSettings: "'tnum'" }}>
+                <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: 2, backgroundColor: C.accentFg, opacity: 1 - i * 0.22, marginRight: 5 }} />
+                {a.k} {a.pct}%
+              </span>
+            ))}
+          </div>
+        </div>
+        <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 12 }}>
+          {p.positions.map((pos, i) => (
+            <div key={pos.ticker} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
+              borderBottom: i < p.positions.length - 1 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <div style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <span style={{ fontSize: 10, fontWeight: 800, color: C.accentFg }}>{pos.ticker.slice(0, 2)}</span>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: C.text }}>{pos.ticker}</div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>{pos.name}</div>
+              </div>
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>{fmtInt(pos.valueUSD)} $</div>
+                <div style={{ fontSize: 11, fontFeatureSettings: "'tnum'", color: pos.changePct >= 0 ? "#7FB77E" : "#EF6B6B", marginTop: 1 }}>
+                  {pos.changePct >= 0 ? "+" : ""}{pos.changePct.toFixed(1).replace(".", ",")}%
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div data-press onClick={onOpenTn} style={{ backgroundColor: C.accentDark, borderRadius: 12, padding: "15px 0", textAlign: "center", cursor: "pointer", marginBottom: 8 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>Торговать · TraderNet</span>
+        </div>
+        <div style={{ fontSize: 11, color: C.muted, textAlign: "center", lineHeight: 1.5 }}>
+          Витрина по всем брокерским счетам · сделки исполняются в SDK TraderNet
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Выпуск карты: своя или близкому. Шаги: роль (family) → лимит (family) → доставка → готово.
+   Доставка по всему миру за 10 дней — ставка деки. */
+function NewCardScreen({ C, mode, onBack, onDone }) {
+  const family = mode === "family";
+  const [step, setStep] = useState(0); // 0 role/type, 1 limit (family only), 2 delivery
+  const [role, setRole] = useState(family ? FAMILY_ROLE_PRESETS[0] : "Metal Card");
+  const [limit, setLimit] = useState(300000);
+  const [delivery, setDelivery] = useState("world");
+  const [city, setCity] = useState("Лиссабон, Португалия");
+  const steps = family ? ["Кому", "Лимит", "Доставка"] : ["Карта", "Доставка"];
+  const last = step === steps.length - 1;
+  const d = CARD_DELIVERY.find(x => x.id === delivery);
+  return (
+    <ScreenShell C={C} title={family ? "Карта близкому" : "Новая карта"} onBack={step === 0 ? onBack : () => setStep(s => s - 1)}>
+      <div style={{ padding: "0 20px 110px" }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>
+          {steps.map((st, i) => (
+            <div key={st} style={{ flex: 1 }}>
+              <div style={{ height: 3, borderRadius: 2, backgroundColor: i <= step ? C.accentFg : C.faint, marginBottom: 5 }} />
+              <span style={{ fontSize: 10.5, fontWeight: 600, color: i <= step ? C.accentFg : C.muted }}>{st}</span>
+            </div>
+          ))}
+        </div>
+
+        {step === 0 && (
+          <>
+            <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5, marginBottom: 14 }}>
+              {family
+                ? "Карта привязывается к вашему счёту. Держатель видит только свой лимит."
+                : "Металлическая карта Executive или дополнительная стандартная."}
+            </div>
+            {family ? (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
+                {FAMILY_ROLE_PRESETS.map(r => (
+                  <div key={r} data-press onClick={() => setRole(r)} style={{
+                    padding: "9px 16px", borderRadius: 18, cursor: "pointer", fontSize: 13.5, fontWeight: 600,
+                    backgroundColor: role === r ? C.accentDark : C.faint, color: role === r ? C.accent : C.sub,
+                  }}>{r}</div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+                {[
+                  { t: "Metal Card", s: "Матовый металл · графит и шампань", badge: "Executive" },
+                  { t: "Standard Card", s: "Дополнительная к текущему счёту" },
+                ].map(v => (
+                  <div key={v.t} data-press onClick={() => setRole(v.t)} style={{
+                    backgroundColor: C.card, borderRadius: 14, padding: "14px 16px",
+                    border: `1.5px solid ${role === v.t ? C.accentDark : C.border}`, cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: 12,
+                  }}>
+                    <CreditCard size={18} color={C.accentFg} strokeWidth={1.9} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{v.t}</div>
+                      <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>{v.s}</div>
+                    </div>
+                    {v.badge && <span style={{ fontSize: 9.5, fontWeight: 700, color: C.accentFg, backgroundColor: C.accentSoft, borderRadius: 8, padding: "3px 8px" }}>{v.badge}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {family && step === 1 && (
+          <>
+            <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5, marginBottom: 14 }}>Месячный лимит трат — можно поменять в любой момент.</div>
+            <div style={{ backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 20 }}>
+              {[150000, 300000, 500000, 1000000].map((v, i) => (
+                <div key={v} data-press onClick={() => setLimit(v)} style={{
+                  display: "flex", alignItems: "center", padding: "13px 16px", cursor: "pointer",
+                  borderBottom: i < 3 ? `1px solid ${C.divider}` : "none",
+                  backgroundColor: limit === v ? C.accentSoft : "transparent",
+                }}>
+                  <span style={{ flex: 1, fontSize: 15, fontWeight: 600, color: C.text, fontFeatureSettings: "'tnum'" }}>{fmtFull(v)} ₸</span>
+                  {limit === v && <Check size={17} color={C.accentFg} strokeWidth={2.4} />}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {last && (
+          <>
+            <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5, marginBottom: 14 }}>
+              Доставим карту туда, где {family ? "живёт близкий" : "вы находитесь"} — по всему миру.
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+              {CARD_DELIVERY.map(x => (
+                <div key={x.id} data-press onClick={() => setDelivery(x.id)} style={{
+                  backgroundColor: C.card, borderRadius: 14, padding: "14px 16px",
+                  border: `1.5px solid ${delivery === x.id ? C.accentDark : C.border}`, cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: 12,
+                }}>
+                  <Globe size={17} color={C.accentFg} strokeWidth={1.9} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{x.label}</div>
+                    <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>{x.eta} · {x.price}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {delivery === "world" && (
+              <div style={{ backgroundColor: C.faint, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+                <div style={{ fontSize: 11, color: C.muted, marginBottom: 3 }}>Город доставки</div>
+                <input value={city} onChange={e => setCity(e.target.value)} style={{
+                  width: "100%", border: "none", outline: "none", background: "transparent",
+                  fontSize: 14.5, fontWeight: 600, color: C.text, fontFamily: "inherit",
+                }} />
+              </div>
+            )}
+            <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.5, marginBottom: 16 }}>
+              Виртуальная версия появится в приложении сразу — платить можно, не дожидаясь пластика.
+            </div>
+          </>
+        )}
+
+        <div data-press onClick={() => last
+          ? onDone({ family, role, limit, delivery: d, city: delivery === "world" ? city : "Казахстан" })
+          : setStep(s => s + 1)} style={{
+          backgroundColor: C.accentDark, borderRadius: 12, padding: "15px 0", textAlign: "center", cursor: "pointer",
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>{last ? "Выпустить карту" : "Далее"}</span>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+function SharedAccountScreen({ C, onBack }) {
+  const sa = SHARED_ACCOUNT;
+  const [sheet, setSheet] = useState(null); // 'topup' | 'rules'
+  const [amt, setAmt] = useState("");
+  const [done, setDone] = useState(false);
+  const cm = CURRENCY_META[sa.currency] || { symbol: sa.currency };
+  return (
+    <ScreenShell C={C} title="Общий счёт" onBack={onBack}>
+      <div style={{ padding: "4px 20px 110px" }}>
+        <div style={{
+          borderRadius: 18, background: "linear-gradient(135deg, #1E1E24 0%, #17171B 55%, #232329 100%)",
+          border: `1px solid ${C.border}`, borderTop: `2px solid ${C.accentFg}`, padding: "16px 18px", marginBottom: 14,
+        }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: C.accentFg, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 14 }}>Совместный</div>
+          <div style={{ fontSize: 30, fontWeight: 300, color: C.text, letterSpacing: -0.8, fontFeatureSettings: "'tnum'" }}>
+            {fmtFull(sa.balance)} <span style={{ fontSize: 19, color: C.muted }}>{cm.symbol}</span>
+          </div>
+          <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
+            {sa.members.map(m => (
+              <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 6, backgroundColor: C.faint, borderRadius: 10, padding: "4px 10px 4px 4px" }}>
+                <div style={{ width: 20, height: 20, borderRadius: "50%", backgroundColor: `${m.color}2E`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: m.color }}>{m.name[0]}</span>
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 600, color: C.sub }}>{m.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {done && (
+          <div style={{ backgroundColor: C.accentSoft, borderRadius: 12, padding: "11px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+            <Check size={15} color={C.accentFg} strokeWidth={2.4} />
+            <span style={{ fontSize: 12.5, color: C.text }}>Счёт пополнен</span>
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+          {[
+            { key: "topup", t: "Пополнить", Icon: Plus },
+            { key: "rules", t: "Правила", Icon: Settings2 },
+          ].map(a => (
+            <div key={a.key} data-press onClick={() => setSheet(a.key)} style={{
+              flex: 1, textAlign: "center", padding: "11px 0 9px", borderRadius: 12,
+              border: `1px solid ${C.accentFg}38`, cursor: "pointer",
+            }}>
+              <a.Icon size={15} color={C.accentFg} strokeWidth={2} style={{ marginBottom: 3 }} />
+              <div style={{ fontSize: 10.5, fontWeight: 600, color: C.accentFg }}>{a.t}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 14 }}>
+          {sa.tx.map((o, i) => (
+            <div key={o.id} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
+              borderBottom: i < sa.tx.length - 1 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <div style={{ width: 34, height: 34, borderRadius: "50%", backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <o.Icon size={15} color={C.accentFg} strokeWidth={1.9} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o.name}</div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>{o.who} · {o.time}</div>
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 700, fontFeatureSettings: "'tnum'", color: o.amount > 0 ? "#7FB77E" : C.text, flexShrink: 0 }}>
+                {o.amount > 0 ? "+" : ""}{fmtFull(o.amount)} {cm.symbol}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.5 }}>
+          Оба участника видят операции и баланс. Лимиты каждого — в «Правилах».
+        </div>
+      </div>
+
+      {sheet === "topup" && (
+        <BottomSheetModal C={C} onClose={() => setSheet(null)}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 14 }}>Пополнить общий счёт</div>
+          <div style={{ backgroundColor: C.faint, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+            <input value={amt} autoFocus inputMode="decimal" placeholder="0"
+              onChange={e => setAmt(e.target.value.replace(/[^0-9.,]/g, ""))}
+              style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 24, fontWeight: 800, color: C.text, fontFamily: "inherit", fontFeatureSettings: "'tnum'", minWidth: 0 }} />
+            <span style={{ fontSize: 16, fontWeight: 800, color: C.text }}>{cm.symbol}</span>
+          </div>
+          <div data-press onClick={() => { if (parseFloat(amt.replace(",", ".")) > 0) { setSheet(null); setAmt(""); setDone(true); setTimeout(() => setDone(false), 2600); } }} style={{
+            backgroundColor: C.accentDark, borderRadius: 12, padding: "15px 0", textAlign: "center", cursor: "pointer",
+          }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>Пополнить</span>
+          </div>
+        </BottomSheetModal>
+      )}
+      {sheet === "rules" && (
+        <BottomSheetModal C={C} onClose={() => setSheet(null)}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 16 }}>Правила счёта</div>
+          {[
+            { label: "Никита · Владелец", value: "без лимита" },
+            { label: "Супруга · Полный доступ", value: "без лимита" },
+            { label: "Подтверждение трат", value: "от 1 000 €" },
+            { label: "Уведомления", value: "обоим участникам" },
+          ].map((r, i, arr) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: i < arr.length - 1 ? `1px solid ${C.divider}` : "none" }}>
+              <span style={{ fontSize: 13, color: C.muted }}>{r.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{r.value}</span>
+            </div>
+          ))}
+        </BottomSheetModal>
+      )}
+    </ScreenShell>
+  );
+}
+
+/* Валютные автоправила: автопокупка по целевому курсу или по расписанию. */
+function AutoRulesScreen({ C, onBack }) {
+  const [rules, setRules] = useState(AUTO_RULES_INITIAL);
+  const [creating, setCreating] = useState(false);
+  const [from, setFrom] = useState("USD");
+  const [to, setTo] = useState("EUR");
+  const [kind, setKind] = useState("rate");
+  const toggle = (id) => setRules(rs => rs.map(r => r.id === id ? { ...r, on: !r.on } : r));
+  const ruleText = (r) => r.kind === "rate"
+    ? `Покупать ${r.to}, когда курс ${r.from}/${r.to} ≤ ${r.threshold}`
+    : `Каждый понедельник · ${fmtFull(r.amount)} ${CURRENCY_META[r.from]?.symbol || r.from} → ${r.to}`;
+  return (
+    <ScreenShell C={C} title="Автоправила валют" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5, marginBottom: 16 }}>
+          Обмен работает сам: по целевому курсу или по расписанию. Правило можно выключить в любой момент.
+        </div>
+        <div style={{ backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 12 }}>
+          {rules.map((r, i) => (
+            <div key={r.id} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "13px 16px",
+              borderBottom: i < rules.length - 1 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Repeat size={15} color={C.accentFg} strokeWidth={1.9} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{r.from} → {r.to}</div>
+                <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2, lineHeight: 1.35 }}>{ruleText(r)}</div>
+              </div>
+              <div onClick={() => toggle(r.id)} style={{
+                width: 38, height: 22, borderRadius: 11, flexShrink: 0, cursor: "pointer",
+                backgroundColor: r.on ? C.accentDark : C.faint, position: "relative", transition: "background-color 0.15s",
+              }}>
+                <div style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: "#fff", position: "absolute", top: 2, left: r.on ? 18 : 2, transition: "left 0.15s" }} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div data-press onClick={() => setCreating(true)} style={{
+          border: `1.5px dashed ${C.accentFg}55`, borderRadius: 14, padding: "14px 0",
+          textAlign: "center", cursor: "pointer",
+        }}>
+          <span style={{ fontSize: 13.5, fontWeight: 600, color: C.accentFg }}>+ Новое правило</span>
+        </div>
+      </div>
+      {creating && (
+        <BottomSheetModal C={C} onClose={() => setCreating(false)}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 16 }}>Новое правило</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 14 }}>
+            {[["Продаю", from, setFrom], ["Покупаю", to, setTo]].map(([lbl, val, set], bi) => (
+              <div key={lbl} style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: C.muted, marginBottom: 5 }}>{lbl}</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                  {["USD", "EUR", "KZT", "TRY", "GEL"].map(c => (
+                    <div key={c} data-press onClick={() => set(c)} style={{
+                      padding: "6px 10px", borderRadius: 12, cursor: "pointer", fontSize: 12, fontWeight: 700,
+                      backgroundColor: val === c ? C.accentDark : C.faint, color: val === c ? C.accent : C.sub,
+                    }}>{c}</div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 5 }}>Условие</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+            {[["rate", "По целевому курсу"], ["weekly", "Каждую неделю"]].map(([k, lbl]) => (
+              <div key={k} data-press onClick={() => setKind(k)} style={{
+                flex: 1, padding: "10px 0", borderRadius: 12, textAlign: "center", cursor: "pointer",
+                fontSize: 12.5, fontWeight: 600,
+                backgroundColor: kind === k ? C.accentDark : C.faint, color: kind === k ? C.accent : C.sub,
+              }}>{lbl}</div>
+            ))}
+          </div>
+          <div data-press onClick={() => {
+            setRules(rs => [...rs, { id: `ar-${rs.length + 1}-n`, from, to, kind, threshold: "0,90", amount: 500, on: true }]);
+            setCreating(false);
+          }} style={{ backgroundColor: C.accentDark, borderRadius: 12, padding: "15px 0", textAlign: "center", cursor: "pointer" }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>Создать правило</span>
+          </div>
+        </BottomSheetModal>
+      )}
+    </ScreenShell>
+  );
+}
+
+/* Оплата обучения за рубежом: перевод в вуз + пакет документов для визы. */
+function EducationPayScreen({ C, onBack, onNext }) {
+  const [school, setSchool] = useState("");
+  const [country, setCountry] = useState("Великобритания");
+  const [amount, setAmount] = useState("");
+  const [cur, setCur] = useState("EUR");
+  const [docs, setDocs] = useState(true);
+  const valid = school.trim() && parseFloat(amount.replace(",", ".")) > 0;
+  return (
+    <ScreenShell C={C} title="Обучение за рубежом" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5, marginBottom: 16 }}>
+          Перевод в школу или университет с назначением Tuition fee — и сразу пакет подтверждающих документов.
+        </div>
+        <div style={{ backgroundColor: C.faint, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 3 }}>Учебное заведение</div>
+          <input value={school} onChange={e => setSchool(e.target.value)} placeholder="University College London"
+            style={{ width: "100%", border: "none", outline: "none", background: "transparent", fontSize: 14.5, fontWeight: 600, color: C.text, fontFamily: "inherit" }} />
+        </div>
+        <div style={{ backgroundColor: C.faint, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>Страна</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {["Великобритания", "США", "Испания", "ОАЭ", "Сингапур"].map(c => (
+              <div key={c} data-press onClick={() => setCountry(c)} style={{
+                padding: "7px 12px", borderRadius: 14, cursor: "pointer", fontSize: 12, fontWeight: 600,
+                backgroundColor: country === c ? C.accentDark : C.card, color: country === c ? C.accent : C.sub,
+              }}>{c}</div>
+            ))}
+          </div>
+        </div>
+        <div style={{ backgroundColor: C.faint, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+          <input value={amount} inputMode="decimal" placeholder="0"
+            onChange={e => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
+            style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 24, fontWeight: 800, color: C.text, fontFamily: "inherit", fontFeatureSettings: "'tnum'", minWidth: 0 }} />
+          {["EUR", "USD", "GBP"].map(c => (
+            <div key={c} data-press onClick={() => setCur(c)} style={{
+              padding: "6px 10px", borderRadius: 12, cursor: "pointer", fontSize: 12, fontWeight: 700,
+              backgroundColor: cur === c ? C.accentDark : C.card, color: cur === c ? C.accent : C.sub,
+            }}>{c}</div>
+          ))}
+        </div>
+        <div data-press onClick={() => setDocs(v => !v)} style={{
+          display: "flex", alignItems: "center", gap: 12, backgroundColor: C.card,
+          borderRadius: 12, border: `1px solid ${C.border}`, padding: "13px 14px", cursor: "pointer", marginBottom: 18,
+        }}>
+          <div style={{
+            width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+            border: docs ? "none" : `2px solid ${C.borderStrong}`,
+            backgroundColor: docs ? C.accentDark : "transparent",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            {docs && <Check size={12} color={C.accent} strokeWidth={3} />}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: C.text }}>Подготовить документы для визы</div>
+            <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>Справка о переводе и источнике средств на английском</div>
+          </div>
+          <GraduationCap size={17} color={C.accentFg} strokeWidth={1.9} />
+        </div>
+        <div data-press onClick={() => valid && onNext({ school, country, amount: parseFloat(amount.replace(",", ".")), cur, docs })} style={{
+          backgroundColor: valid ? C.accentDark : C.faint, borderRadius: 12, padding: "15px 0", textAlign: "center", cursor: valid ? "pointer" : "default",
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: valid ? C.accent : C.muted }}>Продолжить</span>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* Консьерж-запрос: налоговый помощник / релокация / юрист — единый паттерн
+   «выбор параметров → запрос менеджеру» (бумажные сервисы живут в чате). */
+function ConciergeRequestScreen({ C, kind, onBack, onDone }) {
+  const cfg = CONCIERGE_KINDS[kind];
+  const [sel, setSel] = useState(cfg.fields.map(() => 0));
+  return (
+    <ScreenShell C={C} title={cfg.title} onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5, marginBottom: 16 }}>{cfg.intro}</div>
+        {cfg.fields.map((f, fi) => (
+          <div key={f.label} style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8 }}>{f.label}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+              {f.options.map((o, oi) => (
+                <div key={o} data-press onClick={() => setSel(s => s.map((v, i) => i === fi ? oi : v))} style={{
+                  padding: "9px 14px", borderRadius: 16, cursor: "pointer", fontSize: 12.5, fontWeight: 600,
+                  backgroundColor: sel[fi] === oi ? C.accentDark : C.card,
+                  border: `1px solid ${sel[fi] === oi ? C.accentDark : C.border}`,
+                  color: sel[fi] === oi ? C.accent : C.sub,
+                }}>{o}</div>
+              ))}
+            </div>
+          </div>
+        ))}
+        <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: "12px 14px", margin: "6px 0 18px", display: "flex", gap: 10 }}>
+          <MessageCircle size={15} color={C.accentFg} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 1 }} />
+          <div style={{ fontSize: 12, color: C.sub, lineHeight: 1.5 }}>{cfg.note}</div>
+        </div>
+        <div data-press onClick={() => onDone({ kind, cfg, sel })} style={{ backgroundColor: C.accentDark, borderRadius: 12, padding: "15px 0", textAlign: "center", cursor: "pointer" }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>Отправить менеджеру</span>
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* Тариф Executive — подписка (монетизация из деки). */
+function SubscriptionScreen({ C, onBack }) {
+  return (
+    <ScreenShell C={C} title="Тариф" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        <div style={{
+          borderRadius: 18, background: "linear-gradient(135deg, #1E1E24 0%, #17171B 55%, #232329 100%)",
+          border: `1px solid ${C.border}`, borderTop: `2px solid ${C.accentFg}`, padding: "18px", marginBottom: 14,
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <span style={{ fontSize: 18, fontWeight: 800, color: C.text }}>Executive</span>
+            <span style={{ fontSize: 10.5, fontWeight: 700, color: C.accentFg, backgroundColor: C.accentSoft, borderRadius: 8, padding: "3px 9px" }}>Ваш тариф</span>
+          </div>
+          <div style={{ fontSize: 13, color: C.muted, marginBottom: 14 }}>30 € в месяц · списывается с EUR-счёта</div>
+          {[
+            "Металлическая карта и карты близких без ограничений",
+            "Личный менеджер · ответ до 5 минут, 24/7",
+            "Lounge — 4 прохода и Fast Track каждый месяц",
+            "Доставка карт в любую страну мира",
+            "Врач-телемедицина и страховка путешественника",
+            "Справки и proof of funds — без комиссии",
+          ].map((f, i) => (
+            <div key={i} style={{ display: "flex", gap: 10, padding: "7px 0" }}>
+              <Check size={15} color={C.accentFg} strokeWidth={2.4} style={{ flexShrink: 0, marginTop: 1 }} />
+              <span style={{ fontSize: 13, color: C.text, lineHeight: 1.4 }}>{f}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: "14px 16px", marginBottom: 14 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text, marginBottom: 4 }}>Standard · бесплатно</div>
+          <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.5 }}>
+            Карты и переводы без подписки. Консьерж, лаунжи и доставка по миру — в Executive.
+          </div>
+        </div>
+        <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.5 }}>
+          Следующее списание — 1 августа. Управление подпиской у менеджера.
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    МОНОВАЛЮТНЫЙ ПЕРЕВОД (дефолтный флоу)
    Концепция: счета остаются сущностью, но выбирается ВАЛЮТА операции
    (дефолт EUR) — счёт под картой резолвится сам. Нет счёта → предлагаем
@@ -7799,8 +8725,9 @@ function FamilyCardScreen({ C, fc, onBack }) {
    обмен валют — отдельный сценарий. Вариант "context" — валюта сегментом
    сверху; "amount" — пилюлей в поле суммы.
    ═══════════════════════════════════════════════ */
-const MONO_CURRENCIES = ["EUR", "KZT", "USD", "RUB", "CNY"];
-// Какие валютные счета карта может открыть (Цифра — только KZT/RUB).
+const MONO_CURRENCIES = ["EUR", "KZT", "USD", "RUB", "CNY", "TRY", "GEL"];
+// Какие валютные счета карта может открыть (Цифра — только KZT/RUB;
+// новые валюты TRY/GEL — пока только на депозитных картах).
 const CARD_OPENABLE = { deposit: MONO_CURRENCIES, invest: ["EUR", "KZT", "USD", "CNY"], cifra: ["KZT", "RUB"] };
 
 // Резолв продукта в валюте операции: счёт | можно открыть | причина недоступности.
@@ -8926,6 +9853,15 @@ export default function FreedomV6() {
           onOpenFamily={(fc) => pushScreen({ type: "familyCard", fc })}
           onOpenEsim={() => pushScreen({ type: "esim" })}
           onOpenAviata={() => pushScreen({ type: "aviata" })}
+          onOpenLounge={() => pushScreen({ type: "lounge" })}
+          onOpenFastTrack={() => pushScreen({ type: "fasttrack" })}
+          onOpenMedical={() => pushScreen({ type: "medical" })}
+          onOpenSos={() => pushScreen({ type: "sos" })}
+          onNewCard={() => pushScreen({ type: "newCard", mode: "own" })}
+          onNewFamilyCard={() => pushScreen({ type: "newCard", mode: "family" })}
+          onOpenShared={() => pushScreen({ type: "sharedAccount" })}
+          onOpenProfile={() => pushScreen({ type: "settings" })}
+          onConnectBank={() => pushScreen({ type: "stub", title: "Подключить банк", note: "Open banking: авторизация в банке-источнике и согласие на чтение остатков. Флоу подключения в прототип не включён — подключённые банки показаны как результат." })}
           onOpenTransaction={(tx) => pushScreen({ type: "transaction", tx })}
           onOpenAllTransactions={() => pushScreen({ type: "allTransactions" })}
           onManager={() => setActiveTab("chats")}
@@ -8984,6 +9920,8 @@ export default function FreedomV6() {
           onToOtherCard={() => pushScreen({ type: "transferClient", segment: "card" })}
           onIban={() => pushScreen({ type: "transferClient", segment: "iban" })}
           onConversion={() => pushScreen({ type: "conversion" })}
+          onAutoRules={() => pushScreen({ type: "autoRules" })}
+          onEducation={() => pushScreen({ type: "educationPay" })}
           onQrScan={() => pushScreen({ type: "qrScanner" })}
           onSwift={() => pushScreen({ type: "swift" })}
           onMobilePay={() => pushScreen({ type: "mobilePay" })}
@@ -8997,39 +9935,22 @@ export default function FreedomV6() {
         />
       )}
       {activeTab === "investments" && (
-        /* Заглушка: сюда встраивается SDK TraderNet (отдельный трек работ) */
-        <div style={{
-          maxWidth: 430, margin: "0 auto", minHeight: "100dvh",
-          backgroundColor: C.bg,
-          fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', system-ui, sans-serif",
-          display: "flex", flexDirection: "column", paddingBottom: 90,
-        }}>
-          <StatusBar C={C} />
-          <div style={{ padding: "8px 20px 0" }}>
-            <div style={{ fontSize: 24, fontWeight: 800, color: C.text, letterSpacing: -0.5 }}>Инвестиции</div>
-          </div>
-          <div style={{
-            flex: 1, display: "flex", flexDirection: "column",
-            alignItems: "center", justifyContent: "center", gap: 14,
-            padding: "0 40px 60px", textAlign: "center",
-          }}>
-            <div style={{
-              width: 72, height: 72, borderRadius: 22, backgroundColor: C.accentSoft,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <TrendingUp size={30} color={C.accentDark} strokeWidth={2} />
-            </div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>SDK TraderNet</div>
-            <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.55 }}>
-              Здесь встраивается инвестиционный модуль TraderNet.
-              Экран-заглушка — наполним позже.
-            </div>
-          </div>
-        </div>
+        /* Портфель — витрина; сделки исполняются в SDK TraderNet */
+        <PortfolioScreen C={C}
+          onOpenTn={() => pushScreen({ type: "stub", title: "TraderNet", note: "Здесь открывается торговый модуль SDK TraderNet (отдельный трек работ). Портфель на предыдущем экране — витрина поверх всех брокерских счетов." })}
+        />
       )}
       {activeTab === "chats" && (
         <ChatsScreen C={C} featureFlags={featureFlags}
           onOpenThread={() => pushScreen({ type: "chatThread" })}
+          concierge={theme === "exec" ? {
+            certificates: () => pushScreen({ type: "certificates" }),
+            tax: () => pushScreen({ type: "conciergeRequest", kind: "tax" }),
+            relocation: () => pushScreen({ type: "conciergeRequest", kind: "relocation" }),
+            lawyer: () => pushScreen({ type: "conciergeRequest", kind: "lawyer" }),
+            medical: () => pushScreen({ type: "medical" }),
+            travel: () => pushScreen({ type: "aviata" }),
+          } : undefined}
         />
       )}
       {navStack.map((s, i) => {
@@ -9089,6 +10010,86 @@ export default function FreedomV6() {
         );
         if (s.type === "familyCard") return (
           <FamilyCardScreen key={i} C={C} fc={s.fc} onBack={popScreen} />
+        );
+        if (s.type === "lounge") return (
+          <LoungeScreen key={i} C={C} onBack={popScreen} />
+        );
+        if (s.type === "fasttrack") return (
+          <FastTrackScreen key={i} C={C} onBack={popScreen}
+            onDone={(a) => pushScreen({
+              type: "flowSuccess",
+              payload: { title: "Fast Track забронирован", message: "Пропуск придёт в уведомления и будет в этом разделе", amountStr: "0 ₸", note: `${a.airport} · рейс ALA → CDG, 24 июня` },
+            })}
+          />
+        );
+        if (s.type === "medical") return (
+          <MedicalScreen key={i} C={C} onBack={popScreen}
+            onCall={() => pushScreen({
+              type: "flowSuccess",
+              payload: { title: "Запрос принят", message: "Врач свяжется в течение 10 минут — видеозвонок придёт в приложение", amountStr: "24/7", note: "Телемедицина · включено в тариф Executive" },
+            })}
+          />
+        );
+        if (s.type === "sos") return (
+          <SosScreen key={i} C={C} onBack={popScreen}
+            onManager={() => pushScreen({ type: "chatThread" })}
+            onMedical={() => pushScreen({ type: "medical" })}
+            onLawyer={() => pushScreen({ type: "conciergeRequest", kind: "lawyer" })}
+          />
+        );
+        if (s.type === "newCard") return (
+          <NewCardScreen key={i} C={C} mode={s.mode} onBack={popScreen}
+            onDone={(p) => pushScreen({
+              type: "flowSuccess",
+              payload: {
+                title: p.family ? `Карта для «${p.role}» выпущена` : "Карта выпущена",
+                message: `Виртуальная версия уже в приложении. Пластик — ${p.delivery.id === "world" ? `доставка в ${p.city}, ${p.delivery.eta}` : `доставка по Казахстану, ${p.delivery.eta}`}`,
+                amountStr: p.family ? `${fmtFull(p.limit)} ₸ / мес` : p.role,
+                note: p.family ? "Держатель видит только свой лимит" : "Привязана к текущему счёту",
+              },
+            })}
+          />
+        );
+        if (s.type === "sharedAccount") return (
+          <SharedAccountScreen key={i} C={C} onBack={popScreen} />
+        );
+        if (s.type === "autoRules") return (
+          <AutoRulesScreen key={i} C={C} onBack={popScreen} />
+        );
+        if (s.type === "educationPay") return (
+          <EducationPayScreen key={i} C={C} onBack={popScreen}
+            onNext={(p) => pushScreen({
+              type: "genericConfirm",
+              payload: {
+                subtitle: "Обучение за рубежом",
+                amountStr: `${fmtFull(p.amount)} ${CURRENCY_META[p.cur]?.symbol || p.cur}`,
+                rows: [
+                  { label: "Получатель", value: p.school },
+                  { label: "Страна", value: p.country },
+                  { label: "Назначение", value: "Tuition fee" },
+                  { label: "Документы для визы", value: p.docs ? "Подготовим (EN)" : "Не нужны" },
+                  { label: "Комиссия", value: "0.2% · мин 20 €" },
+                ],
+                success: { title: "Перевод отправлен", message: p.docs ? "Подтверждение оплаты и справка об источнике средств придут в чат менеджера" : "Подтверждение оплаты придёт на email", amountStr: `${fmtFull(p.amount)} ${CURRENCY_META[p.cur]?.symbol || p.cur}`, note: p.school },
+              },
+            })}
+          />
+        );
+        if (s.type === "conciergeRequest") return (
+          <ConciergeRequestScreen key={i} C={C} kind={s.kind} onBack={popScreen}
+            onDone={({ cfg, sel }) => pushScreen({
+              type: "flowSuccess",
+              payload: {
+                title: "Запрос у Алишера",
+                message: "Менеджер ответит в чате в течение 5 минут — все документы останутся там же",
+                amountStr: cfg.title,
+                note: cfg.fields.map((f, fi) => f.options[sel[fi]]).join(" · "),
+              },
+            })}
+          />
+        );
+        if (s.type === "subscription") return (
+          <SubscriptionScreen key={i} C={C} onBack={popScreen} />
         );
         if (s.type === "servicesList") return (
           <ScreenShell key={i} C={C} title="Оплата услуг" onBack={popScreen}>
@@ -9189,6 +10190,8 @@ export default function FreedomV6() {
               onToOtherCard={() => pushScreen({ type: "transferClient", segment: "card" })}
               onIban={() => pushScreen({ type: "transferClient", segment: "iban" })}
               onConversion={() => pushScreen({ type: "conversion" })}
+              onAutoRules={() => pushScreen({ type: "autoRules" })}
+              onEducation={() => pushScreen({ type: "educationPay" })}
               onQrScan={() => pushScreen({ type: "qrScanner" })}
               onSwift={() => pushScreen({ type: "swift" })}
               onMobilePay={() => pushScreen({ type: "mobilePay" })}
@@ -9365,6 +10368,7 @@ export default function FreedomV6() {
             onOpenAbout={() => pushScreen({ type: "about" })}
             onOpenQr={() => pushScreen({ type: "profileQr" })}
             onOpenAviata={() => pushScreen({ type: "aviata" })}
+            onOpenSubscription={theme === "exec" ? () => pushScreen({ type: "subscription" }) : undefined}
             onLogout={() => setSheet({ type: "logout" })}
           />
         );

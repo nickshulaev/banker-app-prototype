@@ -7761,8 +7761,9 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
   );
 }
 
-/* Карта близкого: пополнить / лимит / отозвать / детали + статистика операций. */
-function FamilyCardScreen({ C, fc, onBack }) {
+/* Карта близкого: пополнить / лимит / отозвать + статистика операций.
+   «Детали» — переход в ОБЫЧНЫЙ карточный интерфейс (ProductDetailsScreen). */
+function FamilyCardScreen({ C, fc, onBack, onOpenCardDetails }) {
   const [limit, setLimit] = useState(fc.limit);
   const [revoked, setRevoked] = useState(false);
   const [sheet, setSheet] = useState(null); // 'topup' | 'limit' | 'revoke' | 'details'
@@ -7807,10 +7808,12 @@ function FamilyCardScreen({ C, fc, onBack }) {
           </div>
         )}
 
-        {/* Действия */}
+        {/* Действия («Детали» — в обычный карточный интерфейс) */}
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           {actions.map(a => (
-            <div key={a.key} data-press onClick={() => a.key === "revoke" && revoked ? setRevoked(false) : setSheet(a.key)} style={{
+            <div key={a.key} data-press onClick={() => a.key === "revoke" && revoked ? setRevoked(false)
+              : a.key === "details" ? onOpenCardDetails({ limit, spent: spentNow })
+              : setSheet(a.key)} style={{
               flex: 1, textAlign: "center", padding: "11px 0 9px", borderRadius: 12,
               border: `1px solid ${a.key === "revoke" && !revoked ? "rgba(239,68,68,0.4)" : `${C.accentFg}38`}`,
               cursor: "pointer", opacity: revoked && a.key !== "revoke" && a.key !== "details" ? 0.4 : 1,
@@ -7920,23 +7923,6 @@ function FamilyCardScreen({ C, fc, onBack }) {
           <div data-press onClick={() => setSheet(null)} style={{ backgroundColor: C.faint, borderRadius: 12, padding: "15px 0", textAlign: "center", cursor: "pointer" }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: C.text }}>Отмена</span>
           </div>
-        </BottomSheetModal>
-      )}
-      {sheet === "details" && (
-        <BottomSheetModal C={C} onClose={() => setSheet(null)}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 16 }}>Детали карты</div>
-          {[
-            { label: "Держатель", value: fc.name },
-            { label: "Карта", value: `${fc.cardName} •••• ${fc.last4}` },
-            { label: "Срок действия", value: "07/29" },
-            { label: "Привязана к счёту", value: "KZ81…5USD" },
-            { label: "Лимит на месяц", value: `${fmtFull(limit)} ₸` },
-          ].map((r2, i, arr2) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: i < arr2.length - 1 ? `1px solid ${C.divider}` : "none" }}>
-              <span style={{ fontSize: 13, color: C.muted }}>{r2.label}</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: C.text, fontFeatureSettings: "'tnum'" }}>{r2.value}</span>
-            </div>
-          ))}
         </BottomSheetModal>
       )}
     </ScreenShell>
@@ -9968,13 +9954,14 @@ export default function FreedomV6() {
         if (s.type === "product") return (
           <ProductDetailsScreen key={i} card={s.card} C={C} featureFlags={featureFlags}
             onBack={popScreen}
-            onTransfer={() => openWithdraw(s.card.id)}
-            onExchange={() => openExchange(s.card.id)}
+            /* Семейная псевдокарта не в buildProducts — деньги двигаются общими флоу */
+            onTransfer={() => s.card.family ? pushScreen({ type: "monoTransfer" }) : openWithdraw(s.card.id)}
+            onExchange={() => s.card.family ? pushScreen({ type: "conversion" }) : openExchange(s.card.id)}
             onOpenTransaction={(tx) => pushScreen({ type: "transaction", tx })}
             onOpenLimits={() => pushScreen({ type: "cardLimits", card: s.card })}
             onOpenPinChange={() => pushScreen({ type: "pinChange" })}
             onOpenRequisites={() => pushScreen({ type: "requisites", card: s.card })}
-            onTopUp={() => setSheet({ type: "topup", card: s.card })}
+            onTopUp={() => s.card.family ? pushScreen({ type: "monoTransfer" }) : setSheet({ type: "topup", card: s.card })}
             onOpenAllTransactions={() => pushScreen({ type: "allTransactions" })}
           />
         );
@@ -10020,7 +10007,17 @@ export default function FreedomV6() {
           />
         );
         if (s.type === "familyCard") return (
-          <FamilyCardScreen key={i} C={C} fc={s.fc} onBack={popScreen} />
+          <FamilyCardScreen key={i} C={C} fc={s.fc} onBack={popScreen}
+            onOpenCardDetails={({ limit, spent }) => pushScreen({
+              type: "product",
+              card: {
+                id: `famcard-${s.fc.id}`, family: true,
+                name: `${s.fc.name} · ${s.fc.cardName}`, last4: s.fc.last4,
+                color: s.fc.color, primaryCurrency: s.fc.currency || "KZT",
+                primaryBalance: Math.max(0, limit - spent),
+              },
+            })}
+          />
         );
         if (s.type === "lounge") return (
           <LoungeScreen key={i} C={C} onBack={popScreen} />

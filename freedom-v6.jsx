@@ -4084,7 +4084,7 @@ function RequestInfoScreen({ request, C, onBack, onAccept, onReject }) {
    (sections and texts from settingsFlow.settings.*)
    ═══════════════════════════════════════════════ */
 
-function SettingsScreen({ C, onBack, onOpenNotifications, onOpenProfileInfo, onOpenSecurity, onOpenDevices, onOpenLanguage, onOpenCertificates, onOpenHelp, onOpenDecor, onOpenAbout, onOpenQr, onOpenAviata, onOpenSubscription, onLogout }) {
+function SettingsScreen({ C, onBack, onOpenNotifications, onOpenProfileInfo, onOpenSecurity, onOpenDevices, onOpenLanguage, onOpenCertificates, onOpenHelp, onOpenDecor, onOpenAbout, onOpenQr, onOpenAviata, onOpenSubscription, onOpenMedical, onOpenSos, onLogout }) {
   const [hideAmount, setHideAmount] = useState(false);
   const isDark = C.bg === '#0E0F0C';
 
@@ -4173,6 +4173,12 @@ function SettingsScreen({ C, onBack, onOpenNotifications, onOpenProfileInfo, onO
             <Row Icon={Star} color="#D7C08A" title="Тариф Executive" subtitle="30 € в месяц · консьерж, лаунжи, metal" onClick={onOpenSubscription} />
           )}
           <Row Icon={FileText} color="#0D9488" title="Заказ справок" subtitle="Для оформления визы и в налоговую" onClick={onOpenCertificates} />
+          {onOpenMedical && (
+            <Row Icon={HeartPulse} color="#EC4899" title="Медицина" subtitle="Врач 24/7 и страховка путешественника" onClick={onOpenMedical} />
+          )}
+          {onOpenSos && (
+            <Row Icon={Siren} color="#EF4444" title="SOS за границей" subtitle="Блокировка карт, врач, юрист — экстренно" onClick={onOpenSos} />
+          )}
           <Row Icon={Plane} color="#3B82F6" title="Путешествия" subtitle="Авиабилеты, горящие туры, пассажиры" onClick={onOpenAviata} last />
         </Section>
 
@@ -7378,7 +7384,7 @@ function CardAccountPicker({ C, displayCurrency, products, counterpart, showUnav
    Капитал → быстрые действия → свои карты (карусель-металл) →
    карты близких (лимиты) → Travel → последние операции.
    ═══════════════════════════════════════════════ */
-function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposits, credits, brokerGroups, news, onAvatarClick, onOpenProfile, onOpenTotal, onOpenCard, onCardTopUp, onCardTransfer, onOpenFamily, onOpenAccount, onOpenDeposit, onOpenCredit, onOpenBroker, onOpenEsim, onOpenAviata, onOpenLounge, onOpenFastTrack, onOpenMedical, onOpenSos, onNewCard, onNewFamilyCard, onOpenShared, onConnectBank, onOpenNews, onOpenNewsDetail, onOpenTransaction, onOpenAllTransactions, onManager }) {
+function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposits, credits, brokerGroups, news, onAvatarClick, onOpenProfile, onOpenTotal, onOpenCard, onCardTopUp, onCardTransfer, onOpenFamily, onOpenAccount, onOpenDeposit, onOpenCredit, onOpenBroker, onOpenEsim, onOpenAviata, onOpenLounge, onOpenFastTrack, onNewCard, onNewFamilyCard, onOpenShared, onConnectBank, onOpenNews, onOpenNewsDetail, onOpenTransaction, onOpenAllTransactions, onManager }) {
   const [prodTab, setProdTab] = useState("bank");
   const [prodExpanded, setProdExpanded] = useState(false); // «Другие счета»: короткий список по умолчанию
   const [activeCardIdx, setActiveCardIdx] = useState(0); // активный слайд hero-карусели
@@ -7454,26 +7460,23 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
           </>
         )}
 
-        {/* Travel + жизнь вне географии — ядро сервисной части */}
-        {secLabel("Тревел и сервисы")}
+        {/* Travel — ядро сервисной части (Медицина и SOS — в профиле: не на каждый день) */}
+        {secLabel("Тревел")}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {[
             { t: "Авиабилеты", s: "Поиск и покупка", Icon: Plane, on: onOpenAviata },
             { t: "eSIM", s: "Интернет в поездках", Icon: Smartphone, on: onOpenEsim },
             { t: "Lounge", s: "Залы ожидания", Icon: Sofa, on: onOpenLounge },
             { t: "Fast Track", s: "Без очередей", Icon: Zap, on: onOpenFastTrack },
-            { t: "Медицина", s: "Врач 24/7 и страховка", Icon: HeartPulse, on: onOpenMedical },
-            { t: "SOS", s: "Экстренная помощь", Icon: Siren, sos: true, on: onOpenSos },
           ].map(sv => (
             <div key={sv.t} data-press onClick={sv.on} style={{
-              backgroundColor: C.card, borderRadius: 14,
-              border: `1px solid ${sv.sos ? "rgba(239,107,107,0.35)" : C.border}`,
+              backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`,
               padding: "13px 14px", cursor: "pointer",
             }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                <sv.Icon size={17} color={sv.sos ? "#EF6B6B" : C.accentFg} strokeWidth={1.9} />
+                <sv.Icon size={17} color={C.accentFg} strokeWidth={1.9} />
               </div>
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: sv.sos ? "#EF6B6B" : C.text }}>{sv.t}</div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text }}>{sv.t}</div>
               <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{sv.s}</div>
             </div>
           ))}
@@ -9855,8 +9858,6 @@ export default function FreedomV6() {
           onOpenAviata={() => pushScreen({ type: "aviata" })}
           onOpenLounge={() => pushScreen({ type: "lounge" })}
           onOpenFastTrack={() => pushScreen({ type: "fasttrack" })}
-          onOpenMedical={() => pushScreen({ type: "medical" })}
-          onOpenSos={() => pushScreen({ type: "sos" })}
           onNewCard={() => pushScreen({ type: "newCard", mode: "own" })}
           onNewFamilyCard={() => pushScreen({ type: "newCard", mode: "family" })}
           onOpenShared={() => pushScreen({ type: "sharedAccount" })}
@@ -10369,6 +10370,8 @@ export default function FreedomV6() {
             onOpenQr={() => pushScreen({ type: "profileQr" })}
             onOpenAviata={() => pushScreen({ type: "aviata" })}
             onOpenSubscription={theme === "exec" ? () => pushScreen({ type: "subscription" }) : undefined}
+            onOpenMedical={theme === "exec" ? () => pushScreen({ type: "medical" }) : undefined}
+            onOpenSos={theme === "exec" ? () => pushScreen({ type: "sos" }) : undefined}
             onLogout={() => setSheet({ type: "logout" })}
           />
         );

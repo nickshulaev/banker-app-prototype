@@ -4084,7 +4084,7 @@ function RequestInfoScreen({ request, C, onBack, onAccept, onReject }) {
    (sections and texts from settingsFlow.settings.*)
    ═══════════════════════════════════════════════ */
 
-function SettingsScreen({ C, onBack, onOpenNotifications, onOpenProfileInfo, onOpenSecurity, onOpenDevices, onOpenLanguage, onOpenCertificates, onOpenHelp, onOpenDecor, onOpenAbout, onOpenQr, onOpenAviata, onOpenSubscription, onOpenMedical, onOpenSos, onLogout }) {
+function SettingsScreen({ C, onBack, onOpenNotifications, onOpenProfileInfo, onOpenSecurity, onOpenDevices, onOpenLanguage, onOpenCertificates, onOpenHelp, onOpenDecor, onOpenAbout, onOpenQr, onOpenAviata, onOpenSubscription, onLogout }) {
   const [hideAmount, setHideAmount] = useState(false);
   const isDark = C.bg === '#0E0F0C';
 
@@ -4173,12 +4173,6 @@ function SettingsScreen({ C, onBack, onOpenNotifications, onOpenProfileInfo, onO
             <Row Icon={Star} color="#D7C08A" title="Тариф Executive" subtitle="30 € в месяц · консьерж, лаунжи, metal" onClick={onOpenSubscription} />
           )}
           <Row Icon={FileText} color="#0D9488" title="Заказ справок" subtitle="Для оформления визы и в налоговую" onClick={onOpenCertificates} />
-          {onOpenMedical && (
-            <Row Icon={HeartPulse} color="#EC4899" title="Медицина" subtitle="Врач 24/7 и страховка путешественника" onClick={onOpenMedical} />
-          )}
-          {onOpenSos && (
-            <Row Icon={Siren} color="#EF4444" title="SOS за границей" subtitle="Блокировка карт, врач, юрист — экстренно" onClick={onOpenSos} />
-          )}
           <Row Icon={Plane} color="#3B82F6" title="Путешествия" subtitle="Авиабилеты, горящие туры, пассажиры" onClick={onOpenAviata} last />
         </Section>
 
@@ -7384,7 +7378,7 @@ function CardAccountPicker({ C, displayCurrency, products, counterpart, showUnav
    Капитал → быстрые действия → свои карты (карусель-металл) →
    карты близких (лимиты) → Travel → последние операции.
    ═══════════════════════════════════════════════ */
-function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposits, credits, brokerGroups, news, onAvatarClick, onOpenProfile, onOpenTotal, onOpenCard, onCardTopUp, onCardTransfer, onOpenFamily, onOpenAccount, onOpenDeposit, onOpenCredit, onOpenBroker, onOpenEsim, onOpenAviata, onOpenLounge, onOpenFastTrack, onNewCard, onNewFamilyCard, onOpenShared, onConnectBank, onOpenNews, onOpenNewsDetail, onOpenTransaction, onOpenAllTransactions, onManager }) {
+function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposits, credits, brokerGroups, news, onAvatarClick, onOpenProfile, onOpenTotal, onOpenCard, onCardTopUp, onCardTransfer, onOpenFamily, onOpenAccount, onOpenDeposit, onOpenCredit, onOpenBroker, onOpenEsim, onOpenAviata, onOpenLounge, onOpenFastTrack, onOpenOtherServices, onNewCard, onNewFamilyCard, onOpenShared, onConnectBank, onOpenNews, onOpenNewsDetail, onOpenTransaction, onOpenAllTransactions, onManager }) {
   const [prodTab, setProdTab] = useState("bank");
   const [prodExpanded, setProdExpanded] = useState(false); // «Другие счета»: короткий список по умолчанию
   const [activeCardIdx, setActiveCardIdx] = useState(0); // активный слайд hero-карусели
@@ -7460,8 +7454,8 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
           </>
         )}
 
-        {/* Travel — ядро сервисной части (Медицина и SOS — в профиле: не на каждый день) */}
-        {secLabel("Тревел")}
+        {/* Сервисы: тревел-четвёрка на виду, редкие — за «Другие сервисы» */}
+        {secLabel("Сервисы", "Другие сервисы", onOpenOtherServices)}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {[
             { t: "Авиабилеты", s: "Поиск и покупка", Icon: Plane, on: onOpenAviata },
@@ -8678,6 +8672,58 @@ function ConciergeRequestScreen({ C, kind, onBack, onDone }) {
   );
 }
 
+/* Другие сервисы — каталог редких услуг: не на каждый день, но в одном месте. */
+function OtherServicesScreen({ C, onBack, onPick }) {
+  const Row = ({ Icon, color, title, subtitle, type, last }) => (
+    <div data-press onClick={() => onPick(type)} style={{
+      display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", cursor: "pointer",
+      borderBottom: last ? "none" : `1px solid ${C.divider}`,
+    }}>
+      <div style={{ width: 38, height: 38, borderRadius: "50%", backgroundColor: `${color}14`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <Icon size={17} color={color} strokeWidth={1.9} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{title}</div>
+        <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{subtitle}</div>
+      </div>
+      <ChevronRight size={15} color={C.muted} strokeWidth={1.8} />
+    </div>
+  );
+  const secTitle = (t) => (
+    <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: "0.09em", textTransform: "uppercase", margin: "20px 0 8px" }}>{t}</div>
+  );
+  const box = { backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`, overflow: "hidden" };
+  return (
+    <ScreenShell C={C} title="Другие сервисы" onBack={onBack}>
+      <div style={{ padding: "0 20px 110px" }}>
+        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5 }}>
+          Редкие, но важные услуги — всё для жизни вне географии счёта, в одном месте.
+        </div>
+        {secTitle("Здоровье и экстренное")}
+        <div style={box}>
+          <Row Icon={HeartPulse} color="#EC4899" title="Медицина" subtitle="Врач 24/7 и страховка путешественника" type="medical" />
+          <Row Icon={Siren} color="#EF4444" title="SOS за границей" subtitle="Блокировка карт, врач, юрист — экстренно" type="sos" last />
+        </div>
+        {secTitle("Бумаги и юрисдикции")}
+        <div style={box}>
+          <Row Icon={FileText} color="#0D9488" title="Справки и proof of funds" subtitle="Для виз и ВНЖ — форматы посольств" type="certificates" />
+          <Row Icon={Landmark} color="#F59E0B" title="Налоговый помощник" subtitle="Декларации резидентам третьих стран" type="tax" />
+          <Row Icon={Globe} color="#3B82F6" title="Релокация" subtitle="Переезд под ключ: чеклист вашей страны" type="relocation" />
+          <Row Icon={Scale} color="#8B5CF6" title="Юрист" subtitle="Апостили, доверенности, переводы документов" type="lawyer" last />
+        </div>
+        {secTitle("Деньги")}
+        <div style={box}>
+          <Row Icon={Clock} color="#22C55E" title="Автоправила валют" subtitle="Покупка по целевому курсу или расписанию" type="autoRules" />
+          <Row Icon={GraduationCap} color="#0EA5E9" title="Обучение за рубежом" subtitle="Tuition fee + документы для визы" type="education" last />
+        </div>
+        <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.5, marginTop: 14 }}>
+          Каждый сервис можно запросить и через менеджера — карточками в чате.
+        </div>
+      </div>
+    </ScreenShell>
+  );
+}
+
 /* Тариф Executive — подписка (монетизация из деки). */
 function SubscriptionScreen({ C, onBack }) {
   return (
@@ -9858,6 +9904,7 @@ export default function FreedomV6() {
           onOpenAviata={() => pushScreen({ type: "aviata" })}
           onOpenLounge={() => pushScreen({ type: "lounge" })}
           onOpenFastTrack={() => pushScreen({ type: "fasttrack" })}
+          onOpenOtherServices={() => pushScreen({ type: "otherServices" })}
           onNewCard={() => pushScreen({ type: "newCard", mode: "own" })}
           onNewFamilyCard={() => pushScreen({ type: "newCard", mode: "family" })}
           onOpenShared={() => pushScreen({ type: "sharedAccount" })}
@@ -10053,6 +10100,18 @@ export default function FreedomV6() {
         );
         if (s.type === "sharedAccount") return (
           <SharedAccountScreen key={i} C={C} onBack={popScreen} />
+        );
+        if (s.type === "otherServices") return (
+          <OtherServicesScreen key={i} C={C} onBack={popScreen}
+            onPick={(t) => {
+              if (t === "medical") pushScreen({ type: "medical" });
+              else if (t === "sos") pushScreen({ type: "sos" });
+              else if (t === "certificates") pushScreen({ type: "certificates" });
+              else if (t === "autoRules") pushScreen({ type: "autoRules" });
+              else if (t === "education") pushScreen({ type: "educationPay" });
+              else pushScreen({ type: "conciergeRequest", kind: t });
+            }}
+          />
         );
         if (s.type === "autoRules") return (
           <AutoRulesScreen key={i} C={C} onBack={popScreen} />
@@ -10370,8 +10429,6 @@ export default function FreedomV6() {
             onOpenQr={() => pushScreen({ type: "profileQr" })}
             onOpenAviata={() => pushScreen({ type: "aviata" })}
             onOpenSubscription={theme === "exec" ? () => pushScreen({ type: "subscription" }) : undefined}
-            onOpenMedical={theme === "exec" ? () => pushScreen({ type: "medical" }) : undefined}
-            onOpenSos={theme === "exec" ? () => pushScreen({ type: "sos" }) : undefined}
             onLogout={() => setSheet({ type: "logout" })}
           />
         );

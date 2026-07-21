@@ -7247,6 +7247,7 @@ function CardAccountPicker({ C, displayCurrency, products, counterpart, showUnav
    ═══════════════════════════════════════════════ */
 function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposits, credits, brokerGroups, news, onAvatarClick, onOpenTotal, onOpenCard, onCardTopUp, onCardTransfer, onOpenFamily, onOpenAccount, onOpenDeposit, onOpenCredit, onOpenBroker, onOpenEsim, onOpenAviata, onOpenNews, onOpenNewsDetail, onOpenTransaction, onOpenAllTransactions, onManager }) {
   const [prodTab, setProdTab] = useState("bank");
+  const [prodExpanded, setProdExpanded] = useState(false); // «Другие счета»: короткий список по умолчанию
   const [activeCardIdx, setActiveCardIdx] = useState(0); // активный слайд hero-карусели
   const dc = displayCurrency || "EUR";
   const dcMeta = CURRENCY_META[dc] || { symbol: dc };
@@ -7473,15 +7474,18 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
           </div>
         </div>
 
-        {/* Продукты — Банк / Депозиты / Брокер */}
-        {secLabel("Продукты")}
+        {/* Другие счета — Банк / Депозиты / Брокер; общий баланс в заголовке */}
+        {secLabel("Другие счета", `${fmtCompact(convertTo(
+          accounts.reduce((s2, a) => s2 + convertToKZT(a.balance, a.currency), 0)
+          + deposits.reduce((s2, d) => s2 + convertToKZT(d.balance, d.currency), 0)
+          + brokerGroups.reduce((s2, g) => s2 + g.accounts.reduce((s3, a) => s3 + convertToKZT(a.balance, a.currency), 0), 0), dc))} ${dcMeta.symbol}`)}
         <div style={{ display: "flex", backgroundColor: C.faint, borderRadius: 12, padding: 3, marginBottom: 10 }}>
           {[
             { k: "bank", t: `Банк · ${accounts.length + credits.length}` },
             { k: "deposits", t: `Депозиты · ${deposits.length}` },
             { k: "broker", t: `Брокер · ${brokerGroups.reduce((n, g) => n + g.accounts.length, 0)}` },
           ].map(tb => (
-            <div key={tb.k} data-press onClick={() => setProdTab(tb.k)} style={{
+            <div key={tb.k} data-press onClick={() => { setProdTab(tb.k); setProdExpanded(false); }} style={{
               flex: 1, textAlign: "center", padding: "8px 0", borderRadius: 10, cursor: "pointer",
               backgroundColor: prodTab === tb.k ? C.card : "transparent",
             }}>
@@ -7492,10 +7496,10 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
         <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: "hidden" }}>
           {prodTab === "bank" && (
             <>
-              {accounts.map((a, i) => (
+              {(prodExpanded ? accounts : accounts.slice(0, 3)).map((a, i, arr) => (
                 <div key={a.id} data-press onClick={() => onOpenAccount(a)} style={{
                   display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", cursor: "pointer",
-                  borderBottom: i < accounts.length - 1 || credits.length ? `1px solid ${C.divider}` : "none",
+                  borderBottom: i < arr.length - 1 || (prodExpanded && credits.length) ? `1px solid ${C.divider}` : "none",
                 }}>
                   <div style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <Landmark size={15} color={C.accentFg} strokeWidth={1.9} />
@@ -7509,7 +7513,7 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
                   </span>
                 </div>
               ))}
-              {credits.map((cr, i) => (
+              {prodExpanded && credits.map((cr, i) => (
                 <div key={cr.id} data-press onClick={() => onOpenCredit(cr)} style={{
                   display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", cursor: "pointer",
                   borderBottom: i < credits.length - 1 ? `1px solid ${C.divider}` : "none",
@@ -7528,10 +7532,10 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
               ))}
             </>
           )}
-          {prodTab === "deposits" && deposits.map((d, i) => (
+          {prodTab === "deposits" && (prodExpanded ? deposits : deposits.slice(0, 3)).map((d, i, arrD) => (
             <div key={d.id} data-press onClick={() => onOpenDeposit(d)} style={{
               display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", cursor: "pointer",
-              borderBottom: i < deposits.length - 1 ? `1px solid ${C.divider}` : "none",
+              borderBottom: i < arrD.length - 1 ? `1px solid ${C.divider}` : "none",
             }}>
               <div style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <PiggyBank size={15} color={C.accentFg} strokeWidth={1.9} />
@@ -7545,13 +7549,13 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
               </span>
             </div>
           ))}
-          {prodTab === "broker" && brokerGroups.map((g, gi) => (
+          {prodTab === "broker" && (prodExpanded ? brokerGroups : brokerGroups.slice(0, 1)).map((g, gi, arrG) => (
             <div key={g.group}>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, padding: "10px 16px 4px", letterSpacing: "0.05em", textTransform: "uppercase" }}>{g.group}</div>
               {g.accounts.map((a, i) => (
                 <div key={a.id} data-press onClick={() => onOpenBroker(a)} style={{
                   display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", cursor: "pointer",
-                  borderBottom: gi < brokerGroups.length - 1 || i < g.accounts.length - 1 ? `1px solid ${C.divider}` : "none",
+                  borderBottom: gi < arrG.length - 1 || i < g.accounts.length - 1 ? `1px solid ${C.divider}` : "none",
                 }}>
                   <div style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <TrendingUp size={15} color={C.accentFg} strokeWidth={1.9} />
@@ -7567,6 +7571,16 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
               ))}
             </div>
           ))}
+          {/* Развернуть / свернуть — короткий список по умолчанию */}
+          <div data-press onClick={() => setProdExpanded(v => !v)} style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            padding: "11px 0", cursor: "pointer", borderTop: `1px solid ${C.divider}`,
+          }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.accentFg }}>
+              {prodExpanded ? "Свернуть" : `Показать все · ${prodTab === "bank" ? accounts.length + credits.length : prodTab === "deposits" ? deposits.length : brokerGroups.reduce((n, g) => n + g.accounts.length, 0)}`}
+            </span>
+            <ChevronDown size={13} color={C.accentFg} strokeWidth={2.2} style={{ transform: prodExpanded ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+          </div>
         </div>
 
         {/* Последние операции */}

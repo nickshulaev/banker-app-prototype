@@ -7402,27 +7402,30 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
                   <span style={{ fontSize: 12.5, fontWeight: 600, color: C.accentFg }}>Новая карта</span>
                 </div>
               </div>
-              <div style={{ display: "flex", justifyContent: "center", gap: 5, margin: "10px 0 12px" }}>
+              <div style={{ display: "flex", justifyContent: "center", gap: 4, margin: "8px 0 14px" }}>
                 {[...cards, { id: "__plus" }].map((card, i) => (
                   <div key={card.id} style={{
-                    width: i === activeCardIdx ? 16 : 5, height: 5, borderRadius: 3,
+                    width: i === activeCardIdx ? 12 : 3, height: 3, borderRadius: 2,
                     backgroundColor: i === activeCardIdx ? C.accentFg : C.faint,
                     transition: "width 0.2s ease, background-color 0.2s ease",
                   }} />
                 ))}
               </div>
               {active && activeCardIdx < cards.length && (
-                <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ display: "flex", justifyContent: "center", gap: 30 }}>
                   {[
-                    { t: "Пополнить", on: () => onCardTopUp(active) },
-                    { t: "Перевести", on: () => onCardTransfer(active) },
-                    { t: "Детали", on: () => onOpenCard(active) },
+                    { t: "Пополнить", Icon: Plus, on: () => onCardTopUp(active) },
+                    { t: "Перевести", Icon: Send, on: () => onCardTransfer(active) },
+                    { t: "Детали", Icon: CreditCard, on: () => onOpenCard(active) },
                   ].map(a => (
-                    <div key={a.t} data-press onClick={a.on} style={{
-                      flex: 1, textAlign: "center", padding: "11px 0", borderRadius: 12,
-                      border: `1px solid ${C.accentFg}44`, cursor: "pointer",
-                    }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: C.accentFg }}>{a.t}</span>
+                    <div key={a.t} data-press onClick={a.on} style={{ textAlign: "center", cursor: "pointer" }}>
+                      <div style={{
+                        width: 46, height: 46, borderRadius: "50%", backgroundColor: C.accentSoft,
+                        display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 6px",
+                      }}>
+                        <a.Icon size={18} color={C.accentFg} strokeWidth={2} />
+                      </div>
+                      <div style={{ fontSize: 10.5, fontWeight: 600, color: C.sub }}>{a.t}</div>
                     </div>
                   ))}
                 </div>

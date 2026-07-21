@@ -7226,6 +7226,7 @@ function CardAccountPicker({ C, displayCurrency, products, counterpart, showUnav
    ═══════════════════════════════════════════════ */
 function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposits, credits, brokerGroups, onAvatarClick, onOpenTotal, onOpenCard, onOpenFamily, onOpenAccount, onOpenDeposit, onOpenCredit, onOpenBroker, onOpenEsim, onOpenAviata, onOpenTransaction, onOpenAllTransactions, onManager }) {
   const [prodTab, setProdTab] = useState("bank");
+  const [stackTopId, setStackTopId] = useState(null); // активная карта стека «Мои карты»
   const dc = displayCurrency || "EUR";
   const dcMeta = CURRENCY_META[dc] || { symbol: dc };
   const capital = convertTo(totalInKZT, dc);
@@ -7297,32 +7298,57 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
           ))}
         </div>
 
-        {/* Свои карты — карусель металла */}
+        {/* Свои карты — wallet-стек: кромки с именем и балансом, тап поднимает карту,
+            тап по активной открывает её детали */}
         {secLabel("Мои карты")}
-        <div style={{ display: "flex", gap: 12, overflowX: "auto", scrollbarWidth: "none", margin: "0 -20px", padding: "2px 20px 6px" }}>
-          {cards.map(card => (
-            <div key={card.id} data-press onClick={() => onOpenCard(card)} style={{
-              flexShrink: 0, width: 240, height: 148, borderRadius: 18, cursor: "pointer",
-              background: "linear-gradient(135deg, #1E1E24 0%, #17171B 55%, #232329 100%)",
-              border: `1px solid ${C.border}`, padding: "16px 18px",
-              display: "flex", flexDirection: "column", justifyContent: "space-between",
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: C.accentFg, letterSpacing: "0.14em", textTransform: "uppercase" }}>Freedom Private</span>
-                <div style={{ width: 26, height: 18, borderRadius: 4, background: `linear-gradient(135deg, ${C.accentFg} 0%, #B39B62 100%)`, opacity: 0.9 }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.name}</div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                  <span style={{ fontSize: 12, color: C.muted, fontFeatureSettings: "'tnum'" }}>•••• {card.last4}</span>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
-                    {fmtCompact(convertTo(cardSubAccounts(card).reduce((t2, a) => t2 + convertToKZT(a.amount, a.currency), 0), dc))} {dcMeta.symbol}
-                  </span>
-                </div>
-              </div>
+        {(() => {
+          const activeId = stackTopId || (cards[0] || {}).id;
+          const ordered = [...cards.filter(c2 => c2.id !== activeId), ...cards.filter(c2 => c2.id === activeId)];
+          const peek = 48, fullH = 172;
+          return (
+            <div style={{ position: "relative", height: fullH + (ordered.length - 1) * peek }}>
+              {ordered.map((card, j) => {
+                const isTop = card.id === activeId;
+                const total = convertTo(cardSubAccounts(card).reduce((t2, a) => t2 + convertToKZT(a.amount, a.currency), 0), dc);
+                return (
+                  <div key={card.id} data-press onClick={() => isTop ? onOpenCard(card) : setStackTopId(card.id)} style={{
+                    position: "absolute", left: 0, right: 0, top: j * peek, height: fullH,
+                    borderRadius: 18, cursor: "pointer", zIndex: j + 1,
+                    background: "linear-gradient(135deg, #1E1E24 0%, #17171B 55%, #232329 100%)",
+                    border: `1px solid ${C.border}`,
+                    boxShadow: j > 0 ? "0 -10px 24px rgba(0,0,0,0.45)" : "none",
+                    padding: "14px 18px",
+                    transition: "top 0.28s ease",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: card.color, flexShrink: 0 }} />
+                        <span style={{ fontSize: 13, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.name}</span>
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                        {fmtCompact(total)} {dcMeta.symbol}
+                      </span>
+                    </div>
+                    {isTop && (
+                      <>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 24 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: C.accentFg, letterSpacing: "0.14em", textTransform: "uppercase" }}>Freedom Private</span>
+                          <div style={{ width: 26, height: 18, borderRadius: 4, background: `linear-gradient(135deg, ${C.accentFg} 0%, #B39B62 100%)`, opacity: 0.9 }} />
+                        </div>
+                        <div style={{ position: "absolute", left: 18, right: 18, bottom: 14, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                          <span style={{ fontSize: 12, color: C.muted, fontFeatureSettings: "'tnum'" }}>•••• {card.last4}</span>
+                          <span style={{ fontSize: 17, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
+                            {fmtFull(total)} {dcMeta.symbol}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          ))}
-        </div>
+          );
+        })()}
 
         {/* Карты близких — мини-карты каруселью (второй класс карт) */}
         {secLabel("Карты близких")}

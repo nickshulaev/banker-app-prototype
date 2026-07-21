@@ -7361,53 +7361,49 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
                 display: "flex", gap: 10, overflowX: "auto", scrollbarWidth: "none",
                 scrollSnapType: "x mandatory", margin: "0 -20px", padding: "2px 20px 4px",
               }}>
-                {cards.map((card, slideIdx) => {
+                {cards.map(card => {
                   const total = cardTotal(card);
                   const subs = cardSubAccounts(card);
                   return (
-                    <div key={card.id} style={{ flexShrink: 0, width: "calc(100% - 44px)", scrollSnapAlign: "center" }}>
-                      <div data-press onClick={() => onOpenCard(card)} style={{
-                        borderRadius: 18, cursor: "pointer", height: 168, position: "relative",
-                        background: "linear-gradient(135deg, #1E1E24 0%, #17171B 55%, #232329 100%)",
-                        border: `1px solid ${C.border}`, borderTop: `2px solid ${card.color}`,
-                        padding: "14px 16px",
-                      }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: C.accentFg, letterSpacing: "0.14em", textTransform: "uppercase" }}>Freedom Banker</span>
-                          <div style={{ width: 26, height: 18, borderRadius: 4, background: `linear-gradient(135deg, ${C.accentFg} 0%, #B39B62 100%)`, opacity: 0.9 }} />
-                        </div>
-                        <div style={{ fontSize: 14.5, fontWeight: 700, color: C.text, marginTop: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.name}</div>
-                        <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-                          {subs.slice(0, 3).map(a => (
-                            <span key={a.currency} style={{ fontSize: 10, fontWeight: 600, color: C.sub, backgroundColor: C.faint, borderRadius: 8, padding: "2px 8px", fontFeatureSettings: "'tnum'" }}>
-                              {(CURRENCY_META[a.currency] || {}).symbol || a.currency} {fmtCompact(a.amount)}
-                            </span>
-                          ))}
-                        </div>
-                        <div style={{ position: "absolute", left: 16, right: 16, bottom: 13, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                          <span style={{ fontSize: 11.5, color: C.muted, fontFeatureSettings: "'tnum'" }}>•••• {card.last4}</span>
-                          <span style={{ fontSize: 16, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
-                            {fmtFull(total)} {dcMeta.symbol}
-                          </span>
-                        </div>
+                    <div key={card.id} data-press onClick={() => onOpenCard(card)} style={{
+                      flexShrink: 0, width: "calc(100% - 44px)", scrollSnapAlign: "center",
+                      borderRadius: 18, cursor: "pointer", height: 204, position: "relative",
+                      background: "linear-gradient(135deg, #1E1E24 0%, #17171B 55%, #232329 100%)",
+                      border: `1px solid ${C.border}`, borderTop: `2px solid ${card.color}`,
+                      padding: "14px 16px 0", overflow: "hidden",
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: C.accentFg, letterSpacing: "0.14em", textTransform: "uppercase" }}>Freedom Banker</span>
+                        <div style={{ width: 26, height: 18, borderRadius: 4, background: `linear-gradient(135deg, ${C.accentFg} 0%, #B39B62 100%)`, opacity: 0.9 }} />
                       </div>
-                      {/* Капсула действий — часть слайда; у неактивных слайдов невидима,
-                          чтобы по краям выглядывал только пластик */}
+                      <div style={{ fontSize: 14.5, fontWeight: 700, color: C.text, marginTop: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.name}</div>
+                      <div style={{ display: "flex", gap: 6, marginTop: 7, flexWrap: "wrap" }}>
+                        {subs.slice(0, 3).map(a => (
+                          <span key={a.currency} style={{ fontSize: 10, fontWeight: 600, color: C.sub, backgroundColor: C.faint, borderRadius: 8, padding: "2px 8px", fontFeatureSettings: "'tnum'" }}>
+                            {(CURRENCY_META[a.currency] || {}).symbol || a.currency} {fmtCompact(a.amount)}
+                          </span>
+                        ))}
+                      </div>
+                      <div style={{ position: "absolute", left: 16, right: 16, bottom: 56, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                        <span style={{ fontSize: 11.5, color: C.muted, fontFeatureSettings: "'tnum'" }}>•••• {card.last4}</span>
+                        <span style={{ fontSize: 16, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
+                          {fmtFull(total)} {dcMeta.symbol}
+                        </span>
+                      </div>
+                      {/* Встроенная панель действий — часть пластика */}
                       <div style={{
-                        display: "flex", marginTop: 10, border: `1px solid ${C.accentFg}40`,
-                        borderRadius: 12, overflow: "hidden",
-                        opacity: slideIdx === activeCardIdx ? 1 : 0,
-                        pointerEvents: slideIdx === activeCardIdx ? "auto" : "none",
-                        transition: "opacity 0.25s ease",
+                        position: "absolute", left: 0, right: 0, bottom: 0, height: 44,
+                        display: "flex", borderTop: `1px solid rgba(245,242,234,0.08)`,
+                        backgroundColor: "rgba(0,0,0,0.18)",
                       }}>
                         {[
                           { t: "Пополнить", on: () => onCardTopUp(card) },
                           { t: "Перевести", on: () => onCardTransfer(card) },
                           { t: "Детали", on: () => onOpenCard(card) },
                         ].map((a, ai) => (
-                          <div key={a.t} data-press onClick={a.on} style={{
-                            flex: 1, textAlign: "center", padding: "12px 0", cursor: "pointer",
-                            borderLeft: ai > 0 ? `1px solid ${C.accentFg}30` : "none",
+                          <div key={a.t} data-press onClick={(e) => { e.stopPropagation(); a.on(); }} style={{
+                            flex: 1, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                            borderLeft: ai > 0 ? `1px solid rgba(245,242,234,0.07)` : "none",
                           }}>
                             <span style={{ fontSize: 12.5, fontWeight: 600, color: C.accentFg }}>{a.t}</span>
                           </div>
@@ -7416,14 +7412,13 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
                     </div>
                   );
                 })}
-                <div style={{ flexShrink: 0, width: "calc(100% - 44px)", scrollSnapAlign: "center" }}>
-                  <div data-press style={{
-                    height: 168, borderRadius: 18, border: `1.5px dashed ${C.accentFg}55`, cursor: "pointer",
-                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
-                  }}>
-                    <Plus size={22} color={C.accentFg} strokeWidth={2} />
-                    <span style={{ fontSize: 12.5, fontWeight: 600, color: C.accentFg }}>Новая карта</span>
-                  </div>
+                <div data-press style={{
+                  flexShrink: 0, width: "calc(100% - 44px)", scrollSnapAlign: "center", height: 204,
+                  borderRadius: 18, border: `1.5px dashed ${C.accentFg}55`, cursor: "pointer",
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
+                }}>
+                  <Plus size={22} color={C.accentFg} strokeWidth={2} />
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: C.accentFg }}>Новая карта</span>
                 </div>
               </div>
               <div style={{ display: "flex", justifyContent: "center", gap: 4, margin: "8px 0 14px" }}>

@@ -6475,7 +6475,7 @@ function TemplatePayScreen({ C, template, onBack, onConfirm }) {
    CHATS TAB — real chat flag (чат с банком)
    ═══════════════════════════════════════════════ */
 
-function ChatsScreen({ C, featureFlags, onOpenThread, concierge }) {
+function ChatsScreen({ C, featureFlags, onOpenThread }) {
   return (
     <div style={{
       maxWidth: 430, margin: "0 auto", minHeight: "100dvh",
@@ -6519,36 +6519,6 @@ function ChatsScreen({ C, featureFlags, onOpenThread, concierge }) {
           </div>
         )}
 
-        {/* Консьерж-сценарии: «бумажные» сервисы живут в чате менеджера */}
-        {featureFlags.chat && concierge && (
-          <>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: "0.09em", textTransform: "uppercase", margin: "24px 0 10px" }}>
-              Запросы консьержу
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              {[
-                { t: "Справка для визы", s: "Proof of funds, выписки", Icon: FileText, on: concierge.certificates },
-                { t: "Налоги", s: "Декларации третьих стран", Icon: Landmark, on: concierge.tax },
-                { t: "Релокация", s: "Переезд под ключ", Icon: Globe, on: concierge.relocation },
-                { t: "Врач 24/7", s: "Телемедицина в поездке", Icon: HeartPulse, on: concierge.medical },
-                { t: "Юрист", s: "Апостили, доверенности", Icon: Scale, on: concierge.lawyer },
-                { t: "Билеты и отели", s: "Организуем поездку", Icon: Plane, on: concierge.travel },
-              ].map(q => (
-                <div key={q.t} data-press onClick={q.on} style={{
-                  backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`,
-                  padding: "13px 14px", cursor: "pointer",
-                }}>
-                  <q.Icon size={17} color={C.accentFg} strokeWidth={1.9} style={{ marginBottom: 8, display: "block" }} />
-                  <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text }}>{q.t}</div>
-                  <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{q.s}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.5, marginTop: 14 }}>
-              Любой запрос уходит Алишеру — ответ в чате в течение 5 минут, 24/7.
-            </div>
-          </>
-        )}
       </div>
     </div>
   );
@@ -8706,7 +8676,7 @@ function OtherServicesScreen({ C, onBack, onPick }) {
         </div>
         {secTitle("Бумаги и юрисдикции")}
         <div style={box}>
-          <Row Icon={FileText} color="#0D9488" title="Справки и proof of funds" subtitle="Для виз и ВНЖ — форматы посольств" type="certificates" />
+          <Row Icon={FileText} color="#0D9488" title="Справки и выписки" subtitle="Proof of funds для виз и ВНЖ, выписки по счетам" type="certificates" />
           <Row Icon={Landmark} color="#F59E0B" title="Налоговый помощник" subtitle="Декларации резидентам третьих стран" type="tax" />
           <Row Icon={Globe} color="#3B82F6" title="Релокация" subtitle="Переезд под ключ: чеклист вашей страны" type="relocation" />
           <Row Icon={Scale} color="#8B5CF6" title="Юрист" subtitle="Апостили, доверенности, переводы документов" type="lawyer" last />
@@ -8717,7 +8687,7 @@ function OtherServicesScreen({ C, onBack, onPick }) {
           <Row Icon={GraduationCap} color="#0EA5E9" title="Обучение за рубежом" subtitle="Tuition fee + документы для визы" type="education" last />
         </div>
         <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.5, marginTop: 14 }}>
-          Каждый сервис можно запросить и через менеджера — карточками в чате.
+          Любую услугу можно попросить и просто текстом — в чате менеджера.
         </div>
       </div>
     </ScreenShell>
@@ -9989,16 +9959,9 @@ export default function FreedomV6() {
         />
       )}
       {activeTab === "chats" && (
+        /* Менеджер = только чат; все консьерж-сценарии — в каталоге «Другие сервисы» */
         <ChatsScreen C={C} featureFlags={featureFlags}
           onOpenThread={() => pushScreen({ type: "chatThread" })}
-          concierge={theme === "exec" ? {
-            certificates: () => pushScreen({ type: "certificates" }),
-            tax: () => pushScreen({ type: "conciergeRequest", kind: "tax" }),
-            relocation: () => pushScreen({ type: "conciergeRequest", kind: "relocation" }),
-            lawyer: () => pushScreen({ type: "conciergeRequest", kind: "lawyer" }),
-            medical: () => pushScreen({ type: "medical" }),
-            travel: () => pushScreen({ type: "aviata" }),
-          } : undefined}
         />
       )}
       {navStack.map((s, i) => {

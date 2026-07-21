@@ -7361,7 +7361,7 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
                 display: "flex", gap: 10, overflowX: "auto", scrollbarWidth: "none",
                 scrollSnapType: "x mandatory", margin: "0 -20px", padding: "2px 20px 4px",
               }}>
-                {cards.map(card => {
+                {cards.map((card, slideIdx) => {
                   const total = cardTotal(card);
                   const subs = cardSubAccounts(card);
                   return (
@@ -7391,10 +7391,14 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
                           </span>
                         </div>
                       </div>
-                      {/* Капсула действий — часть слайда, едет вместе с картой */}
+                      {/* Капсула действий — часть слайда; у неактивных слайдов невидима,
+                          чтобы по краям выглядывал только пластик */}
                       <div style={{
                         display: "flex", marginTop: 10, border: `1px solid ${C.accentFg}40`,
                         borderRadius: 12, overflow: "hidden",
+                        opacity: slideIdx === activeCardIdx ? 1 : 0,
+                        pointerEvents: slideIdx === activeCardIdx ? "auto" : "none",
+                        transition: "opacity 0.25s ease",
                       }}>
                         {[
                           { t: "Пополнить", on: () => onCardTopUp(card) },

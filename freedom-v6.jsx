@@ -417,6 +417,27 @@ const FAMILY_CARDS = [
   { id: "fam-3", name: "Водитель", cardName: "Expense Card", last4: "7788", limit: 300000, spent: 41000, currency: "KZT", color: "#7D8AA5" },
 ];
 
+/* Операции по картам близких (мок для статистики на экране карты). */
+const FAMILY_TX = {
+  "fam-1": [
+    { id: 1, name: "Magnum Cash&Carry", cat: "Продукты", amount: -24300, time: "Сегодня, 12:40", Icon: ShoppingCart },
+    { id: 2, name: "Europharma", cat: "Здоровье", amount: -8900, time: "Вчера, 16:12", Icon: Plus },
+    { id: 3, name: "Яндекс Такси", cat: "Транспорт", amount: -3200, time: "Вчера, 09:30", Icon: Bus },
+    { id: 4, name: "Rakhat Fitness", cat: "Здоровье", amount: -18000, time: "12 июля", Icon: Zap },
+  ],
+  "fam-2": [
+    { id: 1, name: "PlayStation Store", cat: "Развлечения", amount: -14990, time: "Сегодня, 20:05", Icon: Ticket },
+    { id: 2, name: "Glovo", cat: "Еда", amount: -6700, time: "Вчера, 19:44", Icon: Utensils },
+    { id: 3, name: "Beeline", cat: "Связь", amount: -3490, time: "10 июля", Icon: Smartphone },
+    { id: 4, name: "Яндекс Такси", cat: "Транспорт", amount: -2150, time: "9 июля", Icon: Bus },
+  ],
+  "fam-3": [
+    { id: 1, name: "Helios", cat: "АЗС", amount: -38000, time: "Сегодня, 08:10", Icon: Fuel },
+    { id: 2, name: "Автомойка Blesk", cat: "Авто", amount: -5000, time: "Вчера, 18:20", Icon: Zap },
+    { id: 3, name: "Magnum Cash&Carry", cat: "Продукты", amount: -4200, time: "11 июля", Icon: ShoppingCart },
+  ],
+};
+
 /* ═══════════════════════════════════════════════
    BLOCKS
    ═══════════════════════════════════════════════ */
@@ -7224,16 +7245,18 @@ function CardAccountPicker({ C, displayCurrency, products, counterpart, showUnav
    Капитал → быстрые действия → свои карты (карусель-металл) →
    карты близких (лимиты) → Travel → последние операции.
    ═══════════════════════════════════════════════ */
-function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposits, credits, brokerGroups, onAvatarClick, onOpenTotal, onOpenCard, onOpenFamily, onOpenAccount, onOpenDeposit, onOpenCredit, onOpenBroker, onOpenEsim, onOpenAviata, onOpenTransaction, onOpenAllTransactions, onManager }) {
+function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposits, credits, brokerGroups, news, onAvatarClick, onOpenTotal, onOpenCard, onCardTopUp, onCardTransfer, onOpenFamily, onOpenAccount, onOpenDeposit, onOpenCredit, onOpenBroker, onOpenEsim, onOpenAviata, onOpenNews, onOpenNewsDetail, onOpenTransaction, onOpenAllTransactions, onManager }) {
   const [prodTab, setProdTab] = useState("bank");
-  const [stackTopId, setStackTopId] = useState(null); // активная карта стека «Мои карты»
+  const [activeCardIdx, setActiveCardIdx] = useState(0); // активный слайд hero-карусели
   const dc = displayCurrency || "EUR";
   const dcMeta = CURRENCY_META[dc] || { symbol: dc };
   const capital = convertTo(totalInKZT, dc);
   const secLabel = (t, action, onAction) => (
     <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", margin: "26px 0 10px" }}>
       <span style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: "0.09em", textTransform: "uppercase" }}>{t}</span>
-      {action && <span data-press onClick={onAction} style={{ fontSize: 12, fontWeight: 600, color: C.accentFg, cursor: "pointer" }}>{action}</span>}
+      {action && (onAction
+        ? <span data-press onClick={onAction} style={{ fontSize: 12, fontWeight: 600, color: C.accentFg, cursor: "pointer" }}>{action}</span>
+        : <span style={{ fontSize: 12, fontWeight: 600, color: C.sub, fontFeatureSettings: "'tnum'" }}>{action}</span>)}
     </div>
   );
   const fmtLim = (n) => fmtCompact(n);
@@ -7255,7 +7278,7 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
             <span style={{ fontSize: 13, fontWeight: 700, color: C.accentFg }}>НШ</span>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, color: C.muted }}>Freedom Private</div>
+            <div style={{ fontSize: 11, color: C.muted }}>Freedom Banker</div>
             <div style={{ fontSize: 16, fontWeight: 700, color: C.text, letterSpacing: -0.2 }}>Никита</div>
           </div>
           <div data-press onClick={onManager} style={{
@@ -7274,6 +7297,28 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
           </div>
           <div style={{ fontSize: 12.5, color: C.accentFg, marginTop: 8, fontFeatureSettings: "'tnum'" }}>+2,4% за месяц</div>
         </div>
+
+        {/* Новости — компактно: одна новость + все новости */}
+        {news && (
+          <>
+            {secLabel("Новости", "Все новости", onOpenNews)}
+            <div data-press onClick={() => onOpenNewsDetail(news)} style={{
+              backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`,
+              padding: "13px 14px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer",
+            }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: C.accentSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Newspaper size={16} color={C.accentFg} strokeWidth={1.9} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.text, lineHeight: 1.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                  {news.title}
+                </div>
+                <div style={{ fontSize: 10.5, color: C.muted, marginTop: 3 }}>{news.tag} · {news.time}</div>
+              </div>
+              <ChevronRight size={15} color={C.muted} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+            </div>
+          </>
+        )}
 
         {/* Travel — ядро сервисной части */}
         {secLabel("Тревел")}
@@ -7298,58 +7343,93 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
           ))}
         </div>
 
-        {/* Свои карты — аккордеон на месте: порядок фиксированный, карта раскрывается
-            где лежит (взаимоисключающе); «Открыть →» в кромке раскрытой ведёт в детали */}
-        {secLabel("Мои карты")}
-        <div>
-          {cards.map((card, j) => {
-            const expandedId = stackTopId || (cards[0] || {}).id;
-            const isOpen = card.id === expandedId;
-            const first = j === 0, last = j === cards.length - 1;
-            const total = convertTo(cardSubAccounts(card).reduce((t2, a) => t2 + convertToKZT(a.amount, a.currency), 0), dc);
-            return (
-              <div key={card.id} data-press onClick={() => setStackTopId(isOpen ? "__none__" : card.id)} style={{
-                height: isOpen ? 168 : 47, overflow: "hidden", position: "relative",
-                borderRadius: isOpen ? 16 : `${first ? 14 : 0}px ${first ? 14 : 0}px ${last ? 14 : 0}px ${last ? 14 : 0}px`,
-                background: isOpen ? "linear-gradient(135deg, #1E1E24 0%, #17171B 55%, #232329 100%)" : C.card,
-                border: `1px solid ${isOpen ? `${C.accentFg}55` : C.border}`,
-                margin: isOpen ? "5px 0" : "0",
-                cursor: "pointer", padding: "0 16px",
-                transition: "height 0.24s ease, border-radius 0.24s ease, margin 0.24s ease",
+        {/* Свои карты — hero-карта со свайпом: scroll-snap, чипы валют, цветная кромка;
+            действия под каруселью относятся к активной карте */}
+        {(() => {
+          const cardTotal = (card) => convertTo(cardSubAccounts(card).reduce((t2, a) => t2 + convertToKZT(a.amount, a.currency), 0), dc);
+          const allCardsTotal = cards.reduce((t2, card) => t2 + cardTotal(card), 0);
+          const active = cards[Math.min(activeCardIdx, cards.length - 1)];
+          return (
+            <>
+              {secLabel("Мои карты", `На картах: ${fmtCompact(allCardsTotal)} ${dcMeta.symbol}`)}
+              <div onScroll={(e) => {
+                const el = e.currentTarget;
+                const w = el.firstChild ? el.firstChild.offsetWidth + 10 : 1;
+                const idx = Math.round(el.scrollLeft / w);
+                if (idx !== activeCardIdx) setActiveCardIdx(idx);
+              }} style={{
+                display: "flex", gap: 10, overflowX: "auto", scrollbarWidth: "none",
+                scrollSnapType: "x mandatory", margin: "0 -20px", padding: "2px 20px 4px",
               }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 47, gap: 10 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: card.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.name}</span>
-                  </div>
-                  {isOpen ? (
-                    <span data-press onClick={(e) => { e.stopPropagation(); onOpenCard(card); }} style={{
-                      fontSize: 12, fontWeight: 700, color: C.accentFg, cursor: "pointer", flexShrink: 0,
-                    }}>Открыть →</span>
-                  ) : (
-                    <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
-                      {fmtCompact(total)} {dcMeta.symbol}
-                    </span>
-                  )}
+                {cards.map(card => {
+                  const total = cardTotal(card);
+                  const subs = cardSubAccounts(card);
+                  return (
+                    <div key={card.id} data-press onClick={() => onOpenCard(card)} style={{
+                      flexShrink: 0, width: "calc(100% - 44px)", scrollSnapAlign: "center",
+                      borderRadius: 18, cursor: "pointer", height: 168, position: "relative",
+                      background: "linear-gradient(135deg, #1E1E24 0%, #17171B 55%, #232329 100%)",
+                      border: `1px solid ${C.border}`, borderTop: `2px solid ${card.color}`,
+                      padding: "14px 16px",
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: C.accentFg, letterSpacing: "0.14em", textTransform: "uppercase" }}>Freedom Banker</span>
+                        <div style={{ width: 26, height: 18, borderRadius: 4, background: `linear-gradient(135deg, ${C.accentFg} 0%, #B39B62 100%)`, opacity: 0.9 }} />
+                      </div>
+                      <div style={{ fontSize: 14.5, fontWeight: 700, color: C.text, marginTop: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.name}</div>
+                      <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+                        {subs.slice(0, 3).map(a => (
+                          <span key={a.currency} style={{ fontSize: 10, fontWeight: 600, color: C.sub, backgroundColor: C.faint, borderRadius: 8, padding: "2px 8px", fontFeatureSettings: "'tnum'" }}>
+                            {(CURRENCY_META[a.currency] || {}).symbol || a.currency} {fmtCompact(a.amount)}
+                          </span>
+                        ))}
+                      </div>
+                      <div style={{ position: "absolute", left: 16, right: 16, bottom: 13, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                        <span style={{ fontSize: 11.5, color: C.muted, fontFeatureSettings: "'tnum'" }}>•••• {card.last4}</span>
+                        <span style={{ fontSize: 16, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
+                          {fmtFull(total)} {dcMeta.symbol}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div data-press style={{
+                  flexShrink: 0, width: "calc(100% - 44px)", scrollSnapAlign: "center", height: 168,
+                  borderRadius: 18, border: `1.5px dashed ${C.accentFg}55`, cursor: "pointer",
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
+                }}>
+                  <Plus size={22} color={C.accentFg} strokeWidth={2} />
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: C.accentFg }}>Новая карта</span>
                 </div>
-                {isOpen && (
-                  <>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: C.accentFg, letterSpacing: "0.14em", textTransform: "uppercase" }}>Freedom Private</span>
-                      <div style={{ width: 26, height: 18, borderRadius: 4, background: `linear-gradient(135deg, ${C.accentFg} 0%, #B39B62 100%)`, opacity: 0.9 }} />
-                    </div>
-                    <div style={{ position: "absolute", left: 16, right: 16, bottom: 14, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                      <span style={{ fontSize: 12, color: C.muted, fontFeatureSettings: "'tnum'" }}>•••• {card.last4}</span>
-                      <span style={{ fontSize: 17, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>
-                        {fmtFull(total)} {dcMeta.symbol}
-                      </span>
-                    </div>
-                  </>
-                )}
               </div>
-            );
-          })}
-        </div>
+              <div style={{ display: "flex", justifyContent: "center", gap: 5, margin: "10px 0 12px" }}>
+                {[...cards, { id: "__plus" }].map((card, i) => (
+                  <div key={card.id} style={{
+                    width: i === activeCardIdx ? 16 : 5, height: 5, borderRadius: 3,
+                    backgroundColor: i === activeCardIdx ? C.accentFg : C.faint,
+                    transition: "width 0.2s ease, background-color 0.2s ease",
+                  }} />
+                ))}
+              </div>
+              {active && activeCardIdx < cards.length && (
+                <div style={{ display: "flex", gap: 8 }}>
+                  {[
+                    { t: "Пополнить", on: () => onCardTopUp(active) },
+                    { t: "Перевести", on: () => onCardTransfer(active) },
+                    { t: "Детали", on: () => onOpenCard(active) },
+                  ].map(a => (
+                    <div key={a.t} data-press onClick={a.on} style={{
+                      flex: 1, textAlign: "center", padding: "11px 0", borderRadius: 12,
+                      border: `1px solid ${C.accentFg}44`, cursor: "pointer",
+                    }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: C.accentFg }}>{a.t}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         {/* Карты близких — мини-карты каруселью (второй класс карт) */}
         {secLabel("Карты близких")}
@@ -7512,34 +7592,74 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
   );
 }
 
-/* Карта близкого: лимит, прогресс, заморозка (локально в экране — прототип). */
+/* Карта близкого: пополнить / лимит / отозвать / детали + статистика операций. */
 function FamilyCardScreen({ C, fc, onBack }) {
   const [limit, setLimit] = useState(fc.limit);
-  const [frozen, setFrozen] = useState(false);
-  const [limitOpen, setLimitOpen] = useState(false);
-  const pct = Math.min(100, Math.round(fc.spent / limit * 100));
+  const [revoked, setRevoked] = useState(false);
+  const [sheet, setSheet] = useState(null); // 'topup' | 'limit' | 'revoke' | 'details'
+  const [topupAmt, setTopupAmt] = useState("");
+  const [topupDone, setTopupDone] = useState(false);
+  const tx = FAMILY_TX[fc.id] || [];
+  const spentNow = tx.reduce((t2, o) => t2 + Math.abs(o.amount), 0) || fc.spent;
+  const pct = Math.min(100, Math.round(spentNow / limit * 100));
+  // Категории — top-3 по тратам
+  const byCat = {};
+  tx.forEach(o => { byCat[o.cat] = (byCat[o.cat] || 0) + Math.abs(o.amount); });
+  const cats = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const maxCat = cats.length ? cats[0][1] : 1;
+
+  const actions = [
+    { key: "topup", t: "Пополнить", Icon: Plus },
+    { key: "limit", t: "Лимит", Icon: Settings2 },
+    { key: "revoke", t: revoked ? "Вернуть" : "Отозвать", Icon: X },
+    { key: "details", t: "Детали", Icon: FileText },
+  ];
+
   return (
     <ScreenShell C={C} title={fc.name} onBack={onBack}>
       <div style={{ padding: "4px 20px 110px" }}>
         <div style={{
           borderRadius: 18, background: "linear-gradient(135deg, #1E1E24 0%, #17171B 55%, #232329 100%)",
-          border: `1px solid ${C.border}`, padding: "18px", marginBottom: 18, opacity: frozen ? 0.5 : 1,
+          border: `1px solid ${C.border}`, borderTop: `2px solid ${fc.color}`,
+          padding: "16px 18px", marginBottom: 14, opacity: revoked ? 0.45 : 1,
         }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 26 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: C.accentFg, letterSpacing: "0.14em", textTransform: "uppercase" }}>Freedom Private</span>
-            {frozen && <span style={{ fontSize: 10, fontWeight: 700, color: C.text, backgroundColor: C.faint, borderRadius: 8, padding: "3px 8px" }}>Заморожена</span>}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: C.accentFg, letterSpacing: "0.14em", textTransform: "uppercase" }}>Freedom Banker</span>
+            {revoked && <span style={{ fontSize: 10, fontWeight: 700, color: C.text, backgroundColor: C.faint, borderRadius: 8, padding: "3px 8px" }}>Отозвана</span>}
           </div>
           <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 4 }}>{fc.cardName}</div>
           <div style={{ fontSize: 12, color: C.muted, fontFeatureSettings: "'tnum'" }}>•••• {fc.last4}</div>
         </div>
 
+        {topupDone && (
+          <div style={{ backgroundColor: C.accentSoft, borderRadius: 12, padding: "11px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+            <Check size={15} color={C.accentFg} strokeWidth={2.4} />
+            <span style={{ fontSize: 12.5, color: C.text }}>Карта пополнена</span>
+          </div>
+        )}
+
+        {/* Действия */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+          {actions.map(a => (
+            <div key={a.key} data-press onClick={() => a.key === "revoke" && revoked ? setRevoked(false) : setSheet(a.key)} style={{
+              flex: 1, textAlign: "center", padding: "11px 0 9px", borderRadius: 12,
+              border: `1px solid ${a.key === "revoke" && !revoked ? "rgba(239,68,68,0.4)" : `${C.accentFg}38`}`,
+              cursor: "pointer", opacity: revoked && a.key !== "revoke" && a.key !== "details" ? 0.4 : 1,
+            }}>
+              <a.Icon size={15} color={a.key === "revoke" && !revoked ? "#EF6B6B" : C.accentFg} strokeWidth={2} style={{ marginBottom: 3 }} />
+              <div style={{ fontSize: 10.5, fontWeight: 600, color: a.key === "revoke" && !revoked ? "#EF6B6B" : C.accentFg }}>{a.t}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Лимит месяца */}
         <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: "15px 16px", marginBottom: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
             <span style={{ fontSize: 12, color: C.muted }}>Потрачено в июле</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>{fmtFull(fc.spent)} ₸</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>{fmtFull(spentNow)} ₸</span>
           </div>
           <div style={{ height: 4, borderRadius: 2, backgroundColor: C.faint, overflow: "hidden", marginBottom: 8 }}>
-            <div style={{ width: `${pct}%`, height: "100%", backgroundColor: C.accentFg, borderRadius: 2 }} />
+            <div style={{ width: `${pct}%`, height: "100%", backgroundColor: fc.color, borderRadius: 2 }} />
           </div>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span style={{ fontSize: 11.5, color: C.muted }}>Лимит на месяц</span>
@@ -7547,29 +7667,105 @@ function FamilyCardScreen({ C, fc, onBack }) {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-          <div data-press onClick={() => setLimitOpen(true)} style={{ flex: 1, textAlign: "center", padding: "13px 0", borderRadius: 12, border: `1px solid ${C.accentFg}44`, cursor: "pointer" }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: C.accentFg }}>Изменить лимит</span>
+        {/* Статистика: категории */}
+        {cats.length > 0 && (
+          <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: "15px 16px", marginBottom: 14 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 12 }}>Расходы по категориям</div>
+            {cats.map(([cat, sum], i) => (
+              <div key={cat} style={{ marginBottom: i < cats.length - 1 ? 12 : 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: C.text }}>{cat}</span>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'" }}>{fmtFull(sum)} ₸</span>
+                </div>
+                <div style={{ height: 3, borderRadius: 2, backgroundColor: C.faint, overflow: "hidden" }}>
+                  <div style={{ width: `${Math.round(sum / maxCat * 100)}%`, height: "100%", backgroundColor: C.accentFg, borderRadius: 2, opacity: 0.85 }} />
+                </div>
+              </div>
+            ))}
           </div>
-          <div data-press onClick={() => setFrozen(f => !f)} style={{ flex: 1, textAlign: "center", padding: "13px 0", borderRadius: 12, border: `1px solid ${frozen ? C.accentFg : C.border}`, cursor: "pointer" }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: frozen ? C.accentFg : C.text }}>{frozen ? "Разморозить" : "Заморозить"}</span>
-          </div>
+        )}
+
+        {/* Операции карты */}
+        <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 14 }}>
+          {tx.map((o, i) => (
+            <div key={o.id} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
+              borderBottom: i < tx.length - 1 ? `1px solid ${C.divider}` : "none",
+            }}>
+              <div style={{ width: 34, height: 34, borderRadius: "50%", backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <o.Icon size={15} color={C.accentFg} strokeWidth={1.9} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o.name}</div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>{o.cat} · {o.time}</div>
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>{fmtFull(o.amount)} ₸</span>
+            </div>
+          ))}
         </div>
+
         <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.5 }}>
           Карта привязана к вашему счёту. Владелец видит только свой лимит — балансы и операции остальных счетов ему недоступны.
         </div>
       </div>
 
-      {limitOpen && (
-        <BottomSheetModal C={C} onClose={() => setLimitOpen(false)}>
+      {sheet === "topup" && (
+        <BottomSheetModal C={C} onClose={() => setSheet(null)}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 14 }}>Пополнить «{fc.name}»</div>
+          <div style={{ backgroundColor: C.faint, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+            <input value={topupAmt} autoFocus inputMode="decimal" placeholder="0"
+              onChange={e => setTopupAmt(e.target.value.replace(/[^0-9.,]/g, ""))}
+              style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 24, fontWeight: 800, color: C.text, fontFamily: "inherit", fontFeatureSettings: "'tnum'", minWidth: 0 }} />
+            <span style={{ fontSize: 16, fontWeight: 800, color: C.text }}>₸</span>
+          </div>
+          <div data-press onClick={() => { if (parseFloat(topupAmt.replace(",", ".")) > 0) { setSheet(null); setTopupAmt(""); setTopupDone(true); setTimeout(() => setTopupDone(false), 2600); } }} style={{
+            backgroundColor: C.accentDark, borderRadius: 12, padding: "15px 0", textAlign: "center", cursor: "pointer",
+          }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>Пополнить</span>
+          </div>
+        </BottomSheetModal>
+      )}
+      {sheet === "limit" && (
+        <BottomSheetModal C={C} onClose={() => setSheet(null)}>
           <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 16 }}>Лимит на месяц</div>
           {[150000, 300000, 500000, 1000000].map((v, i) => (
-            <div key={v} data-press onClick={() => { setLimit(v); setLimitOpen(false); }} style={{
+            <div key={v} data-press onClick={() => { setLimit(v); setSheet(null); }} style={{
               display: "flex", alignItems: "center", padding: "13px 0", cursor: "pointer",
               borderBottom: i < 3 ? `1px solid ${C.divider}` : "none",
             }}>
               <span style={{ flex: 1, fontSize: 15, fontWeight: 600, color: C.text, fontFeatureSettings: "'tnum'" }}>{fmtFull(v)} ₸</span>
               {limit === v && <Check size={17} color={C.accentFg} strokeWidth={2.4} />}
+            </div>
+          ))}
+        </BottomSheetModal>
+      )}
+      {sheet === "revoke" && (
+        <BottomSheetModal C={C} onClose={() => setSheet(null)}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 8 }}>Отозвать карту?</div>
+          <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.55, marginBottom: 20 }}>
+            Карта «{fc.name}» перестанет работать сразу. Вернуть её можно в любой момент.
+          </div>
+          <div data-press onClick={() => { setRevoked(true); setSheet(null); }} style={{ backgroundColor: "#EF4444", borderRadius: 12, padding: "15px 0", textAlign: "center", cursor: "pointer", marginBottom: 10 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>Отозвать</span>
+          </div>
+          <div data-press onClick={() => setSheet(null)} style={{ backgroundColor: C.faint, borderRadius: 12, padding: "15px 0", textAlign: "center", cursor: "pointer" }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: C.text }}>Отмена</span>
+          </div>
+        </BottomSheetModal>
+      )}
+      {sheet === "details" && (
+        <BottomSheetModal C={C} onClose={() => setSheet(null)}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 16 }}>Детали карты</div>
+          {[
+            { label: "Держатель", value: fc.name },
+            { label: "Карта", value: `${fc.cardName} •••• ${fc.last4}` },
+            { label: "Срок действия", value: "07/29" },
+            { label: "Привязана к счёту", value: "KZ81…5USD" },
+            { label: "Лимит на месяц", value: `${fmtFull(limit)} ₸` },
+          ].map((r2, i, arr2) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: i < arr2.length - 1 ? `1px solid ${C.divider}` : "none" }}>
+              <span style={{ fontSize: 13, color: C.muted }}>{r2.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.text, fontFeatureSettings: "'tnum'" }}>{r2.value}</span>
             </div>
           ))}
         </BottomSheetModal>
@@ -8698,6 +8894,11 @@ export default function FreedomV6() {
         <ExecHomeScreen C={C} displayCurrency={displayCurrency} totalInKZT={totalInKZT}
           cards={activeCardProducts.flatMap(g => g.cards).filter(c => !c.blocked)}
           accounts={activeAccounts} deposits={DEPOSITS} credits={activeCredits} brokerGroups={BROKER_ACCOUNTS}
+          news={activeNews}
+          onOpenNews={() => pushScreen({ type: "newsList" })}
+          onOpenNewsDetail={(news) => pushScreen({ type: "newsDetail", news })}
+          onCardTopUp={(card) => setSheet({ type: "topup", card })}
+          onCardTransfer={(card) => openWithdraw(card.id)}
           onOpenAccount={(account) => pushScreen({ type: "accountDetails", account })}
           onOpenDeposit={(deposit) => pushScreen({ type: "depositDetails", deposit })}
           onOpenCredit={(credit) => pushScreen({ type: "creditDetails", credit })}

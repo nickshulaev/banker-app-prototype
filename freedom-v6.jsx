@@ -419,23 +419,23 @@ const EXEC_COLORS = {
    крупная типографика, чёрные круглые действия, плавающий таб-бар.
    accentDark=чёрные действия, pop=акцентный остров (по умолчанию шампань). */
 const NEO_COLORS = {
-  bg: "#ECE9E2",
+  bg: "#F7F8F8",
   card: "#FFFFFF",
-  text: "#141414",
-  sub: "#67676E",
-  muted: "#9A9AA1",
-  faint: "rgba(20,20,20,0.045)",
-  border: "rgba(20,20,20,0.06)",
-  borderStrong: "rgba(20,20,20,0.16)",
-  divider: "rgba(20,20,20,0.06)",
+  text: "#13181D",
+  sub: "#4D565E",
+  muted: "#747F8A",
+  faint: "rgba(19,24,29,0.045)",
+  border: "rgba(19,24,29,0.06)",
+  borderStrong: "rgba(19,24,29,0.16)",
+  divider: "rgba(19,24,29,0.06)",
   accent: "#FFFFFF",
-  accentDark: "#141414",
-  accentFg: "#141414",
-  accentSoft: "rgba(20,20,20,0.05)",
-  cardShadow: "0 6px 24px rgba(20,18,14,0.06)",
-  pop: "#D9B25A",
-  popText: "#2E2408",
-  popSoft: "rgba(217,178,90,0.16)",
+  accentDark: "#13181D",
+  accentFg: "#07B14B",
+  accentSoft: "#E6F7ED",
+  cardShadow: "0 6px 24px rgba(19,24,29,0.06)",
+  pop: "#07B14B",
+  popText: "#F0FCFF",
+  popSoft: "rgba(7,177,75,0.14)",
   neo: true,
 };
 
@@ -7478,7 +7478,7 @@ function NeoHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposi
             width: 42, height: 42, borderRadius: "50%", backgroundColor: C.card, boxShadow: C.cardShadow,
             display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0,
           }}>
-            <MessageCircle size={19} color={C.text} strokeWidth={1.9} />
+            <MessageCircle size={19} color={C.accentFg} strokeWidth={1.9} />
           </div>
         </div>
 
@@ -7490,7 +7490,6 @@ function NeoHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposi
           }}>
             {fmtInt(capital)}<span style={{ fontSize: 30, color: C.muted, fontWeight: 600, marginLeft: 4 }}>{dcMeta.symbol}</span>
           </div>
-          <div style={{ fontSize: 13, color: "#1F9E55", marginTop: 12, fontWeight: 600, fontFeatureSettings: "'tnum'" }}>+2,4% за месяц</div>
         </div>
 
         {/* Круглые действия */}
@@ -7510,7 +7509,7 @@ function NeoHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposi
           {neoSec("Новости", "Все", onOpenNews)}
           <div data-press onClick={() => onOpenNewsDetail(news)} style={{ ...island, padding: "13px 14px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
             <div style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: C.accentSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <Newspaper size={17} color={C.text} strokeWidth={1.9} />
+              <Newspaper size={17} color={C.accentFg} strokeWidth={1.9} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 14, fontWeight: 600, color: C.text, lineHeight: 1.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{news.title}</div>
@@ -7542,7 +7541,7 @@ function NeoHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposi
             { t: "Fast Track", s: "Без очередей", Icon: Zap, on: onOpenFastTrack },
           ].map(sv => (
             <div key={sv.t} data-press onClick={sv.on} style={{ ...island, padding: "14px 15px", cursor: "pointer" }}>
-              <sv.Icon size={19} color={C.text} strokeWidth={1.9} style={{ marginBottom: 10, display: "block" }} />
+              <sv.Icon size={19} color={C.accentFg} strokeWidth={1.9} style={{ marginBottom: 10, display: "block" }} />
               <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{sv.t}</div>
               <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{sv.s}</div>
             </div>
@@ -7666,7 +7665,7 @@ function NeoHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposi
           {prodTab === "bank" && (<>
             {(prodExpanded ? accounts : accounts.slice(0, 3)).map((a, i, arr) => (
               <div key={a.id} data-press onClick={() => onOpenAccount(a)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", cursor: "pointer", borderBottom: i < arr.length - 1 || (prodExpanded && credits.length) ? `1px solid ${C.divider}` : "none" }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Landmark size={16} color={C.text} strokeWidth={1.9} /></div>
+                <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Landmark size={16} color={C.accentFg} strokeWidth={1.9} /></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</div>
                   <div style={{ fontSize: 11.5, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'" }}>{a.number.slice(0, 4)}…{a.number.replace(/\s/g, "").slice(-4)}</div>
@@ -7676,7 +7675,7 @@ function NeoHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposi
             ))}
             {prodExpanded && credits.map((cr, i) => (
               <div key={cr.id} data-press onClick={() => onOpenCredit(cr)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", cursor: "pointer", borderBottom: i < credits.length - 1 ? `1px solid ${C.divider}` : "none" }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Banknote size={16} color={C.text} strokeWidth={1.9} /></div>
+                <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Banknote size={16} color={C.accentFg} strokeWidth={1.9} /></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cr.name}</div>
                   <div style={{ fontSize: 11.5, color: C.muted, marginTop: 1 }}>Платёж до {cr.payoffDate}</div>
@@ -7687,7 +7686,7 @@ function NeoHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposi
           </>)}
           {prodTab === "deposits" && (prodExpanded ? deposits : deposits.slice(0, 3)).map((d, i, arrD) => (
             <div key={d.id} data-press onClick={() => onOpenDeposit(d)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", cursor: "pointer", borderBottom: i < arrD.length - 1 ? `1px solid ${C.divider}` : "none" }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><PiggyBank size={16} color={C.text} strokeWidth={1.9} /></div>
+              <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><PiggyBank size={16} color={C.accentFg} strokeWidth={1.9} /></div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</div>
                 <div style={{ fontSize: 11.5, color: C.muted, marginTop: 1 }}>{d.rate.toFixed(1)}% · до {d.closingDate}</div>
@@ -7700,7 +7699,7 @@ function NeoHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposi
               <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, padding: "10px 16px 4px", letterSpacing: "0.05em", textTransform: "uppercase" }}>{g.group}</div>
               {g.accounts.map((a, i) => (
                 <div key={a.id} data-press onClick={() => onOpenBroker(a)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", cursor: "pointer", borderBottom: gi < arrG.length - 1 || i < g.accounts.length - 1 ? `1px solid ${C.divider}` : "none" }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><TrendingUp size={16} color={C.text} strokeWidth={1.9} /></div>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: C.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><TrendingUp size={16} color={C.accentFg} strokeWidth={1.9} /></div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{a.type}</div>
                     <div style={{ fontSize: 11.5, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'" }}>{a.id}</div>
@@ -7824,7 +7823,6 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
           <div style={{ fontSize: 44, fontWeight: 300, color: C.text, letterSpacing: -1.5, fontFeatureSettings: "'tnum'", lineHeight: 1 }}>
             {fmtInt(capital)} <span style={{ fontSize: 26, color: C.muted, fontWeight: 300 }}>{dcMeta.symbol}</span>
           </div>
-          <div style={{ fontSize: 12.5, color: C.accentFg, marginTop: 8, fontFeatureSettings: "'tnum'" }}>+2,4% за месяц</div>
         </div>
 
         {/* Новости — компактно: одна новость + все новости */}

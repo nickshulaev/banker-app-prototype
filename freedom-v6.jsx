@@ -10008,7 +10008,7 @@ export default function FreedomV6() {
   const [displayCurrency, setDisplayCurrency] = useState("EUR");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [productTab, setProductTab] = useState("bank");
-  const [theme, setTheme] = useState("exec"); // executive-форк: премиум-тема по умолчанию
+  const [theme, setTheme] = useState("neo"); // neo (острова) — дефолтная тема; exec/light/dark в дебаге
   const [debugOpen, setDebugOpen] = useState(false);
   const [emptyState, setEmptyState] = useState(false);
   // Executive-форк: супер-апп нагрузка выключена по умолчанию (Travel — остаётся).

@@ -2758,9 +2758,6 @@ function PaymentsScreen({ C, featureFlags, selectedProduct, embedded, onOpenStub
             {featureFlags.paySwift && sp("swift") && (
               <Row Icon={Globe} color="#06B6D4" title="Переводом SWIFT" subtitle="В любую страну" onClick={onSwift} />
             )}
-            {onEducation && (
-              <Row Icon={GraduationCap} color="#22C55E" title="Обучение за рубежом" subtitle="Tuition fee + документы для визы" onClick={onEducation} />
-            )}
             {featureFlags.crystal && sp("swift") && (
               <Row Icon={FileText} color="#0EA5E9" title="Валютные контракты" subtitle="Для переводов SWIFT"
                 onClick={() => onOpenStub?.("Валютные контракты", "Валютные контракты для SWIFT-переводов (crystal). Флоу в прототип не включён.")} last />
@@ -8881,75 +8878,6 @@ function AutoRulesScreen({ C, onBack }) {
   );
 }
 
-/* Оплата обучения за рубежом: перевод в вуз + пакет документов для визы. */
-function EducationPayScreen({ C, onBack, onNext }) {
-  const [school, setSchool] = useState("");
-  const [country, setCountry] = useState("Великобритания");
-  const [amount, setAmount] = useState("");
-  const [cur, setCur] = useState("EUR");
-  const [docs, setDocs] = useState(true);
-  const valid = school.trim() && parseFloat(amount.replace(",", ".")) > 0;
-  return (
-    <ScreenShell C={C} title="Обучение за рубежом" onBack={onBack}>
-      <div style={{ padding: "0 20px 110px" }}>
-        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5, marginBottom: 16 }}>
-          Перевод в школу или университет с назначением Tuition fee — и сразу пакет подтверждающих документов.
-        </div>
-        <div style={{ backgroundColor: C.faint, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
-          <div style={{ fontSize: 11, color: C.muted, marginBottom: 3 }}>Учебное заведение</div>
-          <input value={school} onChange={e => setSchool(e.target.value)} placeholder="University College London"
-            style={{ width: "100%", border: "none", outline: "none", background: "transparent", fontSize: 14.5, fontWeight: 600, color: C.text, fontFamily: "inherit" }} />
-        </div>
-        <div style={{ backgroundColor: C.faint, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
-          <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>Страна</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {["Великобритания", "США", "Испания", "ОАЭ", "Сингапур"].map(c => (
-              <div key={c} data-press onClick={() => setCountry(c)} style={{
-                padding: "7px 12px", borderRadius: 14, cursor: "pointer", fontSize: 12, fontWeight: 600,
-                backgroundColor: country === c ? C.accentDark : C.card, color: country === c ? C.accent : C.sub,
-              }}>{c}</div>
-            ))}
-          </div>
-        </div>
-        <div style={{ backgroundColor: C.faint, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <input value={amount} inputMode="decimal" placeholder="0"
-            onChange={e => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
-            style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 24, fontWeight: 800, color: C.text, fontFamily: "inherit", fontFeatureSettings: "'tnum'", minWidth: 0 }} />
-          {["EUR", "USD", "GBP"].map(c => (
-            <div key={c} data-press onClick={() => setCur(c)} style={{
-              padding: "6px 10px", borderRadius: 12, cursor: "pointer", fontSize: 12, fontWeight: 700,
-              backgroundColor: cur === c ? C.accentDark : C.card, color: cur === c ? C.accent : C.sub,
-            }}>{c}</div>
-          ))}
-        </div>
-        <div data-press onClick={() => setDocs(v => !v)} style={{
-          display: "flex", alignItems: "center", gap: 12, backgroundColor: C.card,
-          borderRadius: 12, border: `1px solid ${C.border}`, padding: "13px 14px", cursor: "pointer", marginBottom: 18,
-        }}>
-          <div style={{
-            width: 20, height: 20, borderRadius: 6, flexShrink: 0,
-            border: docs ? "none" : `2px solid ${C.borderStrong}`,
-            backgroundColor: docs ? C.accentDark : "transparent",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            {docs && <Check size={12} color={C.accent} strokeWidth={3} />}
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600, color: C.text }}>Подготовить документы для визы</div>
-            <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>Справка о переводе и источнике средств на английском</div>
-          </div>
-          <GraduationCap size={17} color={C.accentFg} strokeWidth={1.9} />
-        </div>
-        <div data-press onClick={() => valid && onNext({ school, country, amount: parseFloat(amount.replace(",", ".")), cur, docs })} style={{
-          backgroundColor: valid ? C.accentDark : C.faint, borderRadius: 12, padding: "15px 0", textAlign: "center", cursor: valid ? "pointer" : "default",
-        }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: valid ? C.accent : C.muted }}>Продолжить</span>
-        </div>
-      </div>
-    </ScreenShell>
-  );
-}
-
 /* Консьерж-запрос: налоговый помощник / релокация / юрист — единый паттерн
    «выбор параметров → запрос менеджеру» (бумажные сервисы живут в чате). */
 function ConciergeRequestScreen({ C, kind, onBack, onDone }) {
@@ -9026,8 +8954,7 @@ function OtherServicesScreen({ C, onBack, onPick }) {
         </div>
         {secTitle("Деньги")}
         <div style={box}>
-          <Row Icon={Clock} color="#22C55E" title="Автоправила валют" subtitle="Покупка по целевому курсу или расписанию" type="autoRules" />
-          <Row Icon={GraduationCap} color="#0EA5E9" title="Обучение за рубежом" subtitle="Tuition fee + документы для визы" type="education" last />
+          <Row Icon={Clock} color="#22C55E" title="Автоправила валют" subtitle="Покупка по целевому курсу или расписанию" type="autoRules" last />
         </div>
         <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.5, marginTop: 14 }}>
           Любую услугу можно попросить и просто текстом — в чате менеджера.
@@ -10256,7 +10183,7 @@ export default function FreedomV6() {
           onOpenNewsDetail={(news) => pushScreen({ type: "newsDetail", news })}
           onTopUp={() => setSheet({ type: "topupPick" })}
           onTransfer={openTransferHub}
-          onConversion={() => pushScreen({ type: "conversion" })}
+          onConversion={() => setSheet({ type: "exchangePick" })}
           onOpenTransaction={(tx) => pushScreen({ type: "transaction", tx })}
           onOpenAllTransactions={() => pushScreen({ type: "allTransactions" })}
           onOpenDepositCalc={() => pushScreen({ type: "depositCalc" })}
@@ -10317,7 +10244,6 @@ export default function FreedomV6() {
           onIban={() => pushScreen({ type: "transferClient", segment: "iban" })}
           onConversion={() => pushScreen({ type: "conversion" })}
           onAutoRules={() => pushScreen({ type: "autoRules" })}
-          onEducation={() => pushScreen({ type: "educationPay" })}
           onQrScan={() => pushScreen({ type: "qrScanner" })}
           onSwift={() => pushScreen({ type: "swift" })}
           onMobilePay={() => pushScreen({ type: "mobilePay" })}
@@ -10450,32 +10376,12 @@ export default function FreedomV6() {
               if (t === "sos") pushScreen({ type: "sos" });
               else if (t === "certificates") pushScreen({ type: "certificates" });
               else if (t === "autoRules") pushScreen({ type: "autoRules" });
-              else if (t === "education") pushScreen({ type: "educationPay" });
               else pushScreen({ type: "conciergeRequest", kind: t });
             }}
           />
         );
         if (s.type === "autoRules") return (
           <AutoRulesScreen key={i} C={C} onBack={popScreen} />
-        );
-        if (s.type === "educationPay") return (
-          <EducationPayScreen key={i} C={C} onBack={popScreen}
-            onNext={(p) => pushScreen({
-              type: "genericConfirm",
-              payload: {
-                subtitle: "Обучение за рубежом",
-                amountStr: `${fmtFull(p.amount)} ${CURRENCY_META[p.cur]?.symbol || p.cur}`,
-                rows: [
-                  { label: "Получатель", value: p.school },
-                  { label: "Страна", value: p.country },
-                  { label: "Назначение", value: "Tuition fee" },
-                  { label: "Документы для визы", value: p.docs ? "Подготовим (EN)" : "Не нужны" },
-                  { label: "Комиссия", value: "0.2% · мин 20 €" },
-                ],
-                success: { title: "Перевод отправлен", message: p.docs ? "Подтверждение оплаты и справка об источнике средств придут в чат менеджера" : "Подтверждение оплаты придёт на email", amountStr: `${fmtFull(p.amount)} ${CURRENCY_META[p.cur]?.symbol || p.cur}`, note: p.school },
-              },
-            })}
-          />
         );
         if (s.type === "conciergeRequest") return (
           <ConciergeRequestScreen key={i} C={C} kind={s.kind} onBack={popScreen}
@@ -10593,8 +10499,7 @@ export default function FreedomV6() {
               onIban={() => pushScreen({ type: "transferClient", segment: "iban" })}
               onConversion={() => pushScreen({ type: "conversion" })}
               onAutoRules={() => pushScreen({ type: "autoRules" })}
-              onEducation={() => pushScreen({ type: "educationPay" })}
-              onQrScan={() => pushScreen({ type: "qrScanner" })}
+                  onQrScan={() => pushScreen({ type: "qrScanner" })}
               onSwift={() => pushScreen({ type: "swift" })}
               onMobilePay={() => pushScreen({ type: "mobilePay" })}
               onOpenCategory={(category) => pushScreen({ type: "category", category })}
@@ -11107,6 +11012,47 @@ export default function FreedomV6() {
                   <div style={{ fontSize: 11.5, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'" }}>{fmtFull(a.balance)} {(CURRENCY_META[a.currency] || {}).symbol}</div>
                 </div>
                 <ChevronRight size={16} color={C.muted} strokeWidth={1.8} />
+              </div>
+            ))}
+          </div>
+        </BottomSheetModal>
+      )}
+      {sheet?.type === "exchangePick" && (
+        <BottomSheetModal C={C} onClose={() => setSheet(null)}>
+          {/* Обмен валют: сначала выбор карты или счёта, обмен идёт в его контексте */}
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 4 }}>Обмен валют</div>
+          <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>Выберите карту или счёт для обмена</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>Карты</div>
+          <div style={{ backgroundColor: C.faint, borderRadius: 14, overflow: "hidden", marginBottom: 16 }}>
+            {activeCardProducts.flatMap(g => g.cards).filter(c => !c.blocked).map((card, i, arr) => (
+              <div key={card.id} data-press onClick={() => { setSheet(null); openExchange(card.id); }} style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", cursor: "pointer",
+                borderBottom: i < arr.length - 1 ? `1px solid ${C.divider}` : "none",
+              }}>
+                <div style={{ width: 40, height: 27, borderRadius: 6, flexShrink: 0, background: `linear-gradient(135deg, ${card.color} 0%, ${card.color}CC 100%)` }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.name}</div>
+                  <div style={{ fontSize: 11.5, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'" }}>•• {card.last4}</div>
+                </div>
+                <ArrowLeftRight size={16} color={C.muted} strokeWidth={1.9} />
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>Счета</div>
+          <div style={{ backgroundColor: C.faint, borderRadius: 14, overflow: "hidden" }}>
+            {activeAccounts.map((a, i, arr) => (
+              <div key={a.id} data-press onClick={() => { setSheet(null); openExchange(`acc-${a.id}`); }} style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", cursor: "pointer",
+                borderBottom: i < arr.length - 1 ? `1px solid ${C.divider}` : "none",
+              }}>
+                <div style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: C.card, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Landmark size={15} color={C.accentFg} strokeWidth={1.9} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</div>
+                  <div style={{ fontSize: 11.5, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'" }}>{fmtFull(a.balance)} {(CURRENCY_META[a.currency] || {}).symbol}</div>
+                </div>
+                <ArrowLeftRight size={16} color={C.muted} strokeWidth={1.9} />
               </div>
             ))}
           </div>

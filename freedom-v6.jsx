@@ -7525,7 +7525,7 @@ function NeoHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposi
           <div style={{ position: "absolute", right: -30, bottom: -40, width: 150, height: 150, borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.16)" }} />
           <div style={{ position: "relative" }}>
             <div style={{ fontSize: 20, fontWeight: 700, color: C.popText, letterSpacing: -0.4 }}>Получи $10 за друга</div>
-            <div style={{ fontSize: 13.5, color: C.popText, opacity: 0.72, marginTop: 4, lineHeight: 1.4 }}>Друг откроет счёт — по $10 получите оба</div>
+            <div style={{ fontSize: 13.5, color: C.popText, opacity: 0.72, marginTop: 4, lineHeight: 1.4 }}>Друг открывает счёт — вы получаете $10</div>
             <div style={{ display: "inline-flex", alignItems: "center", marginTop: 16, backgroundColor: C.accentDark, borderRadius: 22, padding: "11px 20px" }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: C.accent }}>Пригласить друга</span>
             </div>
@@ -7647,16 +7647,15 @@ function NeoHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposi
 
         {/* Другие счета — банк/депозиты/брокер/мультибанк */}
         {neoSec("Другие счета", `${fmtCompact(otherTotal)} ${dcMeta.symbol}`)}
-        <div style={{ display: "flex", gap: 2, overflowX: "auto", scrollbarWidth: "none", backgroundColor: C.faint, borderRadius: 14, padding: 3, marginBottom: 10 }}>
+        <div style={{ display: "flex", backgroundColor: C.faint, borderRadius: 14, padding: 3, marginBottom: 10 }}>
           {[
             { k: "bank", t: `Банк · ${accounts.length + credits.length}` },
             { k: "deposits", t: `Депозиты · ${deposits.length}` },
             { k: "broker", t: `Брокер · ${brokerGroups.reduce((n, g) => n + g.accounts.length, 0)}` },
-            { k: "extbank", t: `Банки · ${EXT_BANKS.length}` },
-            { k: "crypto", t: `Крипто · ${CRYPTO_WALLETS.length}` },
+            { k: "other", t: "Другое" },
           ].map(tb => (
             <div key={tb.k} data-press onClick={() => { setProdTab(tb.k); setProdExpanded(false); }} style={{
-              flexShrink: 0, textAlign: "center", padding: "8px 13px", borderRadius: 11, cursor: "pointer",
+              flex: 1, textAlign: "center", padding: "8px 0", borderRadius: 11, cursor: "pointer",
               backgroundColor: prodTab === tb.k ? C.card : "transparent", boxShadow: prodTab === tb.k ? C.cardShadow : "none",
             }}>
               <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", color: prodTab === tb.k ? C.text : C.muted }}>{tb.t}</span>
@@ -7711,24 +7710,21 @@ function NeoHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposi
               ))}
             </div>
           ))}
-          {prodTab === "extbank" && (<>
+          {prodTab === "other" && (<>
+            <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, padding: "12px 16px 4px", letterSpacing: "0.05em", textTransform: "uppercase" }}>Другие банки · Open banking</div>
             {EXT_BANKS.map((b) => (
-              <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", borderBottom: `1px solid ${C.divider}` }}>
+              <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: `1px solid ${C.divider}` }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${b.color}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><span style={{ fontSize: 13, fontWeight: 800, color: b.color }}>{b.short}</span></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{b.name}</div>
-                  <div style={{ fontSize: 11.5, color: C.muted, marginTop: 1 }}>Open banking · {b.synced}</div>
+                  <div style={{ fontSize: 11.5, color: C.muted, marginTop: 1 }}>{b.synced}</div>
                 </div>
                 <span style={{ fontSize: 14, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>{fmtFull(b.balance)} {(CURRENCY_META[b.currency] || {}).symbol}</span>
               </div>
             ))}
-            <div data-press onClick={onConnectBank} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "13px 0", cursor: "pointer" }}>
-              <Plus size={14} color={C.text} strokeWidth={2.2} /><span style={{ fontSize: 12.5, fontWeight: 700, color: C.text }}>Подключить банк</span>
-            </div>
-          </>)}
-          {prodTab === "crypto" && (<>
+            <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, padding: "14px 16px 4px", letterSpacing: "0.05em", textTransform: "uppercase" }}>Крипто-кошельки</div>
             {CRYPTO_WALLETS.map((w) => (
-              <div key={w.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", borderBottom: `1px solid ${C.divider}` }}>
+              <div key={w.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: `1px solid ${C.divider}` }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${w.color}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><span style={{ fontSize: 16, fontWeight: 800, color: w.color }}>{w.short}</span></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{w.name}</div>
@@ -7738,10 +7734,10 @@ function NeoHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposi
               </div>
             ))}
             <div data-press onClick={onConnectBank} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "13px 0", cursor: "pointer" }}>
-              <Plus size={14} color={C.text} strokeWidth={2.2} /><span style={{ fontSize: 12.5, fontWeight: 700, color: C.text }}>Подключить кошелёк</span>
+              <Plus size={14} color={C.text} strokeWidth={2.2} /><span style={{ fontSize: 12.5, fontWeight: 700, color: C.text }}>Подключить банк или кошелёк</span>
             </div>
           </>)}
-          {prodTab !== "extbank" && prodTab !== "crypto" && (
+          {prodTab !== "other" && (
             <div data-press onClick={() => setProdExpanded(v => !v)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px 0", cursor: "pointer", borderTop: `1px solid ${C.divider}` }}>
               <span style={{ fontSize: 12.5, fontWeight: 700, color: C.text }}>{prodExpanded ? "Свернуть" : `Показать все · ${prodTab === "bank" ? accounts.length + credits.length : prodTab === "deposits" ? deposits.length : brokerGroups.reduce((n, g) => n + g.accounts.length, 0)}`}</span>
               <ChevronDown size={14} color={C.text} strokeWidth={2.2} style={{ transform: prodExpanded ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
@@ -8028,16 +8024,15 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
           + deposits.reduce((s2, d) => s2 + convertToKZT(d.balance, d.currency), 0)
           + brokerGroups.reduce((s2, g) => s2 + g.accounts.reduce((s3, a) => s3 + convertToKZT(a.balance, a.currency), 0), 0)
           + CRYPTO_WALLETS.reduce((s2, w) => s2 + w.kzt, 0), dc))} ${dcMeta.symbol}`)}
-        <div style={{ display: "flex", gap: 2, overflowX: "auto", scrollbarWidth: "none", backgroundColor: C.faint, borderRadius: 12, padding: 3, marginBottom: 10 }}>
+        <div style={{ display: "flex", backgroundColor: C.faint, borderRadius: 12, padding: 3, marginBottom: 10 }}>
           {[
             { k: "bank", t: `Банк · ${accounts.length + credits.length}` },
             { k: "deposits", t: `Депозиты · ${deposits.length}` },
             { k: "broker", t: `Брокер · ${brokerGroups.reduce((n, g) => n + g.accounts.length, 0)}` },
-            { k: "extbank", t: `Банки · ${EXT_BANKS.length}` },
-            { k: "crypto", t: `Крипто · ${CRYPTO_WALLETS.length}` },
+            { k: "other", t: "Другое" },
           ].map(tb => (
             <div key={tb.k} data-press onClick={() => { setProdTab(tb.k); setProdExpanded(false); }} style={{
-              flexShrink: 0, textAlign: "center", padding: "8px 13px", borderRadius: 10, cursor: "pointer",
+              flex: 1, textAlign: "center", padding: "8px 0", borderRadius: 10, cursor: "pointer",
               backgroundColor: prodTab === tb.k ? C.card : "transparent",
             }}>
               <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", color: prodTab === tb.k ? C.text : C.muted }}>{tb.t}</span>
@@ -8122,40 +8117,27 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
               ))}
             </div>
           ))}
-          {/* Мультибанк: чужие банки через open banking — «весь капитал в одном экране» */}
-          {prodTab === "extbank" && (
+          {/* Другое: мультибанк (open banking) + крипто-кошельки, сгруппированы */}
+          {prodTab === "other" && (
             <>
-              {EXT_BANKS.map((b, i) => (
-                <div key={b.id} style={{
-                  display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
-                  borderBottom: `1px solid ${C.divider}`,
-                }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, padding: "11px 16px 4px", letterSpacing: "0.05em", textTransform: "uppercase" }}>Другие банки · Open banking</div>
+              {EXT_BANKS.map((b) => (
+                <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", borderBottom: `1px solid ${C.divider}` }}>
                   <div style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: `${b.color}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <span style={{ fontSize: 13, fontWeight: 800, color: b.color }}>{b.short}</span>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13.5, fontWeight: 600, color: C.text }}>{b.name}</div>
-                    <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>Open banking · {b.synced}</div>
+                    <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>{b.synced}</div>
                   </div>
                   <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
                     {fmtFull(b.balance)} {(CURRENCY_META[b.currency] || {}).symbol}
                   </span>
                 </div>
               ))}
-              <div data-press onClick={onConnectBank} style={{
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                padding: "12px 0", cursor: "pointer",
-              }}>
-                <Plus size={13} color={C.accentFg} strokeWidth={2.2} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: C.accentFg }}>Подключить банк</span>
-              </div>
-            </>
-          )}
-          {/* Крипто-кошельки: внешние кошельки + Digital Assets как счета, балансы рядом с фиатом */}
-          {prodTab === "crypto" && (
-            <>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, padding: "13px 16px 4px", letterSpacing: "0.05em", textTransform: "uppercase" }}>Крипто-кошельки</div>
               {CRYPTO_WALLETS.map((w) => (
-                <div key={w.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: `1px solid ${C.divider}` }}>
+                <div key={w.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", borderBottom: `1px solid ${C.divider}` }}>
                   <div style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: `${w.color}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <span style={{ fontSize: 15, fontWeight: 800, color: w.color }}>{w.short}</span>
                   </div>
@@ -8170,12 +8152,12 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
               ))}
               <div data-press onClick={onConnectBank} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px 0", cursor: "pointer" }}>
                 <Plus size={13} color={C.accentFg} strokeWidth={2.2} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: C.accentFg }}>Подключить кошелёк</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.accentFg }}>Подключить банк или кошелёк</span>
               </div>
             </>
           )}
           {/* Развернуть / свернуть — короткий список по умолчанию (не для мультибанка) */}
-          {prodTab !== "extbank" && prodTab !== "crypto" && (
+          {prodTab !== "other" && (
             <div data-press onClick={() => setProdExpanded(v => !v)} style={{
               display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
               padding: "11px 0", cursor: "pointer", borderTop: `1px solid ${C.divider}`,
@@ -8517,14 +8499,14 @@ function ReferralScreen({ C, onBack, onShare }) {
     <ScreenShell C={C} title="Пригласить друга" onBack={onBack}>
       <div style={{ padding: "0 20px 110px" }}>
         <div style={{ backgroundColor: C.card, borderRadius: 18, border: `1px solid ${C.border}`, padding: "22px 18px", textAlign: "center", marginBottom: 16 }}>
-          <div style={{ fontSize: 40, fontWeight: 800, color: C.accentFg, letterSpacing: -1 }}>$10 + $10</div>
-          <div style={{ fontSize: 14, color: C.sub, lineHeight: 1.5, marginTop: 8 }}>Друг открывает счёт по вашей ссылке — по $10 получаете вы оба.</div>
+          <div style={{ fontSize: 40, fontWeight: 800, color: C.accentFg, letterSpacing: -1 }}>$10</div>
+          <div style={{ fontSize: 14, color: C.sub, lineHeight: 1.5, marginTop: 8 }}>За каждого друга, который откроет счёт по вашей ссылке.</div>
         </div>
         <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 16 }}>
           {[
             ["1", "Отправьте ссылку", "друг переходит и открывает счёт за минуты"],
             ["2", "Друг проходит верификацию", "дистанционно, без визита в офис"],
-            ["3", "$10 обоим", "бонус зачисляется после первого пополнения"],
+            ["3", "$10 вам", "бонус зачисляется после первого пополнения друга"],
           ].map((r, i, arr) => (
             <div key={i} style={{ display: "flex", gap: 12, padding: "14px 16px", borderBottom: i < arr.length - 1 ? `1px solid ${C.divider}` : "none" }}>
               <div style={{ width: 26, height: 26, borderRadius: "50%", backgroundColor: C.accentSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><span style={{ fontSize: 12, fontWeight: 800, color: C.accentFg }}>{r[0]}</span></div>
@@ -10422,7 +10404,7 @@ export default function FreedomV6() {
           <ReferralScreen key={i} C={C} onBack={popScreen}
             onShare={() => pushScreen({
               type: "flowSuccess",
-              payload: { title: "Ссылка готова", message: "Отправьте её другу — как только он откроет счёт и пополнит, по $10 получите оба", amountStr: "$10 + $10", note: "Промокод NIKITA-10" },
+              payload: { title: "Ссылка готова", message: "Отправьте её другу — как только он откроет счёт и пополнит, вы получите $10", amountStr: "$10", note: "Промокод NIKITA-10" },
             })}
           />
         );

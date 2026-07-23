@@ -7430,7 +7430,7 @@ function NeoHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposi
   const island = { backgroundColor: C.card, borderRadius: 22, boxShadow: C.cardShadow };
   const cardTotal = (card) => convertTo(cardSubAccounts(card).reduce((t, a) => t + convertToKZT(a.amount, a.currency), 0), dc);
   const PLASTIC = "linear-gradient(135deg, #1E1E24 0%, #17171B 55%, #232329 100%)";
-  const GOLD = "#D7C08A";
+  const GOLD = "#39C16F"; // neo: акцент пластика карт — бренд-зелёный (не шампань)
   const neoSec = (title, action, onAction) => (
     <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", margin: "24px 4px 12px" }}>
       <span style={{ fontSize: 17, fontWeight: 700, color: C.text, letterSpacing: -0.3 }}>{title}</span>
@@ -7566,7 +7566,7 @@ function NeoHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposi
                   }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <span style={{ fontSize: 10, fontWeight: 700, color: GOLD, letterSpacing: "0.14em", textTransform: "uppercase" }}>Freedom Banker</span>
-                      <div style={{ width: 26, height: 18, borderRadius: 4, background: `linear-gradient(135deg, ${GOLD} 0%, #B39B62 100%)`, opacity: 0.9 }} />
+                      <div style={{ width: 26, height: 18, borderRadius: 4, background: `linear-gradient(135deg, ${GOLD} 0%, #0C7439 100%)`, opacity: 0.9 }} />
                     </div>
                     <div style={{ fontSize: 15, fontWeight: 700, color: "#F5F2EA", marginTop: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.name}</div>
                     <div style={{ display: "flex", gap: 6, marginTop: 7, flexWrap: "wrap" }}>

@@ -485,6 +485,14 @@ const EXT_BANKS = [
   { id: "eb-2", name: "Kaspi Bank", short: "K", color: "#EF4444", currency: "KZT", balance: 830500, synced: "1 час назад" },
 ];
 
+// Крипто-кошельки: внешние кошельки + Digital Assets подключены как счета,
+// балансы рядом с фиатом (kzt — оценка для тотала/пересчёта в валюту отчёта).
+const CRYPTO_WALLETS = [
+  { id: "cw-1", name: "Bitcoin", ticker: "BTC", short: "₿", color: "#F7931A", amount: 0.42, kzt: 9_640_000, via: "Self-custody" },
+  { id: "cw-2", name: "Tether", ticker: "USDT", short: "₮", color: "#26A17B", amount: 12500, kzt: 6_400_000, via: "Digital Assets" },
+  { id: "cw-3", name: "Ethereum", ticker: "ETH", short: "Ξ", color: "#627EEA", amount: 3.1, kzt: 5_180_000, via: "Digital Assets" },
+];
+
 // Валютные автоправила.
 const AUTO_RULES_INITIAL = [
   { id: "ar-1", from: "USD", to: "EUR", kind: "rate", threshold: "0,92", amount: 1000, on: true },
@@ -7439,7 +7447,8 @@ function NeoHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposi
   const otherTotal = convertTo(
     accounts.reduce((s, a) => s + convertToKZT(a.balance, a.currency), 0)
     + deposits.reduce((s, d) => s + convertToKZT(d.balance, d.currency), 0)
-    + brokerGroups.reduce((s, g) => s + g.accounts.reduce((s2, a) => s2 + convertToKZT(a.balance, a.currency), 0), 0), dc);
+    + brokerGroups.reduce((s, g) => s + g.accounts.reduce((s2, a) => s2 + convertToKZT(a.balance, a.currency), 0), 0)
+    + CRYPTO_WALLETS.reduce((s, w) => s + w.kzt, 0), dc);
 
   return (
     <div style={{
@@ -7640,6 +7649,7 @@ function NeoHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposi
             { k: "deposits", t: `Депозиты · ${deposits.length}` },
             { k: "broker", t: `Брокер · ${brokerGroups.reduce((n, g) => n + g.accounts.length, 0)}` },
             { k: "extbank", t: `Банки · ${EXT_BANKS.length}` },
+            { k: "crypto", t: `Крипто · ${CRYPTO_WALLETS.length}` },
           ].map(tb => (
             <div key={tb.k} data-press onClick={() => { setProdTab(tb.k); setProdExpanded(false); }} style={{
               flex: 1, textAlign: "center", padding: "8px 0", borderRadius: 11, cursor: "pointer",
@@ -7712,7 +7722,22 @@ function NeoHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposi
               <Plus size={14} color={C.text} strokeWidth={2.2} /><span style={{ fontSize: 12.5, fontWeight: 700, color: C.text }}>Подключить банк</span>
             </div>
           </>)}
-          {prodTab !== "extbank" && (
+          {prodTab === "crypto" && (<>
+            {CRYPTO_WALLETS.map((w) => (
+              <div key={w.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", borderBottom: `1px solid ${C.divider}` }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${w.color}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><span style={{ fontSize: 16, fontWeight: 800, color: w.color }}>{w.short}</span></div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{w.name}</div>
+                  <div style={{ fontSize: 11.5, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'" }}>{w.via} · {fmtFull(w.amount)} {w.ticker}</div>
+                </div>
+                <span style={{ fontSize: 14, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>{fmtFull(convertTo(w.kzt, dc))} {dcMeta.symbol}</span>
+              </div>
+            ))}
+            <div data-press onClick={onConnectBank} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "13px 0", cursor: "pointer" }}>
+              <Plus size={14} color={C.text} strokeWidth={2.2} /><span style={{ fontSize: 12.5, fontWeight: 700, color: C.text }}>Подключить кошелёк</span>
+            </div>
+          </>)}
+          {prodTab !== "extbank" && prodTab !== "crypto" && (
             <div data-press onClick={() => setProdExpanded(v => !v)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px 0", cursor: "pointer", borderTop: `1px solid ${C.divider}` }}>
               <span style={{ fontSize: 12.5, fontWeight: 700, color: C.text }}>{prodExpanded ? "Свернуть" : `Показать все · ${prodTab === "bank" ? accounts.length + credits.length : prodTab === "deposits" ? deposits.length : brokerGroups.reduce((n, g) => n + g.accounts.length, 0)}`}</span>
               <ChevronDown size={14} color={C.text} strokeWidth={2.2} style={{ transform: prodExpanded ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
@@ -7988,13 +8013,15 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
         {secLabel("Другие счета", `${fmtCompact(convertTo(
           accounts.reduce((s2, a) => s2 + convertToKZT(a.balance, a.currency), 0)
           + deposits.reduce((s2, d) => s2 + convertToKZT(d.balance, d.currency), 0)
-          + brokerGroups.reduce((s2, g) => s2 + g.accounts.reduce((s3, a) => s3 + convertToKZT(a.balance, a.currency), 0), 0), dc))} ${dcMeta.symbol}`)}
+          + brokerGroups.reduce((s2, g) => s2 + g.accounts.reduce((s3, a) => s3 + convertToKZT(a.balance, a.currency), 0), 0)
+          + CRYPTO_WALLETS.reduce((s2, w) => s2 + w.kzt, 0), dc))} ${dcMeta.symbol}`)}
         <div style={{ display: "flex", backgroundColor: C.faint, borderRadius: 12, padding: 3, marginBottom: 10 }}>
           {[
             { k: "bank", t: `Банк · ${accounts.length + credits.length}` },
             { k: "deposits", t: `Депозиты · ${deposits.length}` },
             { k: "broker", t: `Брокер · ${brokerGroups.reduce((n, g) => n + g.accounts.length, 0)}` },
             { k: "extbank", t: `Банки · ${EXT_BANKS.length}` },
+            { k: "crypto", t: `Крипто · ${CRYPTO_WALLETS.length}` },
           ].map(tb => (
             <div key={tb.k} data-press onClick={() => { setProdTab(tb.k); setProdExpanded(false); }} style={{
               flex: 1, textAlign: "center", padding: "8px 0", borderRadius: 10, cursor: "pointer",
@@ -8111,8 +8138,31 @@ function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, depos
               </div>
             </>
           )}
+          {/* Крипто-кошельки: внешние кошельки + Digital Assets как счета, балансы рядом с фиатом */}
+          {prodTab === "crypto" && (
+            <>
+              {CRYPTO_WALLETS.map((w) => (
+                <div key={w.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: `1px solid ${C.divider}` }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: `${w.color}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: w.color }}>{w.short}</span>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: C.text }}>{w.name}</div>
+                    <div style={{ fontSize: 11, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'" }}>{w.via} · {fmtFull(w.amount)} {w.ticker}</div>
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                    {fmtFull(convertTo(w.kzt, dc))} {dcMeta.symbol}
+                  </span>
+                </div>
+              ))}
+              <div data-press onClick={onConnectBank} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px 0", cursor: "pointer" }}>
+                <Plus size={13} color={C.accentFg} strokeWidth={2.2} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.accentFg }}>Подключить кошелёк</span>
+              </div>
+            </>
+          )}
           {/* Развернуть / свернуть — короткий список по умолчанию (не для мультибанка) */}
-          {prodTab !== "extbank" && (
+          {prodTab !== "extbank" && prodTab !== "crypto" && (
             <div data-press onClick={() => setProdExpanded(v => !v)} style={{
               display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
               padding: "11px 0", cursor: "pointer", borderTop: `1px solid ${C.divider}`,
@@ -8415,64 +8465,35 @@ function FastTrackScreen({ C, onBack, onDone }) {
   );
 }
 
-function SosScreen({ C, onBack, onManager, onLawyer }) {
-  const [cardsBlocked, setCardsBlocked] = useState(false);
-  const [confirmBlock, setConfirmBlock] = useState(false);
+/* Страховка путешественника: полис и покрытие (без медицины/врача). */
+function InsuranceScreen({ C, onBack, onBuy }) {
   return (
-    <ScreenShell C={C} title="SOS за границей" onBack={onBack}>
+    <ScreenShell C={C} title="Страховка путешественника" onBack={onBack}>
       <div style={{ padding: "0 20px 110px" }}>
-        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5, marginBottom: 16 }}>
-          Что бы ни случилось — карта, документы, здоровье — консьерж берёт ситуацию на себя.
+        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5, marginBottom: 14 }}>
+          Страховка для поездок — покрытие по всему миру, оформление за минуту.
         </div>
-        <div data-press onClick={() => cardsBlocked ? setCardsBlocked(false) : setConfirmBlock(true)} style={{
-          borderRadius: 14, border: `1.5px solid ${cardsBlocked ? C.border : "rgba(239,68,68,0.5)"}`,
-          backgroundColor: cardsBlocked ? C.card : "rgba(239,68,68,0.08)",
-          padding: "15px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, marginBottom: 10,
-        }}>
-          <Snowflake size={19} color={cardsBlocked ? C.accentFg : "#EF6B6B"} strokeWidth={2} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14.5, fontWeight: 700, color: cardsBlocked ? C.text : "#EF6B6B" }}>
-              {cardsBlocked ? "Карты заблокированы" : "Заблокировать все карты"}
-            </div>
-            <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>
-              {cardsBlocked ? "Нажмите, чтобы разблокировать" : "Мгновенно, включая карты близких"}
-            </div>
+        <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: "15px 16px", marginBottom: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: C.text }}>Полис путешественника</span>
+            <span style={{ fontSize: 10.5, fontWeight: 700, color: C.accentFg, backgroundColor: C.accentSoft, borderRadius: 8, padding: "3px 8px" }}>Активна</span>
           </div>
+          {[
+            { label: "Полис", value: "FRB-TRV · 88 412 003" },
+            { label: "Покрытие", value: "до 100 000 € · весь мир" },
+            { label: "Включено", value: "экстренная помощь, багаж, отмена" },
+            { label: "Действует", value: "до 12.03.2027" },
+          ].map((r, i, arr) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "10px 0", borderBottom: i < arr.length - 1 ? `1px solid ${C.divider}` : "none" }}>
+              <span style={{ fontSize: 12.5, color: C.muted, flexShrink: 0 }}>{r.label}</span>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: C.text, textAlign: "right" }}>{r.value}</span>
+            </div>
+          ))}
         </div>
-        {[
-          { t: "Менеджер 24/7", s: "Алишер в чате — любые ситуации", Icon: MessageCircle, on: onManager },
-          { t: "Юрист", s: "Полиция, документы, инциденты", Icon: Scale, on: onLawyer },
-        ].map((a, i) => (
-          <div key={i} data-press onClick={a.on} style={{
-            backgroundColor: C.card, borderRadius: 14, border: `1px solid ${C.border}`,
-            padding: "15px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, marginBottom: 10,
-          }}>
-            <a.Icon size={18} color={C.accentFg} strokeWidth={1.9} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14.5, fontWeight: 700, color: C.text }}>{a.t}</div>
-              <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>{a.s}</div>
-            </div>
-            <ChevronRight size={15} color={C.muted} strokeWidth={1.8} />
-          </div>
-        ))}
-        <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.5, marginTop: 6 }}>
-          Экстренная замена карты доставляется в любую страну за 48 часов.
+        <div data-press onClick={onBuy} style={{ backgroundColor: C.accentDark, borderRadius: 12, padding: "15px 0", textAlign: "center", cursor: "pointer" }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>Оформить на новую поездку</span>
         </div>
       </div>
-      {confirmBlock && (
-        <BottomSheetModal C={C} onClose={() => setConfirmBlock(false)}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 8 }}>Заблокировать все карты?</div>
-          <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.55, marginBottom: 20 }}>
-            Все ваши карты и карты близких перестанут работать сразу. Разблокировать можно здесь же.
-          </div>
-          <div data-press onClick={() => { setCardsBlocked(true); setConfirmBlock(false); }} style={{ backgroundColor: "#EF4444", borderRadius: 12, padding: "15px 0", textAlign: "center", cursor: "pointer", marginBottom: 10 }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>Заблокировать</span>
-          </div>
-          <div data-press onClick={() => setConfirmBlock(false)} style={{ backgroundColor: C.faint, borderRadius: 12, padding: "15px 0", textAlign: "center", cursor: "pointer" }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: C.text }}>Отмена</span>
-          </div>
-        </BottomSheetModal>
-      )}
     </ScreenShell>
   );
 }
@@ -8941,16 +8962,15 @@ function OtherServicesScreen({ C, onBack, onPick }) {
         <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5 }}>
           Редкие, но важные услуги — всё для жизни вне географии счёта, в одном месте.
         </div>
-        {secTitle("Экстренное")}
-        <div style={box}>
-          <Row Icon={Siren} color="#EF4444" title="SOS за границей" subtitle="Блокировка карт, менеджер, юрист — экстренно" type="sos" last />
-        </div>
         {secTitle("Бумаги и юрисдикции")}
         <div style={box}>
           <Row Icon={FileText} color="#0D9488" title="Справки и выписки" subtitle="Proof of funds для виз и ВНЖ, выписки по счетам" type="certificates" />
           <Row Icon={Landmark} color="#F59E0B" title="Налоговый помощник" subtitle="Декларации резидентам третьих стран" type="tax" />
-          <Row Icon={Globe} color="#3B82F6" title="Релокация" subtitle="Переезд под ключ: чеклист вашей страны" type="relocation" />
-          <Row Icon={Scale} color="#8B5CF6" title="Юрист" subtitle="Апостили, доверенности, переводы документов" type="lawyer" last />
+          <Row Icon={Globe} color="#3B82F6" title="Релокация" subtitle="Переезд под ключ: чеклист вашей страны" type="relocation" last />
+        </div>
+        {secTitle("Поездки")}
+        <div style={box}>
+          <Row Icon={Shield} color="#EC4899" title="Страховка путешественника" subtitle="Полис и покрытие для поездок" type="insurance" last />
         </div>
         {secTitle("Деньги")}
         <div style={box}>
@@ -10348,10 +10368,12 @@ export default function FreedomV6() {
             })}
           />
         );
-        if (s.type === "sos") return (
-          <SosScreen key={i} C={C} onBack={popScreen}
-            onManager={() => pushScreen({ type: "chatThread" })}
-            onLawyer={() => pushScreen({ type: "conciergeRequest", kind: "lawyer" })}
+        if (s.type === "insurance") return (
+          <InsuranceScreen key={i} C={C} onBack={popScreen}
+            onBuy={() => pushScreen({
+              type: "flowSuccess",
+              payload: { title: "Полис оформлен", message: "Страховой сертификат придёт на email и появится в разделе документов", amountStr: "0 €", note: "Страховка путешественника · включено в тариф Executive" },
+            })}
           />
         );
         if (s.type === "newCard") return (
@@ -10373,9 +10395,9 @@ export default function FreedomV6() {
         if (s.type === "otherServices") return (
           <OtherServicesScreen key={i} C={C} onBack={popScreen}
             onPick={(t) => {
-              if (t === "sos") pushScreen({ type: "sos" });
-              else if (t === "certificates") pushScreen({ type: "certificates" });
+              if (t === "certificates") pushScreen({ type: "certificates" });
               else if (t === "autoRules") pushScreen({ type: "autoRules" });
+              else if (t === "insurance") pushScreen({ type: "insurance" });
               else pushScreen({ type: "conciergeRequest", kind: t });
             }}
           />

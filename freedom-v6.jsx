@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Search, Bell, Plus, ChevronRight, ChevronDown, ChevronsUpDown, X, ArrowLeftRight, ArrowUpDown, PiggyBank, Banknote, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid, Smartphone, Plane, Sofa, Zap, Phone, Globe, QrCode, Repeat, Send, Landmark, Tv, Bus, GraduationCap, Eye, EyeOff, ArrowLeft, ArrowDown, ArrowDownLeft, Snowflake, FileText, ShoppingCart, Utensils, Fuel, Wifi, Home, Ticket, Settings2, Check, User, Shield, LogOut, Palette, Users, HeartPulse, Siren, Building2, Scale } from "lucide-react";
+import { Search, Bell, Plus, ChevronRight, ChevronDown, ChevronsUpDown, X, ArrowLeftRight, ArrowUpDown, PiggyBank, Banknote, MessageCircle, BarChart3, Wallet, TrendingUp, Star, Clock, CreditCard, Newspaper, LayoutList, LayoutGrid, Smartphone, Plane, Sofa, Zap, Phone, Globe, QrCode, Repeat, Send, Landmark, Tv, Bus, GraduationCap, Eye, EyeOff, ArrowLeft, ArrowDown, ArrowDownLeft, Snowflake, FileText, ShoppingCart, Utensils, Fuel, Wifi, Home, Ticket, Settings2, Check, User, Shield, LogOut, Palette, Users, HeartPulse, Siren, Building2, Scale, ArrowUpRight, MoreHorizontal, Bitcoin } from "lucide-react";
 import OnboardingFlow, { ONB_START, ONB_GATES, ONB_PRESETS, ONB_STEPS, SUMSUB_PHASES, SUMSUB_PHASE_LABELS } from "./onboarding.jsx";
 
 /* ═══════════════════════════════════════════════
@@ -409,6 +409,30 @@ const EXEC_COLORS = {
   accentFg: "#D7C08A",
   accentSoft: "rgba(215,192,138,0.14)",
   cardShadow: "none",
+};
+
+/* NEO — светлый «островной» экзек-дизайн: тёплая бумага, белые плашки,
+   крупная типографика, чёрные круглые действия, плавающий таб-бар.
+   accentDark=чёрные действия, pop=акцентный остров (по умолчанию шампань). */
+const NEO_COLORS = {
+  bg: "#ECE9E2",
+  card: "#FFFFFF",
+  text: "#141414",
+  sub: "#67676E",
+  muted: "#9A9AA1",
+  faint: "rgba(20,20,20,0.045)",
+  border: "rgba(20,20,20,0.06)",
+  borderStrong: "rgba(20,20,20,0.16)",
+  divider: "rgba(20,20,20,0.06)",
+  accent: "#FFFFFF",
+  accentDark: "#141414",
+  accentFg: "#141414",
+  accentSoft: "rgba(20,20,20,0.05)",
+  cardShadow: "0 6px 24px rgba(20,18,14,0.06)",
+  pop: "#D9B25A",
+  popText: "#2E2408",
+  popSoft: "rgba(217,178,90,0.16)",
+  neo: true,
 };
 
 /* Карты, открытые близким (executive-форк): держатель + месячный лимит. */
@@ -1080,6 +1104,7 @@ function BottomSheet({ theme, setTheme, onClose, blockVis, setBlockVis, blockOrd
     { key: "stripe", label: "Light", desc: "Светлая" },
     { key: "dark", label: "Dark", desc: "Тёмная" },
     { key: "exec", label: "Executive", desc: "Премиум" },
+    { key: "neo", label: "Neo", desc: "Острова" },
   ];
 
   const [dragIndex, setDragIndex] = useState(null);
@@ -2502,7 +2527,41 @@ function MainScreen({
    BOTTOM TAB BAR — real HomeTab: products / statistics / payments / chat
    ═══════════════════════════════════════════════ */
 
-function BottomTabBar({ active, onChange, C }) {
+function BottomTabBar({ active, onChange, C, floating }) {
+  const tabs = [
+    { key: "products", Icon: Wallet, label: "Продукты" },
+    { key: "statistics", Icon: BarChart3, label: "Статистика" },
+    { key: "payments", Icon: ArrowLeftRight, label: "Перевести" },
+    { key: "investments", Icon: TrendingUp, label: "Инвестиции" },
+    { key: "chats", Icon: MessageCircle, label: "Менеджер" },
+  ];
+
+  // NEO: плавающая белая пилюля с иконками (референс Revolut/Wise).
+  if (floating) {
+    return (
+      <div style={{ position: "fixed", bottom: 22, left: 0, right: 0, zIndex: 50, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 6,
+          backgroundColor: C.card, borderRadius: 30, padding: "8px 10px",
+          boxShadow: "0 8px 30px rgba(20,18,14,0.16)", pointerEvents: "auto",
+        }}>
+          {tabs.map(tab => {
+            const isActive = active === tab.key;
+            return (
+              <div key={tab.key} data-press onClick={() => onChange(tab.key)} style={{
+                width: 46, height: 46, borderRadius: "50%", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                backgroundColor: isActive ? C.accentDark : "transparent",
+              }}>
+                <tab.Icon size={21} color={isActive ? C.accent : C.muted} strokeWidth={isActive ? 2.1 : 1.8} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       position: "fixed", bottom: 0, left: 0, right: 0,
@@ -2513,13 +2572,7 @@ function BottomTabBar({ active, onChange, C }) {
       display: "flex", justifyContent: "space-around",
       zIndex: 50,
     }}>
-      {[
-        { key: "products", Icon: Wallet, label: "Продукты" },
-        { key: "statistics", Icon: BarChart3, label: "Статистика" },
-        { key: "payments", Icon: ArrowLeftRight, label: "Перевести" },
-        { key: "investments", Icon: TrendingUp, label: "Инвестиции" },
-        { key: "chats", Icon: MessageCircle, label: "Менеджер" },
-      ].map(tab => {
+      {tabs.map(tab => {
         const isActive = active === tab.key;
         return (
           <div key={tab.key} data-press onClick={() => onChange(tab.key)} style={{
@@ -7348,6 +7401,175 @@ function CardAccountPicker({ C, displayCurrency, products, counterpart, showUnav
    Капитал → быстрые действия → свои карты (карусель-металл) →
    карты близких (лимиты) → Travel → последние операции.
    ═══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   NEO HOME — светлый «островной» экзек-дизайн (референс Revolut/Wise):
+   крупная типографика, белые плашки-острова, чёрные круглые действия,
+   один акцентный остров (C.pop). Плавающий таб-бар — в BottomTabBar floating.
+   ═══════════════════════════════════════════════ */
+function NeoHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposits, news,
+  onAvatarClick, onOpenProfile, onOpenTotal, onOpenCard, onTopUp, onTransfer, onConversion,
+  onOpenOtherServices, onOpenTransaction, onOpenAllTransactions, onOpenDepositCalc, onManager }) {
+  const dc = displayCurrency || "EUR";
+  const dcMeta = CURRENCY_META[dc] || { symbol: dc };
+  const capital = convertTo(totalInKZT, dc);
+  const island = { backgroundColor: C.card, borderRadius: 26, boxShadow: C.cardShadow };
+  const cardTotal = (card) => convertTo(cardSubAccounts(card).reduce((t, a) => t + convertToKZT(a.amount, a.currency), 0), dc);
+  const actions = [
+    { t: "Пополнить", Icon: Plus, on: onTopUp },
+    { t: "Перевести", Icon: ArrowUpRight, on: onTransfer },
+    { t: "Обменять", Icon: ArrowLeftRight, on: onConversion },
+    { t: "Ещё", Icon: MoreHorizontal, on: onOpenOtherServices },
+  ];
+  const ops = TRANSACTIONS.slice(0, 3);
+
+  return (
+    <div style={{
+      maxWidth: 430, margin: "0 auto", minHeight: "100dvh", backgroundColor: C.bg,
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', system-ui, sans-serif",
+      overflowX: "clip", paddingBottom: 120,
+    }}>
+      <StatusBar C={C} />
+      <div style={{ padding: "6px 18px 0" }}>
+        {/* Шапка: аватар (дебаг) · менеджер · профиль */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
+          <div data-press onClick={onAvatarClick} style={{
+            width: 42, height: 42, borderRadius: "50%", overflow: "hidden", cursor: "pointer",
+            backgroundColor: C.accentDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: C.accent }}>НШ</span>
+          </div>
+          <div style={{ flex: 1 }} />
+          {[{ Icon: MessageCircle, on: onManager }, { Icon: Settings2, on: onOpenProfile }].map((b, i) => (
+            <div key={i} data-press onClick={b.on} style={{
+              width: 42, height: 42, borderRadius: "50%", backgroundColor: C.card, boxShadow: C.cardShadow,
+              display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0,
+            }}>
+              <b.Icon size={19} color={C.text} strokeWidth={1.9} />
+            </div>
+          ))}
+        </div>
+
+        {/* Баланс — крупно, по центру */}
+        <div style={{ textAlign: "center", padding: "6px 0 4px" }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: C.muted, marginBottom: 10 }}>Капитал · {dc}</div>
+          <div data-press onClick={onOpenTotal} style={{
+            fontSize: 50, fontWeight: 700, color: C.text, letterSpacing: -2,
+            fontFeatureSettings: "'tnum'", lineHeight: 1, cursor: "pointer",
+          }}>
+            {fmtInt(capital)}<span style={{ fontSize: 30, color: C.muted, fontWeight: 600, marginLeft: 4 }}>{dcMeta.symbol}</span>
+          </div>
+          <div data-press onClick={onOpenTotal} style={{
+            display: "inline-flex", alignItems: "center", gap: 8, marginTop: 16, cursor: "pointer",
+          }}>
+            <div style={{ display: "flex", gap: 4 }}>
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{ width: i === 0 ? 16 : 5, height: 5, borderRadius: 3, backgroundColor: i === 0 ? C.text : C.borderStrong }} />
+              ))}
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Управление</span>
+            <ChevronRight size={14} color={C.text} strokeWidth={2.4} />
+          </div>
+        </div>
+
+        {/* Круглые действия */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 22, padding: "26px 0 24px" }}>
+          {actions.map(a => (
+            <div key={a.t} data-press onClick={a.on} style={{
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 9, cursor: "pointer",
+            }}>
+              <div style={{
+                width: 58, height: 58, borderRadius: "50%", backgroundColor: C.accentDark,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <a.Icon size={23} color={C.accent} strokeWidth={2} />
+              </div>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: C.text }}>{a.t}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Операции — остров */}
+        <div style={{ ...island, padding: "6px 6px 4px", marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px 8px" }}>
+            <span style={{ fontSize: 17, fontWeight: 700, color: C.text, letterSpacing: -0.3 }}>Операции</span>
+            <div data-press onClick={onOpenAllTransactions} style={{
+              display: "flex", alignItems: "center", gap: 3, cursor: "pointer",
+              backgroundColor: C.faint, borderRadius: 20, padding: "5px 11px",
+            }}>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: C.text }}>Все</span>
+              <ChevronRight size={13} color={C.text} strokeWidth={2.2} />
+            </div>
+          </div>
+          {ops.map((t, i) => (
+            <div key={t.id} data-press onClick={() => onOpenTransaction(t)} style={{
+              display: "flex", alignItems: "center", gap: 13, padding: "11px 16px", cursor: "pointer",
+            }}>
+              <div style={{
+                width: 42, height: 42, borderRadius: "50%", backgroundColor: `${t.color}1A`,
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}>
+                <t.Icon size={18} color={t.color} strokeWidth={1.9} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</div>
+                <div style={{ fontSize: 12.5, color: C.muted, marginTop: 1 }}>{t.time}</div>
+              </div>
+              <span style={{ fontSize: 15, fontWeight: 700, fontFeatureSettings: "'tnum'", flexShrink: 0, color: t.amount > 0 ? "#1F9E55" : C.text }}>
+                {t.amount > 0 ? "+" : ""}{fmtFull(t.amount)} {(CURRENCY_META[t.currency] || {}).symbol || "₸"}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Акцентный остров — доход на остаток */}
+        <div data-press onClick={onOpenDepositCalc} style={{
+          borderRadius: 26, backgroundColor: C.pop, padding: "20px 20px 18px", marginBottom: 14,
+          cursor: "pointer", position: "relative", overflow: "hidden",
+        }}>
+          <div style={{ position: "absolute", right: -30, bottom: -40, width: 150, height: 150, borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.16)" }} />
+          <div style={{ position: "relative" }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color: C.popText, letterSpacing: -0.4 }}>Доход 4,2% на остаток</div>
+            <div style={{ fontSize: 13.5, color: C.popText, opacity: 0.72, marginTop: 4, lineHeight: 1.4 }}>Разместите свободные средства во вклад за минуту</div>
+            <div style={{
+              display: "inline-flex", alignItems: "center", marginTop: 16, backgroundColor: C.accentDark,
+              borderRadius: 22, padding: "11px 20px",
+            }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: C.accent }}>Открыть вклад</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Мои карты — остров */}
+        <div style={{ ...island, padding: "6px 6px 8px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px 8px" }}>
+            <span style={{ fontSize: 17, fontWeight: 700, color: C.text, letterSpacing: -0.3 }}>Мои карты</span>
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: C.muted, fontFeatureSettings: "'tnum'" }}>{cards.length}</span>
+          </div>
+          {cards.slice(0, 3).map(card => (
+            <div key={card.id} data-press onClick={() => onOpenCard(card)} style={{
+              display: "flex", alignItems: "center", gap: 13, padding: "11px 16px", cursor: "pointer",
+            }}>
+              <div style={{
+                width: 46, height: 32, borderRadius: 8, flexShrink: 0, position: "relative", overflow: "hidden",
+                background: `linear-gradient(135deg, ${card.color} 0%, ${card.color}CC 100%)`,
+              }}>
+                <div style={{ position: "absolute", top: 6, left: 6, width: 9, height: 7, borderRadius: 2, background: "rgba(255,255,255,0.55)" }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.name}</div>
+                <div style={{ fontSize: 12.5, color: C.muted, marginTop: 1, fontFeatureSettings: "'tnum'" }}>•• {card.last4}</div>
+              </div>
+              <span style={{ fontSize: 15, fontWeight: 700, color: C.text, fontFeatureSettings: "'tnum'", flexShrink: 0 }}>
+                {fmtFull(cardTotal(card))} {dcMeta.symbol}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ExecHomeScreen({ C, displayCurrency, totalInKZT, cards, accounts, deposits, credits, brokerGroups, news, onAvatarClick, onOpenProfile, onOpenTotal, onOpenCard, onCardTopUp, onCardTransfer, onOpenFamily, onOpenAccount, onOpenDeposit, onOpenCredit, onOpenBroker, onOpenEsim, onOpenAviata, onOpenLounge, onOpenFastTrack, onOpenOtherServices, onNewCard, onNewFamilyCard, onOpenShared, onConnectBank, onOpenNews, onOpenNewsDetail, onOpenTransaction, onOpenAllTransactions, onManager }) {
   const [prodTab, setProdTab] = useState("bank");
   const [prodExpanded, setProdExpanded] = useState(false); // «Другие счета»: короткий список по умолчанию
@@ -9803,7 +10025,7 @@ export default function FreedomV6() {
     return sum;
   }, [emptyState]);
 
-  const C = theme === "exec" ? EXEC_COLORS : theme === "dark" ? DARK_COLORS : LIGHT_COLORS;
+  const C = theme === "exec" ? EXEC_COLORS : theme === "neo" ? NEO_COLORS : theme === "dark" ? DARK_COLORS : LIGHT_COLORS;
 
   useEffect(() => {
     document.body.style.backgroundColor = C.bg;
@@ -9871,7 +10093,25 @@ export default function FreedomV6() {
           onManager={() => setActiveTab("chats")}
         />
       )}
-      {activeTab === "products" && theme !== "exec" && (
+      {activeTab === "products" && theme === "neo" && (
+        <NeoHomeScreen C={C} displayCurrency={displayCurrency} totalInKZT={totalInKZT}
+          cards={activeCardProducts.flatMap(g => g.cards).filter(c => !c.blocked)}
+          accounts={activeAccounts} deposits={DEPOSITS} news={activeNews}
+          onAvatarClick={() => setDebugOpen(true)}
+          onOpenProfile={() => pushScreen({ type: "settings" })}
+          onOpenTotal={() => pushScreen({ type: "total" })}
+          onOpenCard={(card) => pushScreen({ type: "product", card })}
+          onTopUp={() => setSheet({ type: "topup", card: activeCardProducts.flatMap(g => g.cards).filter(c => !c.blocked)[0] })}
+          onTransfer={openTransferHub}
+          onConversion={() => pushScreen({ type: "conversion" })}
+          onOpenOtherServices={() => pushScreen({ type: "otherServices" })}
+          onOpenTransaction={(tx) => pushScreen({ type: "transaction", tx })}
+          onOpenAllTransactions={() => pushScreen({ type: "allTransactions" })}
+          onOpenDepositCalc={() => pushScreen({ type: "depositCalc" })}
+          onManager={() => setActiveTab("chats")}
+        />
+      )}
+      {activeTab === "products" && theme !== "exec" && theme !== "neo" && (
         <MainScreen
           onAvatarClick={() => setDebugOpen(true)}
           displayCurrency={displayCurrency} setDisplayCurrency={setDisplayCurrency}
@@ -10665,6 +10905,7 @@ export default function FreedomV6() {
         active={activeTab}
         onChange={(k) => { setActiveTab(k); setNavStack([]); }}
         C={C}
+        floating={theme === "neo"}
       />
       {/* Bottom sheets: promo (real MarketingBannerSheet), top-up, logout */}
       {sheet?.type === "promo" && (
